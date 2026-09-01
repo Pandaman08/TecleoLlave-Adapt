@@ -1,0 +1,79 @@
+{
+  "app": {
+    "title": "TECLEOLLAVE-ADAPT",
+    "subtitle": "Autenticación Biométrica Adaptativa por Dinámica de Tecleo",
+    "status": "API En Línea",
+    "theme_light": "☀️ Claro",
+    "theme_dark": "🌙 Oscuro"
+  },
+  "nav": {
+    "dashboard": "📊 Dashboard",
+    "register": "✍️ Registrarse",
+    "login": "🔑 Iniciar Sesión"
+  },
+  "login": {
+    "title": "Bienvenido de Nuevo",
+    "subtitle": "Accede mediante tu patrón biométrico de tecleo continuo",
+    "username_label": "Usuario",
+    "username_placeholder": "Ingresa tu nombre de usuario",
+    "password_label": "Contraseña",
+    "password_placeholder": "Ingresa tu contraseña",
+    "submit_btn": "Autenticar Biométricamente",
+    "quick_demo": "Prueba Rápida con Usuario de Demo",
+    "demo_user1": "Usuario 1 (Demo)",
+    "demo_user2": "Usuario 2 (Demo)",
+    "seed_demo_btn": "Sembrar Datos de Prueba",
+    "keystroke_preview_title": "Visualizador de Dinámica de Tecleo",
+    "keystroke_preview_desc": "Evaluación en tiempo real del ritmo de pulsación y latencia inter-tecla."
+  },
+  "register": {
+    "title": "Enrolamiento Biométrico",
+    "subtitle": "Completa el registro y entrena tu perfil único de tecleo",
+    "step1_title": "1. Datos de Cuenta",
+    "step2_title": "2. Captura Biométrica",
+    "step3_title": "3. Perfil Entrenado",
+    "username_label": "Nombre de Usuario",
+    "password_label": "Contraseña",
+    "next_btn": "Continuar a Captura Biométrica →",
+    "prev_btn": "← Volver",
+    "finish_btn": "Finalizar Enrolamiento y Crear Modelo",
+    "samples_needed": "Muestras de tecleo requeridas para entrenamiento:",
+    "success_message": "¡Enrolamiento completado con éxito! Se ha generado tu versión de modelo v1."
+  },
+  "typing": {
+    "phrase_notice": "Nota Técnica: La frase de enrolamiento (\"La seguridad protege la información\") está fija en el backend. Modificarla invalidará los perfiles entrenados previamente.",
+    "type_target": "Escribe la siguiente frase con tu ritmo natural:",
+    "progress_label": "Muestras Capturadas:",
+    "wpm_label": "Velocidad:",
+    "rhythm_label": "Ritmo:"
+  },
+  "dashboard": {
+    "title": "Dashboard Analítico Biométrico",
+    "subtitle": "Métricas adaptativas en tiempo real e historial de modelos",
+    "select_user": "Seleccionar Usuario:",
+    "refresh_btn": "Actualizar",
+    "export_pdf": "📄 Exportar PDF",
+    "export_excel": "📊 Exportar Excel",
+    "kpi_active_model": "Modelo Activo",
+    "kpi_far": "FAR (False Acceptance)",
+    "kpi_frr": "FRR (False Rejection)",
+    "kpi_eer": "EER (Equal Error Rate)",
+    "kpi_adaptations": "Adaptaciones Exitosas",
+    "kpi_total_auth": "Autenticaciones Totales",
+    "chart_score_title": "📈 Evolución del Score Biométrico (Serie Temporal)",
+    "chart_comp_title": "📊 Comparación: Modelo Estático (M0) vs Adaptativo (Mn)",
+    "table_models_title": "Versiones del Modelo Biométrico",
+    "table_timeline_title": "Timeline de Adaptaciones del Perfil",
+    "table_col_version": "Versión",
+    "table_col_status": "Estado",
+    "table_col_samples": "Muestras",
+    "table_col_attempts": "Intentos Auth",
+    "table_col_allow": "Tasa Permitidos",
+    "table_col_score": "Score Promed.",
+    "table_col_date": "Fecha",
+    "filter_all": "Todos los Eventos",
+    "filter_accepted": "Candidatos Aceptados",
+    "filter_rejected": "Candidatos Rechazados",
+    "search_placeholder": "Buscar versión o razón..."
+  }
+}

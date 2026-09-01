@@ -13,8 +13,8 @@ build/
 
 # Backend
 backend/.env
-backend/tecleollave.db
-backend/tecleollave.db-journal
+*.db
+*.db-journal
 backend/*.joblib
 backend/models/
 

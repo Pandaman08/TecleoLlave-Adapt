@@ -56,7 +56,7 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env
+cp .env.example .env  # Windows: copy .env.example .env
 python -m app.main
 ```
 Servidor: http://localhost:8000

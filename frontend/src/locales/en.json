@@ -1,0 +1,79 @@
+{
+  "app": {
+    "title": "TECLEOLLAVE-ADAPT",
+    "subtitle": "Continuous Adaptive Authentication via Keystroke Dynamics",
+    "status": "API Online",
+    "theme_light": "☀️ Light",
+    "theme_dark": "🌙 Dark"
+  },
+  "nav": {
+    "dashboard": "📊 Dashboard",
+    "register": "✍️ Register",
+    "login": "🔑 Login"
+  },
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Authenticate using your continuous keystroke dynamics pattern",
+    "username_label": "Username",
+    "username_placeholder": "Enter your username",
+    "password_label": "Password",
+    "password_placeholder": "Enter your password",
+    "submit_btn": "Authenticate Biometrically",
+    "quick_demo": "Quick Demo Credentials",
+    "demo_user1": "User 1 (Demo)",
+    "demo_user2": "User 2 (Demo)",
+    "seed_demo_btn": "Seed Demo Data",
+    "keystroke_preview_title": "Keystroke Dynamics Visualizer",
+    "keystroke_preview_desc": "Real-time keypress rhythm evaluation and inter-key latency metering."
+  },
+  "register": {
+    "title": "Biometric Enrollment",
+    "subtitle": "Complete account setup and train your unique typing profile",
+    "step1_title": "1. Account Details",
+    "step2_title": "2. Biometric Capture",
+    "step3_title": "3. Trained Profile",
+    "username_label": "Username",
+    "password_label": "Password",
+    "next_btn": "Continue to Biometric Capture →",
+    "prev_btn": "← Back",
+    "finish_btn": "Complete Enrollment & Train Model",
+    "samples_needed": "Typing samples required for initial model training:",
+    "success_message": "Enrollment completed successfully! Model version v1 has been generated."
+  },
+  "typing": {
+    "phrase_notice": "Technical Notice: The enrollment phrase (\"La seguridad protege la información\") is fixed in the backend. Changing it invalidates existing trained profiles.",
+    "type_target": "Type the exact phrase at your natural rhythm:",
+    "progress_label": "Samples Captured:",
+    "wpm_label": "Speed:",
+    "rhythm_label": "Rhythm:"
+  },
+  "dashboard": {
+    "title": "Biometric Analytic Dashboard",
+    "subtitle": "Real-time adaptive metrics and model version history",
+    "select_user": "Select User:",
+    "refresh_btn": "Refresh",
+    "export_pdf": "📄 Export PDF",
+    "export_excel": "📊 Export Excel",
+    "kpi_active_model": "Active Model",
+    "kpi_far": "FAR (False Acceptance)",
+    "kpi_frr": "FRR (False Rejection)",
+    "kpi_eer": "EER (Equal Error Rate)",
+    "kpi_adaptations": "Successful Adaptations",
+    "kpi_total_auth": "Total Authentications",
+    "chart_score_title": "📈 Biometric Score Evolution (Time Series)",
+    "chart_comp_title": "📊 Comparison: Static Model (M0) vs Adaptive Model (Mn)",
+    "table_models_title": "Biometric Model Versions",
+    "table_timeline_title": "Profile Adaptation Event Timeline",
+    "table_col_version": "Version",
+    "table_col_status": "Status",
+    "table_col_samples": "Samples",
+    "table_col_attempts": "Auth Attempts",
+    "table_col_allow": "Allow Rate",
+    "table_col_score": "Avg Score",
+    "table_col_date": "Date",
+    "filter_all": "All Events",
+    "filter_accepted": "Candidates Accepted",
+    "filter_rejected": "Candidates Rejected",
+    "search_placeholder": "Search version or reason..."
+  }
+}

@@ -1,6 +1,18 @@
-from pydantic import BaseSettings
+try:
+    from pydantic import BaseSettings
+except Exception:
+    try:
+        from pydantic.v1 import BaseSettings
+    except ImportError:
+        from pydantic_settings import BaseSettings
 from typing import Optional
 import json
+
+
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "tecleollave.db")
 
 
 class Settings(BaseSettings):
@@ -9,7 +21,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
-    DATABASE_URL: str = "sqlite:///./tecleollave.db"
+    DATABASE_URL: str = f"sqlite:///{DB_PATH}"
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

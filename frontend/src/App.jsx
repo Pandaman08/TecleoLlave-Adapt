@@ -1,35 +1,71 @@
-import { Routes, Route, Link } from 'react-router-dom'
-import Dashboard from './pages/Dashboard'
-import Register from './pages/Register'
-import Login from './pages/Login'
+import { Routes, Route, NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from './context/ThemeContext';
+
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 function App() {
+  const { t, i18n } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
+
+  const changeLanguage = (e) => {
+    i18n.changeLanguage(e.target.value);
+  };
+
   return (
-    <div className="container">
-      <header style={{ marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #eee' }}>
-        <h1>TECLEOLLAVE-ADAPT</h1>
-        <p style={{ color: '#7f8c8d' }}>
-          Protótipo académico - Autenticación adaptativa por dinámica de tecleo
-        </p>
+    <div className="app-layout">
+      {/* Top Fixed/Sticky Glassmorphic Header */}
+      <header className="main-header">
+        <div className="header-container">
+          <div className="navbar-brand">
+            <div className="brand-icon">TK</div>
+            <div>
+              <div className="brand-title">{t('app.title')}</div>
+              <div className="brand-subtitle">{t('app.subtitle')}</div>
+            </div>
+          </div>
+
+          <nav className="nav-links">
+            <NavLink to="/" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+              {t('nav.dashboard')}
+            </NavLink>
+            <NavLink to="/register" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+              {t('nav.register')}
+            </NavLink>
+            <NavLink to="/login" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+              {t('nav.login')}
+            </NavLink>
+          </nav>
+
+          <div className="navbar-actions">
+            {/* Theme Toggle */}
+            <button className="btn-theme-toggle" onClick={toggleTheme} title="Cambiar Tema Oscuro / Claro">
+              {theme === 'dark' ? '☀️ Claro' : '🌙 Oscuro'}
+            </button>
+
+            {/* Language Selector */}
+            <div className="lang-selector-wrapper">
+              <select className="select-control lang-select" value={i18n.language} onChange={changeLanguage}>
+                <option value="es">🇪🇸 ES</option>
+                <option value="en">🇬🇧 EN</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </header>
 
-      <nav style={{ marginBottom: '2rem' }}>
-        <Link to="/" style={{ marginRight: '1rem' }}>Dashboard</Link>
-        <Link to="/register" style={{ marginRight: '1rem' }}>Registro</Link>
-        <Link to="/login" style={{ marginRight: '1rem' }}>Login</Link>
-      </nav>
-
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-      </Routes>
-
-      <footer style={{ marginTop: '3rem', paddingTop: '1rem', borderTop: '1px solid #eee', color: '#7f8c8d', fontSize: '0.9rem' }}>
-        <p>Fase 2: Captura de dinámica de tecleo</p>
-      </footer>
+      {/* Main Content Container */}
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

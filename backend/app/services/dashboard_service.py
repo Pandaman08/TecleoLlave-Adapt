@@ -67,6 +67,19 @@ class TimeSeriesPoint:
     label: Optional[str] = None
 
 
+import math
+
+def sanitize_json_val(val):
+    """Replace NaN and Infinity float values with JSON-compliant numbers."""
+    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+        return 0.0
+    if isinstance(val, dict):
+        return {k: sanitize_json_val(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [sanitize_json_val(v) for v in val]
+    return val
+
+
 class DashboardService:
     """Service for dashboard metrics and statistics."""
     
@@ -129,11 +142,11 @@ class DashboardService:
         days: int = 30
     ) -> AuthMetrics:
         """Get authentication metrics for a period."""
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        start_date = datetime.now() - timedelta(days=days)
         
         attempts = db.query(AuthAttempt).filter(
             AuthAttempt.user_id == user_id,
-            AuthAttempt.created_at >= cutoff
+            AuthAttempt.created_at >= start_date
         ).all()
         
         if not attempts:
@@ -145,24 +158,19 @@ class DashboardService:
                 far=0.0,
                 frr=0.0,
                 avg_score=0.0,
-                period_start=cutoff,
-                period_end=datetime.utcnow()
+                period_start=start_date,
+                period_end=datetime.now()
             )
         
         total = len(attempts)
-        allow = sum(1 for a in attempts if a.decision == 'allow')
-        challenge = sum(1 for a in attempts if a.decision == 'challenge')
-        reject = sum(1 for a in attempts if a.decision == 'reject')
-        
-        # FAR: impostor accepted / impostor attempts
-        # For MVP: we don't have impostor labels, use reject rate as proxy
-        far = reject / total if total > 0 else 0.0
-        
-        # FRR: legitimate rejected / legitimate attempts
-        # For MVP: use challenge + reject / (allow + challenge) as proxy
-        frr = (challenge + reject) / (allow + challenge) if (allow + challenge) > 0 else 0.0
+        allow = sum(1 for a in attempts if a.decision == AuthDecision.allow or a.decision == 'allow' or a.decision == AuthDecision.allow.value)
+        challenge = sum(1 for a in attempts if a.decision == AuthDecision.challenge or a.decision == 'challenge' or a.decision == AuthDecision.challenge.value)
+        reject = sum(1 for a in attempts if a.decision == AuthDecision.reject or a.decision == 'reject' or a.decision == AuthDecision.reject.value)
         
         avg_score = sum(a.score for a in attempts) / total if total > 0 else 0.0
+        
+        far = reject / total if total > 0 else 0.0
+        frr = (challenge + reject) / total if total > 0 else 0.0
         
         return AuthMetrics(
             total_attempts=total,
@@ -172,8 +180,8 @@ class DashboardService:
             far=far,
             frr=frr,
             avg_score=avg_score,
-            period_start=cutoff,
-            period_end=datetime.utcnow()
+            period_start=start_date,
+            period_end=datetime.now()
         )
     
     def get_auth_time_series(
@@ -184,23 +192,15 @@ class DashboardService:
         bucket_hours: int = 24
     ) -> List[Dict[str, Any]]:
         """Get time series of authentication metrics."""
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        start_date = datetime.now() - timedelta(days=days)
         
         attempts = db.query(AuthAttempt).filter(
             AuthAttempt.user_id == user_id,
-            AuthAttempt.created_at >= cutoff
-        ).order_by(AuthAttempt.created_at).all()
+            AuthAttempt.created_at >= start_date
+        ).order_by(AuthAttempt.created_at.asc()).all()
         
-        if not attempts:
-            return []
-        
-        # Bucket by time
         buckets = {}
         for attempt in attempts:
-            bucket_time = attempt.created_at.replace(
-                minute=0, second=0, microsecond=0
-            )
-            # Round to bucket
             hour = attempt.created_at.hour
             bucket_hour = (hour // bucket_hours) * bucket_hours
             bucket_key = attempt.created_at.replace(
@@ -210,10 +210,11 @@ class DashboardService:
             if bucket_key not in buckets:
                 buckets[bucket_key] = {'allow': 0, 'challenge': 0, 'reject': 0, 'scores': []}
             
-            buckets[bucket_key][attempt.decision.value] += 1
+            dec_val = attempt.decision.value if hasattr(attempt.decision, 'value') else str(attempt.decision)
+            if dec_val in buckets[bucket_key]:
+                buckets[bucket_key][dec_val] += 1
             buckets[bucket_key]['scores'].append(attempt.score)
         
-        # Convert to list
         result = []
         for ts in sorted(buckets.keys()):
             b = buckets[ts]
@@ -232,7 +233,7 @@ class DashboardService:
         
         return result
     
-    def get_model_versions(self, db: Session, user_id: int) -> List[ModelMetrics]:
+    def get_model_versions(self, db: Session, user_id: int) -> List[Dict[str, Any]]:
         """Get all model versions with metrics."""
         models = db.query(ModelVersion).filter(
             ModelVersion.user_id == user_id
@@ -240,7 +241,6 @@ class DashboardService:
         
         result = []
         for model in models:
-            # Count auth attempts for this model
             auth_count = db.query(AuthAttempt).filter(
                 AuthAttempt.model_version_id == model.id
             ).count()
@@ -254,17 +254,20 @@ class DashboardService:
                 AuthAttempt.model_version_id == model.id
             ).scalar() or 0.0
             
-            result.append(ModelMetrics(
-                version_id=model.id,
-                user_id=model.user_id,
-                is_active=model.is_active,
-                created_at=model.created_at,
-                training_samples=model.training_samples_count,
-                metrics=model.metrics,
-                auth_count=auth_count,
-                allow_rate=allow_count / auth_count if auth_count > 0 else 0,
-                avg_score=float(avg_score)
-            ))
+            clean_metrics = sanitize_json_val(model.metrics or {})
+
+            created_at_val = model.created_at.isoformat() if hasattr(model.created_at, 'isoformat') else str(model.created_at) if model.created_at else None
+            result.append({
+                'version_id': model.id,
+                'user_id': model.user_id,
+                'is_active': model.is_active,
+                'created_at': created_at_val,
+                'training_samples': model.training_samples_count,
+                'metrics': clean_metrics,
+                'auth_count': auth_count,
+                'allow_rate': allow_count / auth_count if auth_count > 0 else 0,
+                'avg_score': float(avg_score)
+            })
         
         return result
     
@@ -285,6 +288,8 @@ class DashboardService:
             AdaptationEvent.user_id == user_id
         ).order_by(desc(AdaptationEvent.created_at)).first()
         
+        last_adaptation_val = last_event.created_at.isoformat() if (last_event and hasattr(last_event.created_at, 'isoformat')) else (str(last_event.created_at) if last_event else None)
+
         return AdaptationMetrics(
             total_events=len(events),
             candidate_created=sum(1 for e in events if e.action == 'candidate_created'),
@@ -295,7 +300,7 @@ class DashboardService:
             challenge_passed=sum(1 for e in events if e.action == 'challenge_passed'),
             challenge_failed=sum(1 for e in events if e.action == 'challenge_failed'),
             current_model_version=current_model.id if current_model else None,
-            last_adaptation=last_event.created_at if last_event else None
+            last_adaptation=last_adaptation_val
         )
     
     def get_adaptation_timeline(
@@ -312,12 +317,12 @@ class DashboardService:
         return [
             {
                 'id': e.id,
-                'action': e.action.value,
+                'action': e.action.value if hasattr(e.action, 'value') else str(e.action),
                 'candidate_model_id': e.candidate_model_id,
                 'old_model_version_id': e.old_model_version_id,
                 'new_model_version_id': e.new_model_version_id,
                 'reason': e.reason,
-                'metrics_comparison': e.metrics_comparison,
+                'metrics_comparison': sanitize_json_val(e.metrics_comparison),
                 'created_at': e.created_at.isoformat()
             }
             for e in events
@@ -334,35 +339,52 @@ class DashboardService:
         user_id: int
     ) -> Dict[str, Any]:
         """Get comparison data for static vs adaptive experiment."""
-        # This is a simplified version - real experiment would need controlled data
         models = self.get_model_versions(db, user_id)
         
         if len(models) < 2:
             return {'message': 'Need at least 2 model versions for comparison'}
         
-        # First model (static baseline)
-        static = models[-1]  # Oldest
-        # Latest model (adaptive)
-        adaptive = models[0]  # Newest
+        static = models[-1]
+        adaptive = models[0]
         
+        static_rate = static['allow_rate'] if isinstance(static, dict) else static.allow_rate
+        adaptive_rate = adaptive['allow_rate'] if isinstance(adaptive, dict) else adaptive.allow_rate
+        
+        static_score = static['avg_score'] if isinstance(static, dict) else static.avg_score
+        adaptive_score = adaptive['avg_score'] if isinstance(adaptive, dict) else adaptive.avg_score
+
+        static_ver = static['version_id'] if isinstance(static, dict) else static.version_id
+        adaptive_ver = adaptive['version_id'] if isinstance(adaptive, dict) else adaptive.version_id
+
+        static_created = static['created_at'] if isinstance(static, dict) else static.created_at
+        adaptive_created = adaptive['created_at'] if isinstance(adaptive, dict) else adaptive.created_at
+
+        static_auth_count = static['auth_count'] if isinstance(static, dict) else static.auth_count
+        adaptive_auth_count = adaptive['auth_count'] if isinstance(adaptive, dict) else adaptive.auth_count
+
+        static_metrics = static['metrics'] if isinstance(static, dict) else static.metrics
+        adaptive_metrics = adaptive['metrics'] if isinstance(adaptive, dict) else adaptive.metrics
+
         return {
             'static_model': {
-                'version_id': static.version_id,
-                'created_at': static.created_at.isoformat() if static.created_at else None,
-                'metrics': static.metrics,
-                'auth_count': static.auth_count,
-                'allow_rate': static.allow_rate
+                'version_id': static_ver,
+                'created_at': static_created.isoformat() if hasattr(static_created, 'isoformat') else str(static_created),
+                'metrics': sanitize_json_val(static_metrics),
+                'auth_count': static_auth_count,
+                'allow_rate': static_rate,
+                'avg_score': static_score
             },
             'adaptive_model': {
-                'version_id': adaptive.version_id,
-                'created_at': adaptive.created_at.isoformat() if adaptive.created_at else None,
-                'metrics': adaptive.metrics,
-                'auth_count': adaptive.auth_count,
-                'allow_rate': adaptive.allow_rate
+                'version_id': adaptive_ver,
+                'created_at': adaptive_created.isoformat() if hasattr(adaptive_created, 'isoformat') else str(adaptive_created),
+                'metrics': sanitize_json_val(adaptive_metrics),
+                'auth_count': adaptive_auth_count,
+                'allow_rate': adaptive_rate,
+                'avg_score': adaptive_score
             },
             'improvement': {
-                'allow_rate_delta': adaptive.allow_rate - static.allow_rate,
-                'avg_score_delta': adaptive.avg_score - static.avg_score
+                'allow_rate_delta': adaptive_rate - static_rate,
+                'avg_score_delta': adaptive_score - static_score
             }
         }
 

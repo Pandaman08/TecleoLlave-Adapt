@@ -1,125 +1,221 @@
 import { useState } from 'react';
-import TypingCapture from '../components/TypingCapture';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
+import TypingCapture from '../components/TypingCapture';
 
 function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [step, setStep] = useState('credentials'); // credentials -> typing -> complete
-  const [token, setToken] = useState(null);
-  const [message, setMessage] = useState(null);
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const [username, setUsername] = useState('user1');
+  const [password, setPassword] = useState('password123');
+  const [showPassword, setShowPassword] = useState(false);
+  const [typingSample, setTypingSample] = useState(null);
+  
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [seedLoading, setSeedLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  // Intentar login
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
     setError(null);
-    setMessage(null);
-    
-    try {
-      const response = await api.post('/auth/login', { username, password });
-      setToken(response.data.access_token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-      setMessage('Credenciales válidas. Ahora verificación biométrica.');
-      setStep('typing');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Error en login');
-    }
-  };
+    setSuccess(null);
 
-  const handleTypingAuth = async (result) => {
+    if (!username || !password) {
+      setError('Por favor ingresa usuario y contraseña');
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      const response = await api.post('/typing/authenticate', {
-        raw_timestamps: result.events,
-        phrase_typed: result.phrase_typed,
-        source: 'auth'
-      });
-      
-      const { decision, score, message: msg } = response.data;
-      
-      if (decision === 'allow') {
-        setMessage(`✅ Acceso concedido (score: ${score.toFixed(3)})`);
-        setStep('complete');
-      } else if (decision === 'challenge') {
-        setMessage(`⚠️ Verificación adicional requerida (score: ${score.toFixed(3)})`);
-        setError(msg);
+      const tokenRes = await api.post('/auth/login', { username, password });
+      const token = tokenRes.data.access_token;
+      localStorage.setItem('token', token);
+
+      // Si hay muestra de tecleo, enviar verificación adaptativa
+      if (typingSample) {
+        try {
+          const authRes = await api.post('/adaptive/process-auth-result', {
+            username,
+            sample: typingSample
+          });
+
+          setSuccess(`¡Autenticación Biométrica Exitosa! Score: ${(authRes.data.score * 100).toFixed(1)}% | Decisión: ${authRes.data.decision}`);
+        } catch (adaptiveErr) {
+          console.warn('Verificación biométrica secundaria falló:', adaptiveErr);
+          setSuccess('Autenticación de contraseña exitosa.');
+        }
       } else {
-        setError(`❌ Acceso denegado (score: ${score.toFixed(3)}): ${msg}`);
+        setSuccess('¡Inicio de sesión exitoso! Redirigiendo al Dashboard...');
       }
+
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
+
     } catch (err) {
-      setError('Error en autenticación biométrica: ' + (err.response?.data?.detail || err.message));
+      setError(err.response?.data?.detail || err.message || 'Error en autenticación');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const renderStep = () => {
-    switch (step) {
-      case 'credentials':
-        return (
-          <div className="card">
-            <h2>Login</h2>
-            <form onSubmit={handleLogin}>
-              <div className="form-group">
-                <label>Usuario</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-              <div className="form-group">
-                <label>Contraseña</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                Iniciar Sesión
-              </button>
-            </form>
-          </div>
-        );
-      
-      case 'typing':
-        return (
-          <>
-            <div className="card">
-              <h3>Verificación Biométrica</h3>
-              <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
-                Escribe la frase para verificar tu identidad.
-              </p>
-              <TypingCapture 
-                mode="auth" 
-                onSampleCaptured={handleTypingAuth} 
-              />
-            </div>
-          </>
-        );
-      
-      case 'complete':
-        return (
-          <div className="card" style={{ textAlign: 'center' }}>
-            <h2 style={{ color: '#27ae60' }}>✅ Login Exitoso</h2>
-            <p>Bienvenido, {username}</p>
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8f9fa', borderRadius: '4px', textAlign: 'left' }}>
-              <strong>Token JWT:</strong>
-              <pre style={{ marginTop: '0.5rem', fontSize: '0.7rem', overflow: 'auto' }}>
-                {token}
-              </pre>
-            </div>
-          </div>
-        );
+  // Sembrar datos demo de prueba
+  const handleSeedDemo = async () => {
+    setSeedLoading(true);
+    setError(null);
+    try {
+      const seedRes = await api.post('/auth/seed-demo');
+      setSuccess(`✅ Base de datos sembrada (${seedRes.data.samples_created} muestras creadas). Credenciales: user1 / password123`);
+    } catch (err) {
+      setError('Error al sembrar datos demo: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setSeedLoading(false);
     }
+  };
+
+  const handleQuickDemo = (user, pass) => {
+    setUsername(user);
+    setPassword(pass);
   };
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-      {message && <div className="card" style={{ background: '#e8f8f5', color: '#27ae60' }}>{message}</div>}
-      {error && <div className="card" style={{ background: '#fadbd8', color: '#e74c3c' }}>{error}</div>}
-      {renderStep()}
+    <div className="auth-page-container">
+      <div className="login-split-layout">
+        
+        {/* Columna 1: Formulario de Autenticación */}
+        <div className="glass-card login-card">
+          <div className="wizard-header">
+            <div className="wizard-badge">🔐 Acceso Biométrico Adaptativo</div>
+            <h1 className="wizard-title">{t('login.title')}</h1>
+            <p className="wizard-subtitle">{t('login.subtitle')}</p>
+          </div>
+
+          {error && (
+            <div className="alert-box alert-danger">
+              ⚠️ {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="alert-box alert-success">
+              ✅ {success}
+            </div>
+          )}
+
+          {/* Atajos Rápidos de Perfiles Demo */}
+          <div className="demo-shortcuts-box">
+            <span className="demo-shortcuts-label">⚡ Perfiles de Prueba Rápidos:</span>
+            <div className="demo-pills-row">
+              <button
+                type="button"
+                className={`demo-pill ${username === 'user1' ? 'active' : ''}`}
+                onClick={() => handleQuickDemo('user1', 'password123')}
+              >
+                👤 Usuario 1 (user1)
+              </button>
+              <button
+                type="button"
+                className={`demo-pill ${username === 'user2' ? 'active' : ''}`}
+                onClick={() => handleQuickDemo('user2', 'password123')}
+              >
+                👤 Usuario 2 (user2)
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="wizard-form-body">
+            <div className="form-group">
+              <label className="form-label">
+                👤 {t('login.username_label')}
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Nombre de usuario"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                🔒 {t('login.password_label')}
+              </label>
+              <div className="password-input-wrapper">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="form-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Contraseña"
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn-toggle-eye"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+
+            <div className="wizard-actions">
+              <button
+                type="submit"
+                className="btn-primary btn-large"
+                disabled={loading}
+              >
+                {loading ? 'Verificando...' : '🚀 Autenticar y Entrar al Sistema'}
+              </button>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleSeedDemo}
+                disabled={seedLoading}
+                title="Genera muestras y modelos automáticos en la base de datos"
+              >
+                {seedLoading ? 'Sembrando Datos...' : '🌱 Sembrar Datos de Prueba (Demo)'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Columna 2: Captura Biométrica Dinámica Opcional */}
+        <div className="glass-card biometric-terminal-card">
+          <div className="terminal-header">
+            <div className="terminal-dot green"></div>
+            <div className="terminal-dot yellow"></div>
+            <div className="terminal-dot red"></div>
+            <span className="terminal-title">Biometric Keystroke Dynamics Terminal</span>
+          </div>
+
+          <div className="terminal-content">
+            <div className="terminal-info-banner">
+              <span className="info-icon">⚡</span>
+              <div>
+                <strong>Verificación en Tiempo Real:</strong> Teclea la frase biométrica a continuación para evaluar tu ritmo contra el modelo adaptativo activo.
+              </div>
+            </div>
+
+            <TypingCapture
+              onSampleCaptured={(sample) => {
+                setTypingSample(sample);
+                setSuccess('¡Muestra biométrica capturada! Haz clic en "Autenticar" para evaluar la similitud.');
+              }}
+              mode="auth"
+            />
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

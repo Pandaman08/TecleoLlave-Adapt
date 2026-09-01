@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 
 
@@ -7,7 +7,7 @@ from datetime import datetime
 class UserSummaryResponse:
     user_id: int
     username: str
-    created_at: Optional[str]
+    created_at: Optional[Union[str, datetime]]
     active_model_version: Optional[int]
     total_samples: int
     enrollment_samples: int
@@ -25,13 +25,13 @@ class AuthMetricsResponse:
     far: float
     frr: float
     avg_score: float
-    period_start: str
-    period_end: str
+    period_start: Optional[Union[str, datetime]]
+    period_end: Optional[Union[str, datetime]]
 
 
 @dataclass
 class TimeSeriesResponse:
-    timestamp: str
+    timestamp: Optional[Union[str, datetime]]
     allow: int
     challenge: int
     reject: int
@@ -45,7 +45,7 @@ class ModelMetricsResponse:
     version_id: int
     user_id: int
     is_active: bool
-    created_at: str
+    created_at: Optional[Union[str, datetime]]
     training_samples: int
     metrics: Dict[str, Any]
     auth_count: int
@@ -64,7 +64,7 @@ class AdaptationMetricsResponse:
     challenge_passed: int
     challenge_failed: int
     current_model_version: Optional[int]
-    last_adaptation: Optional[str]
+    last_adaptation: Optional[Union[str, datetime]]
 
 
 @dataclass
@@ -76,7 +76,7 @@ class AdaptationEventResponse:
     new_model_version_id: Optional[int]
     reason: Optional[str]
     metrics_comparison: Optional[Dict[str, Any]]
-    created_at: str
+    created_at: Optional[Union[str, datetime]]
 
 
 @dataclass
@@ -93,4 +93,4 @@ class CandidateStatusResponse:
 class ComparisonResponse:
     static_model: Dict[str, Any]
     adaptive_model: Dict[str, Any]
-    improvement: Dict[str, Any]
+    improvement: Dict[str, Any]

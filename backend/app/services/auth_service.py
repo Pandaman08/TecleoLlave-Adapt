@@ -25,11 +25,13 @@ class AuthService:
         db.commit()
         db.refresh(user)
         
-        # Crear configuración de adaptación por defecto
+        # Crear configuración de adaptación por defecto si no existe
         from app.models import AdaptationConfig
-        config = AdaptationConfig(user_id=user.id)
-        db.add(config)
-        db.commit()
+        existing_config = db.query(AdaptationConfig).filter(AdaptationConfig.user_id == user.id).first()
+        if not existing_config:
+            config = AdaptationConfig(user_id=user.id)
+            db.add(config)
+            db.commit()
         
         return user
     

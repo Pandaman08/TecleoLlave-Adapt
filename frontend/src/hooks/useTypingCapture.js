@@ -1,7 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 const TARGET_PHRASE = "La seguridad protege la información";
-const PHRASE_LENGTH = 32;
+const PHRASE_LENGTH = TARGET_PHRASE.length;
+
+const normalizeChar = (c) => {
+  if (!c) return '';
+  return c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
 
 export function useTypingCapture(onComplete) {
   const [capturedEvents, setCapturedEvents] = useState([]);
@@ -14,6 +19,7 @@ export function useTypingCapture(onComplete) {
   const keyupTimes = useRef({});
   const startTime = useRef(null);
   const firstKeydown = useRef(null);
+  const lastKeydown = useRef({ key: null, time: null });
 
   const resetCapture = useCallback(() => {
     setCapturedEvents([]);
@@ -25,6 +31,7 @@ export function useTypingCapture(onComplete) {
     keyupTimes.current = {};
     startTime.current = null;
     firstKeydown.current = null;
+    lastKeydown.current = { key: null, time: null };
   }, []);
 
   const handleKeyDown = useCallback((e) => {
@@ -38,8 +45,12 @@ export function useTypingCapture(onComplete) {
       startTime.current = now;
     }
     
-    if (keydownTimes.current[key] === undefined) {
-      keydownTimes.current[key] = now;
+    lastKeydown.current = { key, time: now };
+    keydownTimes.current[key] = now;
+
+    const norm = normalizeChar(key);
+    if (norm) {
+      keydownTimes.current[`norm_${norm}`] = now;
     }
   }, [isCapturing]);
 
@@ -50,45 +61,73 @@ export function useTypingCapture(onComplete) {
     const key = e.key === ' ' ? 'Space' : e.key;
     const expectedChar = TARGET_PHRASE[currentIndex];
     
+    if (!expectedChar) return;
+
     const isSpace = expectedChar === ' ';
-    const matches = isSpace ? key === 'Space' : key === expectedChar;
+    const matchesExact = isSpace ? key === 'Space' : key === expectedChar;
     
-    if (!matches) {
+    if (!matchesExact) {
       return;
     }
     
-    const kdTime = keydownTimes.current[key];
-    if (kdTime === undefined) {
-      return;
+    let kdTime = keydownTimes.current[key]
+      || keydownTimes.current[expectedChar]
+      || keydownTimes.current['Dead']
+      || keydownTimes.current['Process']
+      || keydownTimes.current['Unidentified']
+      || lastKeydown.current.time;
+    
+    if (kdTime === undefined || kdTime === null) {
+      kdTime = now - 50;
     }
     
     keyupTimes.current[key] = now;
-    
-    const event = {
-      key: key,
-      keydown_ts: kdTime,
-      keyup_ts: now,
-      hold_time: now - kdTime,
-      expected_char: expectedChar,
-      position: currentIndex
-    };
-    
-    setCapturedEvents(prev => [...prev, event]);
-    setCurrentIndex(prev => prev + 1);
-    setProgress((currentIndex + 1) / PHRASE_LENGTH);
-    
-    delete keydownTimes.current[key];
-    
-    if (currentIndex + 1 >= PHRASE_LENGTH) {
-      setIsCapturing(false);
-      const totalDuration = now - (startTime.current || now);
-      onComplete?.({
-        events: capturedEvents.concat(event),
-        total_duration: totalDuration,
-        phrase_typed: TARGET_PHRASE
-      });
-    }
-  }, [isCapturing, currentIndex, capturedEvents, onComplete]);
+
+    setCapturedEvents(prevEvents => {
+      const prevEvent = prevEvents[prevEvents.length - 1];
+      if (prevEvent && kdTime < prevEvent.keyup_ts) {
+        kdTime = prevEvent.keyup_ts + 1;
+      }
+
+      let kuTime = now;
+      if (kuTime <= kdTime) {
+        kuTime = kdTime + 1;
+      }
+      
+      const event = {
+        key: key,
+        keydown_ts: kdTime,
+        keyup_ts: kuTime,
+        hold_time: kuTime - kdTime,
+        expected_char: expectedChar,
+        position: currentIndex
+      };
+
+      const newCaptured = [...prevEvents, event];
+      
+      delete keydownTimes.current[key];
+      delete keydownTimes.current[expectedChar];
+      delete keydownTimes.current['Dead'];
+      delete keydownTimes.current['Process'];
+      
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      setProgress(nextIndex / PHRASE_LENGTH);
+      
+      if (nextIndex >= PHRASE_LENGTH) {
+        setIsCapturing(false);
+        const totalDuration = kuTime - (startTime.current || kuTime);
+        onComplete?.({
+          events: newCaptured,
+          total_duration: totalDuration,
+          phrase_typed: TARGET_PHRASE
+        });
+      }
+
+      return newCaptured;
+    });
+
+  }, [isCapturing, currentIndex, onComplete]);
 
   const startCapture = useCallback(() => {
     resetCapture();
@@ -121,4 +160,4 @@ export function useTypingCapture(onComplete) {
   };
 }
 
-export { TARGET_PHRASE, PHRASE_LENGTH };
+export { TARGET_PHRASE, PHRASE_LENGTH };

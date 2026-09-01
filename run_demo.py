@@ -6,6 +6,10 @@ Runs complete demo: setup data, run experiment, show results.
 
 import sys
 import os
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 import subprocess
 import time
 import signal
@@ -45,7 +49,8 @@ def run_frontend():
         ['npm', 'run', 'build'],
         cwd=frontend_dir,
         capture_output=True,
-        text=True
+        text=True,
+        shell=(sys.platform == 'win32')
     )
     
     if result.returncode == 0:
