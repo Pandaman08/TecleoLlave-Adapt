@@ -60,18 +60,23 @@ function Register() {
     setError(null);
 
     try {
-      await api.post('/auth/register', {
+      const res = await api.post('/auth/register', {
         username,
         password,
         samples
       });
+
+      if (res.data?.id) {
+        localStorage.setItem('current_user_id', res.data.id);
+        localStorage.setItem('current_username', res.data.username);
+      }
 
       setSuccess(t('register.success_message'));
       setStep(3);
 
       setTimeout(() => {
         navigate('/login');
-      }, 2500);
+      }, 2200);
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Error registrando usuario');
     } finally {

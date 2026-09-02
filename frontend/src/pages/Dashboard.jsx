@@ -42,7 +42,8 @@ function Dashboard() {
   const [cmuResults, setCmuResults] = useState(null);
   const [cmuLoading, setCmuLoading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState(1);
+  const [userId, setUserId] = useState(() => Number(localStorage.getItem('current_user_id')) || 1);
+  const [userList, setUserList] = useState([]);
   const [error, setError] = useState(null);
 
   // Estados de modal y exportación
@@ -66,6 +67,7 @@ function Dashboard() {
       const safeGet = (url) => api.get(url).catch(() => ({ data: null }));
 
       const [
+        usersRes,
         summaryRes,
         authMetricsRes,
         timeSeriesRes,
@@ -73,6 +75,7 @@ function Dashboard() {
         timelineRes,
         comparisonRes
       ] = await Promise.all([
+        safeGet('/dashboard/users'),
         safeGet(`/dashboard/summary/${userId}`),
         safeGet(`/dashboard/auth-metrics/${userId}`),
         safeGet(`/dashboard/time-series/${userId}`),
@@ -80,6 +83,10 @@ function Dashboard() {
         safeGet(`/dashboard/adaptation-timeline/${userId}`),
         safeGet(`/dashboard/comparison/${userId}`)
       ]);
+
+      if (usersRes.data && Array.isArray(usersRes.data)) {
+        setUserList(usersRes.data);
+      }
 
       setSummary(summaryRes.data);
       setAuthMetrics(authMetricsRes.data);
@@ -269,9 +276,27 @@ function Dashboard() {
             <label className="control-label">
               👤 {t('dashboard.select_user')}
             </label>
-            <select className="select-control user-select" value={userId} onChange={(e) => setUserId(Number(e.target.value))}>
-              <option value={1}>Usuario 1 (user1 - Principal)</option>
-              <option value={2}>Usuario 2 (user2 - Evaluación)</option>
+            <select 
+              className="select-control user-select" 
+              value={userId} 
+              onChange={(e) => {
+                const selectedId = Number(e.target.value);
+                setUserId(selectedId);
+                localStorage.setItem('current_user_id', selectedId);
+              }}
+            >
+              {userList && userList.length > 0 ? (
+                userList.map(u => (
+                  <option key={u.id} value={u.id}>
+                    👤 {u.username} (ID: {u.id}{u.active_model_version ? ` - v${u.active_model_version}` : ' - Nuevo'})
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value={1}>Usuario 1 (user1 - Principal)</option>
+                  <option value={2}>Usuario 2 (user2 - Evaluación)</option>
+                </>
+              )}
             </select>
           </div>
 

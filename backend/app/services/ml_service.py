@@ -32,8 +32,8 @@ class MLService:
             TypingSample.is_validated == True
         ).count()
         
-        if sample_count < 10:
-            raise ValueError(f"Insufficient samples: {sample_count} < 10")
+        if sample_count < 5:
+            raise ValueError(f"Insufficient samples: {sample_count} < 5")
         
         # Determine model version
         existing_versions = db.query(ModelVersion).filter(

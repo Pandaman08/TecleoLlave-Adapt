@@ -35,7 +35,7 @@ class ModelTrainer:
         self, 
         db: Session, 
         user_id: int,
-        min_samples: int = 10
+        min_samples: int = 5
     ) -> Tuple[np.ndarray, np.ndarray, List[int]]:
         """
         Prepare training data from database.

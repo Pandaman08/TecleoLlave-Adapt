@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional, List, Any
 
 
 class UserBase(BaseModel):
@@ -8,6 +9,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    samples: Optional[List[Any]] = None
 
 
 class UserResponse(UserBase):
@@ -22,3 +24,5 @@ class UserResponse(UserBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    user_id: Optional[int] = None
+    username: Optional[str] = None

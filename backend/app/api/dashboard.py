@@ -92,3 +92,9 @@ def get_comparison(
 ):
     """Get static vs adaptive comparison."""
     return dashboard_service.get_comparison_static_vs_adaptive(db, user_id)
+
+
+@router.get("/users")
+def get_all_users(db: Session = Depends(get_db)):
+    """Get all registered users for dashboard selection."""
+    return dashboard_service.get_all_users(db)

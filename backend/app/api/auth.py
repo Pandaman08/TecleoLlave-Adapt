@@ -16,7 +16,12 @@ def register_user(
     db: Session = Depends(get_db)
 ):
     try:
-        user = auth_service.register_user(db, user_data.username, user_data.password)
+        user = auth_service.register_user(
+            db, 
+            user_data.username, 
+            user_data.password, 
+            getattr(user_data, 'samples', None)
+        )
         return user
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -60,7 +65,12 @@ async def login_user(
         )
     
     access_token = auth_service.create_access_token(user.id)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id,
+        "username": user.username
+    }
 
 
 @router.post("/seed-demo")

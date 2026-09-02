@@ -40,6 +40,12 @@ function Login() {
       const tokenRes = await api.post('/auth/login', { username, password });
       const token = tokenRes.data.access_token;
       localStorage.setItem('token', token);
+      if (tokenRes.data.user_id) {
+        localStorage.setItem('current_user_id', tokenRes.data.user_id);
+        localStorage.setItem('current_username', tokenRes.data.username);
+      } else {
+        localStorage.setItem('current_username', username);
+      }
 
       // Si hay muestra de tecleo, enviar verificación adaptativa
       if (typingSample) {
@@ -95,6 +101,12 @@ function Login() {
         otp_code: otpCode
       });
       localStorage.setItem('token', res.data.access_token);
+      if (res.data.user_id) {
+        localStorage.setItem('current_user_id', res.data.user_id);
+        localStorage.setItem('current_username', res.data.username);
+      } else {
+        localStorage.setItem('current_username', username);
+      }
       setSuccess('✅ ' + res.data.message);
       setShow2FaModal(false);
       setTimeout(() => {

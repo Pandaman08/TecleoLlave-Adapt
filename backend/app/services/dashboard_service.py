@@ -388,5 +388,31 @@ class DashboardService:
             }
         }
 
+    def get_all_users(self, db: Session) -> List[Dict[str, Any]]:
+        """Get all registered users with their active model and samples count."""
+        users = db.query(User).filter(User.is_active == True).order_by(User.id.asc()).all()
+        results = []
+        for u in users:
+            active_model = db.query(ModelVersion).filter(
+                ModelVersion.user_id == u.id,
+                ModelVersion.is_active == True
+            ).first()
+            samples_count = db.query(TypingSample).filter(TypingSample.user_id == u.id).count()
+
+            active_model_ver = None
+            if active_model:
+                active_model_ver = active_model.id
+            elif samples_count >= 5:
+                active_model_ver = 1
+
+            results.append({
+                "id": u.id,
+                "username": u.username,
+                "created_at": u.created_at.isoformat() if hasattr(u.created_at, 'isoformat') else str(u.created_at),
+                "active_model_version": active_model_ver,
+                "samples_count": samples_count
+            })
+        return results
+
 
 dashboard_service = DashboardService()
