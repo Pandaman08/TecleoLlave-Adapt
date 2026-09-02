@@ -48,7 +48,7 @@ function TypingCapture({ onSampleCaptured, mode = 'enroll' }) {
         textAlign: 'left',
         lineHeight: 1.4
       }}>
-        <strong>💡 Nota Biométrica:</strong> La frase de enrolamiento (<i>"La seguridad protege la información"</i>) está prefijada en el backend. Modificarla invalidaría los modelos biométricos ya entrenados.
+        <strong>💡 Nota Biométrica:</strong> La frase de enrolamiento es fija (<i>"La seguridad protege la información"</i>). Puedes teclear tanto <code>ó</code> como <code>o</code> según la distribución de tu teclado o laptop.
       </div>
       
       {/* Frase Objetivo */}

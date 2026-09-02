@@ -19,6 +19,7 @@ export function useTypingCapture(onComplete) {
   const keyupTimes = useRef({});
   const startTime = useRef(null);
   const firstKeydown = useRef(null);
+  const deadKeyTime = useRef(null);
   const lastKeydown = useRef({ key: null, time: null });
 
   const resetCapture = useCallback(() => {
@@ -31,6 +32,7 @@ export function useTypingCapture(onComplete) {
     keyupTimes.current = {};
     startTime.current = null;
     firstKeydown.current = null;
+    deadKeyTime.current = null;
     lastKeydown.current = { key: null, time: null };
   }, []);
 
@@ -39,6 +41,13 @@ export function useTypingCapture(onComplete) {
     
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;
+    
+    // Capturar teclas de acento / teclas muertas
+    if (key === 'Dead' || key === '´' || key === '`' || key === "'" || key === '^' || key === '~' || key === 'AltGraph') {
+      deadKeyTime.current = now;
+      keydownTimes.current['Dead'] = now;
+      return;
+    }
     
     if (firstKeydown.current === null) {
       firstKeydown.current = now;
@@ -50,7 +59,7 @@ export function useTypingCapture(onComplete) {
 
     const norm = normalizeChar(key);
     if (norm) {
-      keydownTimes.current[`norm_${norm}`] = now;
+      keydownTimes.current[norm] = now;
     }
   }, [isCapturing]);
 
@@ -59,19 +68,30 @@ export function useTypingCapture(onComplete) {
     
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;
-    const expectedChar = TARGET_PHRASE[currentIndex];
     
+    // Ignorar liberación de teclas muertas o modificadores solos
+    if (key === 'Dead' || key === '´' || key === '`' || key === '^' || key === '~' || key === 'AltGraph' || key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta') {
+      return;
+    }
+    
+    const expectedChar = TARGET_PHRASE[currentIndex];
     if (!expectedChar) return;
 
     const isSpace = expectedChar === ' ';
-    const matchesExact = isSpace ? key === 'Space' : key === expectedChar;
+    const isKeySpace = key === ' ' || key === 'Space';
     
-    if (!matchesExact) {
+    const matchesExact = isSpace ? isKeySpace : (key === expectedChar);
+    const matchesNormalized = !isSpace && (normalizeChar(key) === normalizeChar(expectedChar));
+    
+    if (!matchesExact && !matchesNormalized) {
       return;
     }
     
     let kdTime = keydownTimes.current[key]
       || keydownTimes.current[expectedChar]
+      || keydownTimes.current[normalizeChar(key)]
+      || keydownTimes.current[normalizeChar(expectedChar)]
+      || deadKeyTime.current
       || keydownTimes.current['Dead']
       || keydownTimes.current['Process']
       || keydownTimes.current['Unidentified']
@@ -81,6 +101,7 @@ export function useTypingCapture(onComplete) {
       kdTime = now - 50;
     }
     
+    deadKeyTime.current = null;
     keyupTimes.current[key] = now;
 
     setCapturedEvents(prevEvents => {
@@ -95,7 +116,7 @@ export function useTypingCapture(onComplete) {
       }
       
       const event = {
-        key: key,
+        key: expectedChar,
         keydown_ts: kdTime,
         keyup_ts: kuTime,
         hold_time: kuTime - kdTime,
@@ -107,6 +128,8 @@ export function useTypingCapture(onComplete) {
       
       delete keydownTimes.current[key];
       delete keydownTimes.current[expectedChar];
+      delete keydownTimes.current[normalizeChar(key)];
+      delete keydownTimes.current[normalizeChar(expectedChar)];
       delete keydownTimes.current['Dead'];
       delete keydownTimes.current['Process'];
       
