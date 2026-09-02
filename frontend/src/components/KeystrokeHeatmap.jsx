@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Keyboard, Info } from 'lucide-react';
 
 const KEYBOARD_ROWS = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -6,83 +7,106 @@ const KEYBOARD_ROWS = [
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Space']
 ];
 
-// Sample baseline values per key in ms
 const DEFAULT_HOLD_TIMES = {
   'L': 82, 'A': 95, 'S': 88, 'E': 74, 'G': 91, 'U': 80, 'R': 78,
   'I': 84, 'D': 90, 'P': 86, 'O': 79, 'T': 83, 'J': 89, 'N': 87,
-  'F': 92, 'M': 94, 'C': 85, 'Ó': 98, 'Space': 110
+  'F': 92, 'M': 94, 'C': 85, 'Ó': 98, 'Space': 108
 };
 
-function KeystrokeHeatmap({ holdTimes = DEFAULT_HOLD_TIMES, title = "Mapa de Calor de Tecleo (Hold Times)" }) {
+export default function KeystrokeHeatmap({
+  holdTimes = DEFAULT_HOLD_TIMES,
+  title = "Mapa de Calor Biométrico (Hold Times)"
+}) {
   const [selectedKey, setSelectedKey] = useState(null);
 
-  const getHeatColor = (key) => {
-    const val = holdTimes[key] || holdTimes[key.toUpperCase()] || 85;
-    // Normalized color gradient between 60ms (fast/green) to 120ms (slow/purple/orange)
-    if (val < 75) return 'rgba(16, 185, 129, 0.4)'; // emerald
-    if (val < 90) return 'rgba(99, 102, 241, 0.45)'; // indigo
-    if (val < 105) return 'rgba(245, 158, 11, 0.45)'; // amber
-    return 'rgba(239, 68, 68, 0.45)'; // red
+  // Continuous heatmap scale calculation
+  const getKeyMetric = (key) => {
+    return holdTimes[key] || holdTimes[key.toUpperCase()] || 85;
   };
 
-  const getBorderColor = (key) => {
-    const val = holdTimes[key] || holdTimes[key.toUpperCase()] || 85;
-    if (val < 75) return 'var(--accent-success)';
-    if (val < 90) return 'var(--accent-primary)';
-    if (val < 105) return 'var(--accent-warning)';
-    return 'var(--accent-danger)';
+  const getHeatStyles = (val) => {
+    // Range normalized ~60ms to 120ms
+    if (val < 76) {
+      return {
+        bg: '#059669', // emerald-600
+        border: '#10b981',
+        label: 'Rápido (<76ms)'
+      };
+    }
+    if (val < 90) {
+      return {
+        bg: '#4f46e5', // indigo-600
+        border: '#6366f1',
+        label: 'Consistente (76-90ms)'
+      };
+    }
+    if (val < 105) {
+      return {
+        bg: '#d97706', // amber-600
+        border: '#f59e0b',
+        label: 'Moderado (90-105ms)'
+      };
+    }
+    return {
+      bg: '#dc2626', // red-600
+      border: '#ef4444',
+      label: 'Lento / Transición (>105ms)'
+    };
   };
 
   return (
-    <div className="glass-card" style={{ padding: '1.25rem', margin: '1rem 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+    <div className="heatmap-card">
+      <div className="heatmap-header">
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>⌨️ {title}</h3>
-          <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Duración promedio de pulsación (Hold Time en ms) por tecla en el perfil activo.
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Keyboard size={18} strokeWidth={2} style={{ color: 'var(--brand-500)' }} />
+            {title}
+          </h3>
+          <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            Duración promedio de pulsación (Hold Time en milisegundos) registrada por el motor biométrico.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.8rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.8)' }}></span> Rápido (&lt;75ms)
+
+        {/* Compact Continuous Legend */}
+        <div className="heatmap-legend">
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className="legend-swatch" style={{ backgroundColor: '#059669' }}></span> &lt;76ms
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(99, 102, 241, 0.8)' }}></span> Normal (75-90ms)
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className="legend-swatch" style={{ backgroundColor: '#4f46e5' }}></span> 76-90ms
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.8)' }}></span> Moderado (90-105ms)
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className="legend-swatch" style={{ backgroundColor: '#d97706' }}></span> 90-105ms
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className="legend-swatch" style={{ backgroundColor: '#dc2626' }}></span> &gt;105ms
           </span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', alignItems: 'center', background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '12px' }}>
+      <div className="keyboard-chassis">
         {KEYBOARD_ROWS.map((row, rIdx) => (
-          <div key={rIdx} style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', width: '100%' }}>
+          <div key={rIdx} className="keyboard-row">
             {row.map((key) => {
-              const val = holdTimes[key] || holdTimes[key.toUpperCase()] || Math.floor(75 + Math.random() * 25);
+              const val = getKeyMetric(key);
+              const styles = getHeatStyles(val);
               const isSpace = key === 'Space';
+              const isSelected = selectedKey?.key === key;
+
               return (
                 <div
                   key={key}
-                  onClick={() => setSelectedKey({ key, val })}
+                  onClick={() => setSelectedKey({ key, val, ...styles })}
+                  className={`key-cap ${isSpace ? 'space-key' : ''}`}
                   style={{
-                    width: isSpace ? '280px' : '44px',
-                    height: '42px',
-                    borderRadius: '8px',
-                    background: getHeatColor(key),
-                    border: `1px solid ${getBorderColor(key)}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    backgroundColor: styles.bg,
+                    borderColor: isSelected ? '#ffffff' : styles.border,
+                    boxShadow: isSelected ? '0 0 0 2px #ffffff' : 'none'
                   }}
                   title={`Tecla: ${key} | Hold Time: ${val} ms`}
                 >
-                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ffffff' }}>{key}</span>
-                  {!isSpace && <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.7)' }}>{val}ms</span>}
+                  <span className="key-label">{key}</span>
+                  {!isSpace && <span className="key-metric">{val}ms</span>}
                 </div>
               );
             })}
@@ -91,12 +115,26 @@ function KeystrokeHeatmap({ holdTimes = DEFAULT_HOLD_TIMES, title = "Mapa de Cal
       </div>
 
       {selectedKey && (
-        <div style={{ marginTop: '0.8rem', padding: '0.5rem 0.8rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--accent-primary)' }}>
-          📍 Tecla seleccionada: <b>{selectedKey.key}</b> | Hold Time estimado: <b>{selectedKey.val} ms</b>
+        <div style={{
+          marginTop: '0.75rem',
+          padding: '0.5rem 0.85rem',
+          backgroundColor: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: '0.8rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontFamily: 'JetBrains Mono, monospace'
+        }}>
+          <span>
+            Tecla: <b>{selectedKey.key}</b> | Hold Time: <b>{selectedKey.val} ms</b>
+          </span>
+          <span style={{ color: selectedKey.border, fontWeight: 600 }}>
+            {selectedKey.label}
+          </span>
         </div>
       )}
     </div>
   );
 }
-
-export default KeystrokeHeatmap;
