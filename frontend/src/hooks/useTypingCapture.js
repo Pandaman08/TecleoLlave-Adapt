@@ -129,6 +129,13 @@ export function useTypingCapture(onComplete) {
 
   }, [isCapturing, currentIndex, onComplete]);
 
+  const handlePaste = useCallback((e) => {
+    if (!isCapturing) return;
+    e.preventDefault();
+    setError("⚠️ Intento de pegado (paste) detectado. Por seguridad la captura biométrica requiere tecleo manual.");
+    resetCapture();
+  }, [isCapturing, resetCapture]);
+
   const startCapture = useCallback(() => {
     resetCapture();
     setIsCapturing(true);
@@ -139,12 +146,14 @@ export function useTypingCapture(onComplete) {
     if (isCapturing) {
       window.addEventListener('keydown', handleKeyDown);
       window.addEventListener('keyup', handleKeyUp);
+      window.addEventListener('paste', handlePaste);
     }
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('paste', handlePaste);
     };
-  }, [isCapturing, handleKeyDown, handleKeyUp]);
+  }, [isCapturing, handleKeyDown, handleKeyUp, handlePaste]);
 
   return {
     capturedEvents,

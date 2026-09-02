@@ -22,6 +22,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import ReportPreviewModal from '../components/ReportPreviewModal';
+import KeystrokeHeatmap from '../components/KeystrokeHeatmap';
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 
@@ -29,7 +30,7 @@ function Dashboard() {
   const { t } = useTranslation();
   const { theme } = useTheme();
 
-  const [activeSection, setActiveSection] = useState('overview'); // 'overview' | 'analytics' | 'models' | 'audit'
+  const [activeSection, setActiveSection] = useState('overview'); // 'overview' | 'analytics' | 'models' | 'audit' | 'cmu'
 
   const [health, setHealth] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -38,6 +39,8 @@ function Dashboard() {
   const [models, setModels] = useState([]);
   const [adaptationTimeline, setAdaptationTimeline] = useState([]);
   const [comparison, setComparison] = useState(null);
+  const [cmuResults, setCmuResults] = useState(null);
+  const [cmuLoading, setCmuLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(1);
   const [error, setError] = useState(null);
@@ -88,6 +91,18 @@ function Dashboard() {
       setError('Error cargando dashboard: ' + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCmuBenchmark = async () => {
+    setCmuLoading(true);
+    try {
+      const res = await api.get('/experiments/cmu-benchmark?n_subjects=10');
+      setCmuResults(res.data);
+    } catch (e) {
+      console.error('Error cargando CMU benchmark:', e);
+    } finally {
+      setCmuLoading(false);
     }
   };
 
@@ -319,6 +334,18 @@ function Dashboard() {
           <span className="tab-text">4. Auditoría & Eventos</span>
           <span className="tab-badge">{adaptationTimeline.length} Eventos</span>
         </button>
+
+        <button
+          className={`section-tab-btn ${activeSection === 'cmu' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveSection('cmu');
+            if (!cmuResults) loadCmuBenchmark();
+          }}
+        >
+          <span className="tab-icon">🏛️</span>
+          <span className="tab-text">5. CMU Benchmark</span>
+          <span className="tab-badge">Dataset Académico</span>
+        </button>
       </div>
 
       {/* =========================================================================
@@ -435,6 +462,9 @@ function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* Mapa de calor de pulsación por tecla */}
+          <KeystrokeHeatmap />
 
           {/* Gráfico Principal: Evolución del Score Biométrico (Espacioso y Amplio) */}
           <div className="glass-panel chart-panel large-chart-panel">
@@ -835,6 +865,78 @@ function Dashboard() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* =========================================================================
+          SECCIÓN 5: CMU KEYSTROKE BENCHMARK DATASET EXPERIMENT
+          ========================================================================= */}
+      {activeSection === 'cmu' && (
+        <div className="dashboard-section-content animate-fade">
+          <div className="section-title-banner">
+            <div>
+              <h2 className="section-main-title">🏛️ Experimento Benchmark CMU Keystroke Dataset</h2>
+              <p className="section-sub-title">Evaluación comparativa estándar sobre el dataset de referencia académica (Killourhy & Maxion)</p>
+            </div>
+            <button className="btn-primary" onClick={loadCmuBenchmark} disabled={cmuLoading}>
+              {cmuLoading ? 'Ejecutando Experimentación...' : '🚀 Re-ejecutar Benchmark CMU'}
+            </button>
+          </div>
+
+          {cmuLoading && (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--accent-primary)' }}>
+              ⚡ Evaluando modelo estático vs adaptativo sobre el dataset CMU...
+            </div>
+          )}
+
+          {cmuResults && !cmuLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="kpi-grid">
+                <div className="kpi-card card-primary">
+                  <div className="kpi-label">Dataset Evaluación</div>
+                  <div className="kpi-value" style={{ fontSize: '1.1rem' }}>{cmuResults.dataset_name}</div>
+                  <div className="kpi-footer">Sujetos evaluados: <b>{cmuResults.subjects_evaluated}</b> | Frase: <code>{cmuResults.phrase_used}</code></div>
+                </div>
+
+                <div className="kpi-card card-success">
+                  <div className="kpi-label">Reducción FRR (Usabilidad)</div>
+                  <div className="kpi-value text-success">-{cmuResults.improvement?.frr_reduction_percent?.toFixed(1)}%</div>
+                  <div className="kpi-footer">Menor tasa de falsos rechazos gracias a la adaptación</div>
+                </div>
+
+                <div className="kpi-card card-info">
+                  <div className="kpi-label">Mejora EER Global</div>
+                  <div className="kpi-value text-info">+{cmuResults.improvement?.eer_improvement_percent?.toFixed(1)}%</div>
+                  <div className="kpi-footer">Mejora de tasa de error equivalente (EER)</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                  <h3 style={{ marginTop: 0, color: 'var(--accent-danger)' }}>❌ Modelo Estático Baseline (M0)</h3>
+                  <table className="pro-table">
+                    <tbody>
+                      <tr><td><b>FAR (Falsos Aceptos)</b></td><td>{(cmuResults.static_model?.mean_far * 100).toFixed(2)}%</td></tr>
+                      <tr><td><b>FRR (Falsos Rechazos)</b></td><td>{(cmuResults.static_model?.mean_frr * 100).toFixed(2)}%</td></tr>
+                      <tr><td><b>EER (Error Equivalente)</b></td><td>{(cmuResults.static_model?.mean_eer * 100).toFixed(2)}%</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                  <h3 style={{ marginTop: 0, color: 'var(--accent-success)' }}>✅ Modelo Adaptativo (TecleoLlave-Adapt)</h3>
+                  <table className="pro-table">
+                    <tbody>
+                      <tr><td><b>FAR (Falsos Aceptos)</b></td><td>{(cmuResults.adaptive_model?.mean_far * 100).toFixed(2)}%</td></tr>
+                      <tr><td><b>FRR (Falsos Rechazos)</b></td><td>{(cmuResults.adaptive_model?.mean_frr * 100).toFixed(2)}%</td></tr>
+                      <tr><td><b>EER (Error Equivalente)</b></td><td>{(cmuResults.adaptive_model?.mean_eer * 100).toFixed(2)}%</td></tr>
+                      <tr><td><b>Re-entrenamientos Exitosos</b></td><td>{cmuResults.adaptive_model?.total_adaptations} adaptaciones</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

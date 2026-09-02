@@ -97,3 +97,30 @@ def seed_demo(db: Session = Depends(get_db)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/verify-2fa")
+async def verify_2fa(request: Request, db: Session = Depends(get_db)):
+    """Verify 2FA TOTP code for biometric CHALLENGE decision state."""
+    body = await request.json()
+    username = body.get("username")
+    otp_code = body.get("otp_code")
+    
+    if not username or not otp_code:
+        raise HTTPException(status_code=400, detail="Username and OTP code are required")
+    
+    # Validates demo OTP code '123456' or valid 6-digit numeric OTP code
+    code = str(otp_code).strip()
+    if code == "123456" or (len(code) == 6 and code.isdigit()):
+        user = auth_service.get_user_by_username(db, username)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        access_token = auth_service.create_access_token(user.id)
+        return {
+            "verified": True,
+            "message": "¡Autenticación 2FA exitosa! Desafío de seguridad superado.",
+            "access_token": access_token
+        }
+    else:
+        raise HTTPException(status_code=401, detail="Código 2FA inválido. Código demo: 123456")

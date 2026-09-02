@@ -10,6 +10,7 @@ from app.api.adaptive import router as adaptive_router
 from app.api.dashboard import router as dashboard_router
 from app.api.experiment import router as experiment_router
 from app.api.reports import router as reports_router
+from app.api.cmu_benchmark import router as cmu_benchmark_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -34,6 +35,7 @@ app.include_router(adaptive_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(experiment_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
+app.include_router(cmu_benchmark_router, prefix="/api/experiments")
 
 
 @app.on_event("startup")

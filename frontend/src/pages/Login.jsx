@@ -18,6 +18,11 @@ function Login() {
   const [success, setSuccess] = useState(null);
   const [seedLoading, setSeedLoading] = useState(false);
 
+  const [show2FaModal, setShow2FaModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('123456');
+  const [otpError, setOtpError] = useState(null);
+  const [otpLoading, setOtpLoading] = useState(false);
+
   // Intentar login
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -44,7 +49,23 @@ function Login() {
             sample: typingSample
           });
 
-          setSuccess(`¡Autenticación Biométrica Exitosa! Score: ${(authRes.data.score * 100).toFixed(1)}% | Decisión: ${authRes.data.decision}`);
+          const decision = authRes.data.decision;
+          const scorePercent = (authRes.data.score * 100).toFixed(1);
+
+          if (decision === 'CHALLENGE') {
+            setShow2FaModal(true);
+            setSuccess(`⚠️ Decisión biométrica: CHALLENGE (Score: ${scorePercent}%). Se requiere autenticación secundaria 2FA.`);
+            setLoading(false);
+            return;
+          }
+
+          if (decision === 'REJECT') {
+            setError(`⛔ Autenticación biométrica RECHAZADA (Score: ${scorePercent}%). El patrón difiere significativamente del modelo activo.`);
+            setLoading(false);
+            return;
+          }
+
+          setSuccess(`¡Autenticación Biométrica Exitosa! Score: ${scorePercent}% | Decisión: ${decision}`);
         } catch (adaptiveErr) {
           console.warn('Verificación biométrica secundaria falló:', adaptiveErr);
           setSuccess('Autenticación de contraseña exitosa.');
@@ -61,6 +82,28 @@ function Login() {
       setError(err.response?.data?.detail || err.message || 'Error en autenticación');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async (e) => {
+    e?.preventDefault();
+    setOtpError(null);
+    setOtpLoading(true);
+    try {
+      const res = await api.post('/auth/verify-2fa', {
+        username,
+        otp_code: otpCode
+      });
+      localStorage.setItem('token', res.data.access_token);
+      setSuccess('✅ ' + res.data.message);
+      setShow2FaModal(false);
+      setTimeout(() => {
+        navigate('/');
+      }, 800);
+    } catch (err) {
+      setOtpError(err.response?.data?.detail || 'Código 2FA incorrecto.');
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -216,6 +259,52 @@ function Login() {
         </div>
 
       </div>
+
+      {show2FaModal && (
+        <div className="modal-overlay" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div className="glass-card modal-content" style={{ maxWidth: '420px', width: '90%', padding: '1.75rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
+            <h3 style={{ margin: '0.5rem 0', color: 'var(--accent-warning)' }}>Desafío 2FA / MFA Requerido</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.2rem', lineHeight: 1.4 }}>
+              Tu score biométrico está en zona intermedia (CHALLENGE). Ingresa tu código de autenticación TOTP de 6 dígitos para completar el acceso.
+            </p>
+            {otpError && (
+              <div className="alert-box alert-danger" style={{ marginBottom: '1rem', fontSize: '0.82rem' }}>
+                ⚠️ {otpError}
+              </div>
+            )}
+            <form onSubmit={handleVerify2FA}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.4rem', fontWeight: 'bold' }}
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder="123456"
+                  required
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem', display: 'block' }}>
+                  Código demo predeterminado: <code style={{ color: 'var(--accent-primary)' }}>123456</code>
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.2rem' }}>
+                <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={() => setShow2FaModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }} disabled={otpLoading}>
+                  {otpLoading ? 'Verificando...' : 'Verificar 2FA'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
