@@ -199,12 +199,12 @@ export default function Login() {
         flex: 1,
         maxWidth: '1280px',
         width: '100%',
-        margin: '2rem auto',
+        margin: '1.5rem auto',
         padding: '0 1.5rem',
         display: 'grid',
         gridTemplateColumns: 'minmax(340px, 420px) 1fr',
-        gap: '2rem',
-        alignItems: 'start'
+        gap: '1.75rem',
+        alignItems: 'stretch'
       }}>
 
         {/* Column 1: Standard Credentials Auth Form */}
