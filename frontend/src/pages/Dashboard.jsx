@@ -447,7 +447,7 @@ function Dashboard() {
               <div className="kpi-body">
                 <div className="kpi-label">{t('dashboard.kpi_eer')}</div>
                 <div className="kpi-value text-info">
-                  {authMetrics ? `${(Math.max(authMetrics.far || 0, authMetrics.frr || 0) * 100).toFixed(2)}%` : '0.00%'}
+                  {authMetrics ? `${((authMetrics.eer !== undefined && authMetrics.eer !== null ? authMetrics.eer : Math.max(authMetrics.far || 0, authMetrics.frr || 0)) * 100).toFixed(2)}%` : '0.00%'}
                 </div>
               </div>
               <div className="kpi-footer">

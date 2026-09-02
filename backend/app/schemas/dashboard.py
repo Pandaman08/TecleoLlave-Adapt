@@ -24,6 +24,7 @@ class AuthMetricsResponse:
     reject_count: int
     far: float
     frr: float
+    eer: float
     avg_score: float
     period_start: Optional[Union[str, datetime]]
     period_end: Optional[Union[str, datetime]]
