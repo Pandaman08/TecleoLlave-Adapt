@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useTypingCapture } from '../hooks/useTypingCapture';
 import api from '../services/api';
 
-function TypingCapture({ onSampleCaptured, mode = 'enroll' }) {
+function TypingCapture({ onSampleCaptured, mode = 'enroll', sampleIndex, totalSamples }) {
   const { t } = useTranslation();
 
   const {
@@ -13,7 +13,8 @@ function TypingCapture({ onSampleCaptured, mode = 'enroll' }) {
     progress,
     targetPhrase,
     phraseLength,
-    startCapture
+    startCapture,
+    resetCapture
   } = useTypingCapture(async (result) => {
     try {
       const response = await api.post('/typing/enroll', {
@@ -73,7 +74,7 @@ function TypingCapture({ onSampleCaptured, mode = 'enroll' }) {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
           <span>{t('typing.progress_label')} <b>{currentIndex} / {phraseLength}</b></span>
-          <span>{isCapturing ? '⚡ Capturando Ritmo...' : 'Esperando Inicio'}</span>
+          <span>{isCapturing ? '⚡ Capturando Ritmo...' : currentIndex >= phraseLength ? '✅ Muestra Completada' : 'Esperando Inicio'}</span>
         </div>
       </div>
 
@@ -85,19 +86,40 @@ function TypingCapture({ onSampleCaptured, mode = 'enroll' }) {
 
       {!isCapturing && currentIndex === 0 && (
         <button className="btn-primary" onClick={startCapture} style={{ width: '100%', marginTop: '0.5rem' }}>
-          ⌨️ Iniciar Captura de Tecleo
+          ⌨️ Iniciar Captura de Tecleo {sampleIndex ? `(Muestra ${sampleIndex}/${totalSamples})` : ''}
         </button>
       )}
 
       {isCapturing && (
-        <div className="pulse-glow" style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.9rem', marginTop: '0.75rem' }}>
-          👉 Teclea la frase con tu ritmo natural...
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.75rem' }}>
+          <div className="pulse-glow" style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.9rem' }}>
+            👉 Teclea la frase con tu ritmo natural...
+          </div>
+          <button 
+            type="button" 
+            className="btn-secondary" 
+            onClick={resetCapture}
+            style={{ fontSize: '0.8rem', padding: '0.65rem 0.9rem' }}
+            title="Reiniciar esta muestra desde el inicio"
+          >
+            ↺ Reiniciar
+          </button>
         </div>
       )}
 
       {currentIndex >= phraseLength && !isCapturing && (
-        <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success)', fontWeight: 'bold', fontSize: '0.9rem', marginTop: '0.75rem' }}>
-          ✅ ¡Muestra Biométrica Capturada Exitosamente!
+        <div style={{ marginTop: '0.75rem' }}>
+          <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success)', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+            ✅ ¡Muestra {sampleIndex ? `${sampleIndex}/${totalSamples} ` : ''}Capturada Exitosamente!
+          </div>
+          <button 
+            type="button" 
+            className="btn-primary" 
+            onClick={startCapture} 
+            style={{ width: '100%' }}
+          >
+            ⌨️ Capturar Siguiente Muestra {sampleIndex && totalSamples && sampleIndex < totalSamples ? `(${sampleIndex + 1}/${totalSamples})` : ''}
+          </button>
         </div>
       )}
     </div>

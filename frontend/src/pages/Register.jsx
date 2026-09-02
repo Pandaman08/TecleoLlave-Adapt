@@ -213,7 +213,13 @@ function Register() {
 
             {/* Componente de Captura de Tecleo */}
             {samples.length < REQUIRED_SAMPLES ? (
-              <TypingCapture onSampleCaptured={handleSampleCaptured} mode="enrollment" />
+              <TypingCapture
+                key={`enroll-sample-${samples.length}`}
+                onSampleCaptured={handleSampleCaptured}
+                mode="enrollment"
+                sampleIndex={samples.length + 1}
+                totalSamples={REQUIRED_SAMPLES}
+              />
             ) : (
               <div className="samples-completed-card">
                 <div className="completed-icon">🎉</div>
