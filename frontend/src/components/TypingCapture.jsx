@@ -8,8 +8,7 @@ export default function TypingCapture({
   onSampleCaptured,
   mode = 'enroll',
   sampleIndex,
-  totalSamples,
-  variant = 'default' // 'default' | 'terminal'
+  totalSamples
 }) {
   const { t } = useTranslation();
 
@@ -37,24 +36,22 @@ export default function TypingCapture({
     }
   });
 
-  const isTerminal = variant === 'terminal';
-
   return (
     <div style={{ width: '100%' }}>
       {/* Notice info */}
       <div style={{
-        backgroundColor: isTerminal ? 'rgba(59, 130, 246, 0.1)' : 'var(--info-bg)',
-        border: `1px solid ${isTerminal ? 'rgba(59, 130, 246, 0.25)' : 'var(--info-border)'}`,
+        backgroundColor: 'var(--info-bg)',
+        border: '1px solid var(--info-border)',
         borderRadius: 'var(--radius-md)',
         padding: '0.6rem 0.85rem',
         fontSize: '0.78rem',
-        color: isTerminal ? '#93c5fd' : 'var(--info)',
+        color: 'var(--info)',
         lineHeight: 1.4,
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem'
       }}>
-        <Sparkles size={15} strokeWidth={2} style={{ flexShrink: 0, color: isTerminal ? '#60a5fa' : 'var(--brand-500)' }} />
+        <Sparkles size={15} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--brand-500)' }} />
         <span>
           Frase biométrica: <strong>"La seguridad protege la información"</strong>
         </span>
@@ -71,8 +68,8 @@ export default function TypingCapture({
           flexWrap: 'wrap',
           alignItems: 'center',
           padding: '1rem 1.25rem',
-          backgroundColor: isTerminal ? '#090d16' : 'var(--bg-canvas)',
-          border: `1px solid ${isTerminal ? 'rgba(255, 255, 255, 0.12)' : 'var(--border-subtle)'}`,
+          backgroundColor: 'var(--bg-canvas)',
+          border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-md)',
           margin: '0.85rem 0',
           lineHeight: '1.8',
@@ -86,19 +83,19 @@ export default function TypingCapture({
           const isPendingFirst = idx === currentIndex && !isCapturing;
           const isSpace = char === ' ';
 
-          let color = isTerminal ? '#64748b' : 'var(--text-muted)';
+          let color = 'var(--text-muted)';
           let bgColor = 'transparent';
           let borderBottom = '2px solid transparent';
 
           if (isTyped) {
-            color = '#10b981'; // Green
+            color = 'var(--success)';
           } else if (isCurrent) {
             color = '#ffffff';
-            bgColor = '#4f46e5';
+            bgColor = 'var(--brand-600)';
             borderBottom = '2px solid #ffffff';
           } else if (isPendingFirst) {
-            color = isTerminal ? '#f8fafc' : 'var(--text-primary)';
-            borderBottom = '2px solid #6366f1';
+            color = 'var(--text-primary)';
+            borderBottom = '2px solid var(--brand-500)';
           }
 
           return (
@@ -132,15 +129,15 @@ export default function TypingCapture({
       <div style={{ margin: '0.75rem 0' }}>
         <div style={{
           height: '6px',
-          backgroundColor: isTerminal ? 'rgba(255, 255, 255, 0.08)' : 'var(--bg-surface-elevated)',
+          backgroundColor: 'var(--bg-surface-elevated)',
           borderRadius: '9999px',
           overflow: 'hidden',
-          border: `1px solid ${isTerminal ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-subtle)'}`
+          border: '1px solid var(--border-subtle)'
         }}>
           <div
             style={{
               height: '100%',
-              backgroundColor: '#4f46e5',
+              backgroundColor: 'var(--brand-500)',
               width: `${progress * 100}%`,
               transition: 'width 0.15s ease'
             }}
@@ -152,12 +149,12 @@ export default function TypingCapture({
           justifyContent: 'space-between',
           alignItems: 'center',
           fontSize: '0.75rem',
-          color: isTerminal ? '#94a3b8' : 'var(--text-muted)',
+          color: 'var(--text-muted)',
           marginTop: '0.4rem',
           fontFamily: "'JetBrains Mono', monospace"
         }}>
-          <span>Progreso: <b style={{ color: isTerminal ? '#f8fafc' : 'var(--text-primary)' }}>{currentIndex} / {phraseLength}</b></span>
-          <span style={{ color: isCapturing ? '#60a5fa' : currentIndex >= phraseLength ? '#34d399' : isTerminal ? '#94a3b8' : 'var(--text-muted)' }}>
+          <span>Progreso: <b style={{ color: 'var(--text-primary)' }}>{currentIndex} / {phraseLength}</b></span>
+          <span style={{ color: isCapturing ? 'var(--brand-500)' : currentIndex >= phraseLength ? 'var(--success)' : 'var(--text-muted)' }}>
             {isCapturing
               ? '⚡ Capturando pulsaciones en vivo...'
               : currentIndex >= phraseLength
@@ -204,16 +201,16 @@ export default function TypingCapture({
             flex: 1,
             padding: '0.5rem 0.85rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: 'rgba(99, 102, 241, 0.15)',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
-            color: '#a5b4fc',
+            backgroundColor: 'rgba(99, 102, 241, 0.12)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--brand-500)',
             fontSize: '0.82rem',
             fontWeight: 500,
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6366f1' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--brand-500)' }} />
             Teclea la frase en tu teclado físico...
           </div>
           <button
@@ -221,11 +218,6 @@ export default function TypingCapture({
             className="btn-secondary"
             onClick={resetCapture}
             title="Reiniciar muestra"
-            style={{
-              backgroundColor: isTerminal ? '#1e293b' : 'var(--bg-surface)',
-              color: isTerminal ? '#f8fafc' : 'var(--text-primary)',
-              borderColor: isTerminal ? 'rgba(255,255,255,0.15)' : 'var(--border-subtle)'
-            }}
           >
             <RotateCcw size={16} />
           </button>
