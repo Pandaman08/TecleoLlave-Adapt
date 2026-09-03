@@ -261,6 +261,7 @@ class ModelTrainer:
             roc_auc_score, confusion_matrix, roc_curve
         )
         
+        metrics = {}
         metrics['accuracy'] = float(accuracy_score(y, y_pred))
         metrics['precision'] = float(precision_score(y, y_pred, zero_division=0))
         metrics['recall'] = float(recall_score(y, y_pred, zero_division=0))

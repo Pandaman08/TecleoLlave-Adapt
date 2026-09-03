@@ -110,6 +110,16 @@ export default function Dashboard() {
       if (usersRes.data && Array.isArray(usersRes.data)) {
         setUserList(usersRes.data);
       }
+      
+      if (usersRes.data && Array.isArray(usersRes.data) && usersRes.data.length > 0) {
+        const exists = usersRes.data.some(u => u.id === userId);
+        if (!exists) {
+          const fallbackId = usersRes.data[0].id;
+          localStorage.setItem('current_user_id', fallbackId);
+          setUserId(fallbackId);
+          return; // esto dispara loadDashboard() de nuevo, ya con el id correcto
+        }
+      }
 
       setSummary(summaryRes.data);
       setAuthMetrics(authMetricsRes.data);

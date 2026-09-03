@@ -7,6 +7,7 @@ import { Keyboard, RotateCcw, CheckCircle2, AlertTriangle, Sparkles } from 'luci
 export default function TypingCapture({
   onSampleCaptured,
   mode = 'enroll',
+  username,
   sampleIndex,
   totalSamples
 }) {
@@ -24,15 +25,16 @@ export default function TypingCapture({
     resetCapture
   } = useTypingCapture(async (result) => {
     try {
-      const response = await api.post('/typing/enroll', {
-        raw_timestamps: result.events,
-        phrase_typed: result.phrase_typed,
-        source: mode
-      });
+      const isAuth = mode === 'auth';
+      const endpoint = isAuth ? '/typing/authenticate' : '/typing/enroll';
+      const payload = isAuth
+        ? { raw_timestamps: result.events, phrase_typed: result.phrase_typed, username }
+        : { raw_timestamps: result.events, phrase_typed: result.phrase_typed, source: mode };
+      const response = await api.post(endpoint, payload);
       onSampleCaptured?.(response.data);
     } catch (err) {
       console.error('Error enviando muestra de tecleo:', err);
-      onSampleCaptured?.(result);
+      onSampleCaptured?.(mode === 'auth' ? null : result);
     }
   });
 

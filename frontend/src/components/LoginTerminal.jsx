@@ -7,7 +7,8 @@ export default function LoginTerminal({
   typingSample,
   setTypingSample,
   decisionResult, // { decision: 'ACCEPT' | 'CHALLENGE' | 'REJECT', score: 0.88, avgHoldTime?: number }
-  isEvaluating = false
+  isEvaluating = false,
+  username
 }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -175,6 +176,7 @@ export default function LoginTerminal({
                 setTypingSample(sample);
               }}
               mode="auth"
+              username={username}
             />
           </div>
         </div>

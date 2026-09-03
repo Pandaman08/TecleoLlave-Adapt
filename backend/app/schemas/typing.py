@@ -21,6 +21,7 @@ class TypingEnrollRequest:
 class TypingAuthRequest:
     raw_timestamps: List[TimingEvent]
     phrase_typed: str
+    username: Optional[str] = None
     source: str = "auth"
 
 

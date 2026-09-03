@@ -70,40 +70,30 @@ export default function Login() {
         localStorage.setItem('current_username', username);
       }
 
-      // If biometric sample exists, evaluate adaptive decision
-      if (typingSample) {
-        try {
-          const authRes = await api.post('/adaptive/process-auth-result', {
-            username,
-            sample: typingSample
-          });
+      // If biometric sample exists, use the decision already computed by /typing/authenticate
+      if (typingSample && typingSample.decision) {
+        const decision = typingSample.decision; // 'allow' | 'challenge' | 'reject'
+        const score = typingSample.score;
+        const scorePercent = (score * 100).toFixed(1);
+        const decisionUpper = decision.toUpperCase();
 
-          const decision = authRes.data.decision; // 'ACCEPT' | 'CHALLENGE' | 'REJECT'
-          const score = authRes.data.score;
-          const scorePercent = (score * 100).toFixed(1);
+        setDecisionResult({ decision: decisionUpper, score });
 
-          setDecisionResult({ decision, score });
-
-          if (decision === 'CHALLENGE') {
-            setShow2FaModal(true);
-            setSuccess(`Decisión biométrica: CHALLENGE (${scorePercent}%). Se requiere autenticación 2FA/TOTP.`);
-            setLoading(false);
-            return;
-          }
-
-          if (decision === 'REJECT') {
-            setError(`Acceso biométrico RECHAZADO (${scorePercent}%). El ritmo de tecleo no coincide con el perfil registrado.`);
-            setLoading(false);
-            return;
-          }
-
-          // ACCEPT
-          setSuccess(`Acceso Biométrico Concedido (Score: ${scorePercent}%). Entrando...`);
-        } catch (adaptiveErr) {
-          console.warn('Verificación adaptativa falló:', adaptiveErr);
-          setDecisionResult({ decision: 'ACCEPT', score: 0.95 });
-          setSuccess('Autenticación de credenciales exitosa.');
+        if (decisionUpper === 'CHALLENGE') {
+          setShow2FaModal(true);
+          setSuccess(`Decisión biométrica: CHALLENGE (${scorePercent}%). Se requiere autenticación 2FA/TOTP.`);
+          setLoading(false);
+          return;
         }
+
+        if (decisionUpper === 'REJECT') {
+          setError(`Acceso biométrico RECHAZADO (${scorePercent}%). El ritmo de tecleo no coincide con el perfil registrado.`);
+          setLoading(false);
+          return;
+        }
+
+        // ACCEPT / allow
+        setSuccess(`Acceso Biométrico Concedido (Score: ${scorePercent}%). Entrando...`);
       } else {
         setSuccess('Inicio de sesión exitoso. Redirigiendo al Dashboard...');
       }
@@ -386,6 +376,7 @@ export default function Login() {
             }}
             decisionResult={decisionResult}
             isEvaluating={loading}
+            username={username}
           />
         </div>
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -24,7 +24,10 @@ def get_user_summary(
     db: Session = Depends(get_db)
 ):
     """Get overall user summary."""
-    return dashboard_service.get_user_summary(db, user_id)
+    result = dashboard_service.get_user_summary(db, user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+    return result
 
 
 @router.get("/auth-metrics/{user_id}", response_model=AuthMetricsResponse)
@@ -91,8 +94,14 @@ def get_comparison(
     db: Session = Depends(get_db)
 ):
     """Get static vs adaptive comparison."""
-    return dashboard_service.get_comparison_static_vs_adaptive(db, user_id)
-
+    result = dashboard_service.get_comparison_static_vs_adaptive(db, user_id)
+    if not result or 'static_model' not in result:
+        message = (result or {}).get(
+            'message',
+            'No hay suficientes versiones de modelo para comparar (se necesitan al menos 2).'
+        )
+        raise HTTPException(status_code=404, detail=message)
+    return result
 
 @router.get("/users")
 def get_all_users(db: Session = Depends(get_db)):

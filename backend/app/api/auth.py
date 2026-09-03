@@ -122,10 +122,11 @@ async def verify_2fa(request: Request, db: Session = Depends(get_db)):
     # Validates demo OTP code '123456' or valid 6-digit numeric OTP code
     code = str(otp_code).strip()
     if code == "123456" or (len(code) == 6 and code.isdigit()):
-        user = auth_service.get_user_by_username(db, username)
+        from app.models import User
+        user = db.query(User).filter(User.username == username).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        
+    
         access_token = auth_service.create_access_token(user.id)
         return {
             "verified": True,

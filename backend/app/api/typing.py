@@ -41,7 +41,14 @@ def authenticate_typing(
     Autentica una muestra de dinámica de tecleo contra el modelo del usuario.
     """
     try:
-        result = typing_service.authenticate_sample(db, request)
+        user_id = 1
+        if request.username:
+            from app.models import User
+            user = db.query(User).filter(User.username == request.username).first()
+            if not user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            user_id = user.id
+        result = typing_service.authenticate_sample(db, request, user_id=user_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

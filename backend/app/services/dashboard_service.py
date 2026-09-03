@@ -128,7 +128,12 @@ class DashboardService:
             'user_id': user_id,
             'username': user.username,
             'created_at': user.created_at.isoformat() if user.created_at else None,
-            'active_model_version': active_model.id if active_model else None,
+            'active_model_version': (
+                db.query(ModelVersion).filter(
+                    ModelVersion.user_id == user_id,
+                    ModelVersion.id <= active_model.id
+                ).count() if active_model else None
+            ),
             'total_samples': total_samples,
             'enrollment_samples': enrollment_samples,
             'auth_samples': auth_samples,
@@ -334,6 +339,8 @@ class DashboardService:
         return [
             {
                 'id': e.id,
+                'user_id': e.user_id,
+                'auth_attempt_id': e.auth_attempt_id,
                 'action': e.action.value if hasattr(e.action, 'value') else str(e.action),
                 'candidate_model_id': e.candidate_model_id,
                 'old_model_version_id': e.old_model_version_id,
@@ -418,7 +425,10 @@ class DashboardService:
 
             active_model_ver = None
             if active_model:
-                active_model_ver = active_model.id
+                active_model_ver = db.query(ModelVersion).filter(
+                    ModelVersion.user_id == u.id,
+                    ModelVersion.id <= active_model.id
+                ).count()
             elif samples_count >= 5:
                 active_model_ver = 1
 

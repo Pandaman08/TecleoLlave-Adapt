@@ -224,7 +224,10 @@ class AdaptiveService:
             # Train candidate model with pool samples + recent original training data
             # For MVP: retrain with all enrollment samples + pool
             # In future: use sliding window
-            model_output_path = f"/run/media/pandaman/Datos1/UNT/4to AÑO/VIII/Seguridad de la Información/TecleoLlave-Adapt/backend/models/user_{user_id}_candidate_{candidate.id}"
+            import os
+            models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+            os.makedirs(models_dir, exist_ok=True)
+            model_output_path = os.path.join(models_dir, f"user_{user_id}_candidate_{candidate.id}")
             
             # Train using the same function but we need to include pool samples
             # For simplicity, we'll use the existing train function which uses all enrollment samples

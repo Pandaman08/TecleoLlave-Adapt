@@ -127,5 +127,19 @@ def get_adaptation_events(
     events = db.query(AdaptationEvent).filter(
         AdaptationEvent.user_id == user_id
     ).order_by(AdaptationEvent.created_at.desc()).limit(limit).all()
-    
-    return events
+
+    return [
+        {
+            "id": e.id,
+            "user_id": e.user_id,
+            "auth_attempt_id": e.auth_attempt_id,
+            "action": e.action.value if hasattr(e.action, "value") else e.action,
+            "candidate_model_id": e.candidate_model_id,
+            "old_model_version_id": e.old_model_version_id,
+            "new_model_version_id": e.new_model_version_id,
+            "reason": e.reason,
+            "metrics_comparison": e.metrics_comparison,
+            "created_at": e.created_at
+        }
+        for e in events
+    ]
