@@ -7,13 +7,38 @@ import AuthStepper from '../components/login/AuthStepper';
 import CredentialsForm from '../components/login/CredentialsForm';
 import TwoFactorModal from '../components/login/TwoFactorModal';
 import DecisionExplainer from '../components/login/DecisionExplainer';
-import { ShieldCheck, KeyRound, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, KeyRound, Sun, Moon, GraduationCap, User2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+
+const EXPERT_MODE_STORAGE_KEY = 'tecleollave_expert_mode';
 
 export default function Login() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+
+  // Modo de visualización: 'simple' (default, para usuarios reales) vs
+  // 'expert' (jerga técnica/académica: nombre del motor, algoritmo ML,
+  // umbrales tri-zona). Se recuerda entre sesiones vía localStorage.
+  const [expertMode, setExpertMode] = useState(() => {
+    try {
+      return localStorage.getItem(EXPERT_MODE_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleExpertMode = () => {
+    setExpertMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(EXPERT_MODE_STORAGE_KEY, next ? '1' : '0');
+      } catch {
+        // localStorage no disponible (modo privado, etc.) — no es crítico
+      }
+      return next;
+    });
+  };
 
   // Estado
   const [username, setUsername] = useState('');
@@ -184,6 +209,24 @@ export default function Login() {
           <NavLink to="/register" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
             Enrolamiento
           </NavLink>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={toggleExpertMode}
+            title={expertMode ? 'Cambiar a vista simple' : 'Cambiar a vista académica (detalle técnico)'}
+            style={{
+              fontSize: '0.75rem',
+              padding: '0.35rem 0.7rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              color: expertMode ? 'var(--brand-500)' : undefined,
+              borderColor: expertMode ? 'var(--brand-500)' : undefined
+            }}
+          >
+            {expertMode ? <GraduationCap size={14} /> : <User2 size={14} />}
+            <span>{expertMode ? 'Modo académico' : 'Modo simple'}</span>
+          </button>
           <button type="button" className="btn-icon" onClick={toggleTheme} aria-label="Cambiar tema">
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -271,6 +314,7 @@ export default function Login() {
             decisionResult={decisionResult}
             isEvaluating={loading}
             username={username}
+            expertMode={expertMode}
           />
         </div>
       </div>

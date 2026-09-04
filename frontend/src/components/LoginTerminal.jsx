@@ -8,7 +8,8 @@ export default function LoginTerminal({
   setTypingSample,
   decisionResult, // { decision: 'ACCEPT' | 'CHALLENGE' | 'REJECT', score: 0.88, avgHoldTime?: number }
   isEvaluating = false,
-  username
+  username,
+  expertMode = false
 }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -55,12 +56,15 @@ export default function LoginTerminal({
           fontWeight: 600
         }}>
           <Terminal size={14} style={{ color: 'var(--brand-500)' }} />
-          <span>tecleo-auth-engine v2.4 (Hot-Swap Calibrated)</span>
+          <span>{expertMode ? 'tecleo-auth-engine v2.4 (Hot-Swap Calibrated)' : 'Verificación de identidad'}</span>
         </div>
 
-        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-          ML: RandomForest
-        </div>
+        {expertMode && (
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+            ML: RandomForest
+          </div>
+        )}
+        {!expertMode && <div />}
       </div>
 
       <div style={{
@@ -72,18 +76,31 @@ export default function LoginTerminal({
         justifyContent: 'space-between'
       }}>
         <div>
-          {/* CLI Prompt simulation */}
-          <div style={{
-            color: 'var(--text-secondary)',
-            fontSize: '0.82rem',
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <span style={{ color: 'var(--brand-500)', fontWeight: 700 }}>$</span>
-            <span>tecleo-auth --mode=live-verify --phrase="target"</span>
-          </div>
+          {/* CLI Prompt simulation (solo modo académico) */}
+          {expertMode && (
+            <div style={{
+              color: 'var(--text-secondary)',
+              fontSize: '0.82rem',
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <span style={{ color: 'var(--brand-500)', fontWeight: 700 }}>$</span>
+              <span>tecleo-auth --mode=live-verify --phrase="target"</span>
+            </div>
+          )}
+          {!expertMode && (
+            <p style={{
+              color: 'var(--text-secondary)',
+              fontSize: '0.85rem',
+              marginBottom: '1rem',
+              marginTop: 0,
+              lineHeight: 1.5
+            }}>
+              Escribe la frase de abajo con tu ritmo natural. Usamos tu forma de teclear como una capa extra de seguridad.
+            </p>
+          )}
 
           {/* 3-Zone Decision Engine Visual Meter */}
           <div style={{
@@ -100,7 +117,8 @@ export default function LoginTerminal({
               marginBottom: '0.75rem'
             }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Cpu size={14} style={{ color: 'var(--brand-500)' }} /> Motor de Decisión Tri-Zona (θ_low=45%, θ_high=75%)
+                <Cpu size={14} style={{ color: 'var(--brand-500)' }} />
+                {expertMode ? 'Motor de Decisión Tri-Zona (θ_low=45%, θ_high=75%)' : 'Nivel de confianza'}
               </span>
               {decision && (
                 <span style={{
@@ -163,9 +181,9 @@ export default function LoginTerminal({
               color: 'var(--text-muted)',
               fontWeight: 600
             }}>
-              <span style={{ color: 'var(--danger)' }}>0% REJECT</span>
-              <span style={{ color: 'var(--warning)' }}>45% CHALLENGE</span>
-              <span style={{ color: 'var(--success)' }}>75% ACCEPT</span>
+              <span style={{ color: 'var(--danger)' }}>{expertMode ? '0% REJECT' : 'Bajo'}</span>
+              <span style={{ color: 'var(--warning)' }}>{expertMode ? '45% CHALLENGE' : 'Medio'}</span>
+              <span style={{ color: 'var(--success)' }}>{expertMode ? '75% ACCEPT' : 'Alto'}</span>
             </div>
           </div>
 
@@ -196,7 +214,9 @@ export default function LoginTerminal({
             gap: '0.5rem'
           }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--brand-500)' }} />
-            Evaluando 100+ características temporales contra perfil activo...
+            {expertMode
+              ? 'Evaluando 100+ características temporales contra perfil activo...'
+              : 'Verificando tu identidad...'}
           </div>
         )}
 
@@ -216,14 +236,20 @@ export default function LoginTerminal({
               
               <div>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem' }}>
-                  {decision === 'ACCEPT' && 'ZONA ACCEPT: Acceso Biométrico Concedido'}
-                  {decision === 'CHALLENGE' && 'ZONA CHALLENGE: Desafío 2FA/TOTP Activado'}
-                  {decision === 'REJECT' && 'ZONA REJECT: Acceso Bloqueado por Desviación Rítmica'}
+                  {decision === 'ACCEPT' && (expertMode ? 'ZONA ACCEPT: Acceso Biométrico Concedido' : 'Acceso concedido')}
+                  {decision === 'CHALLENGE' && (expertMode ? 'ZONA CHALLENGE: Desafío 2FA/TOTP Activado' : 'Necesitamos confirmar tu identidad')}
+                  {decision === 'REJECT' && (expertMode ? 'ZONA REJECT: Acceso Bloqueado por Desviación Rítmica' : 'No pudimos verificar tu identidad')}
                 </div>
                 <div style={{ fontSize: '0.78rem', opacity: 0.9, lineHeight: 1.4, color: 'var(--text-secondary)' }}>
-                  {decision === 'ACCEPT' && `Ritmo consistente con el modelo activo ($M_t$) con una confianza del ${scorePercent}%.`}
-                  {decision === 'CHALLENGE' && `Score en zona intermedia (${scorePercent}%). Se requiere código TOTP de 6 dígitos.`}
-                  {decision === 'REJECT' && `El vector rítmico difiere sustancialmente del usuario legítimo (${scorePercent}%).`}
+                  {decision === 'ACCEPT' && (expertMode
+                    ? `Ritmo consistente con el modelo activo ($M_t$) con una confianza del ${scorePercent}%.`
+                    : 'Tu forma de escribir coincide con tu perfil registrado.')}
+                  {decision === 'CHALLENGE' && (expertMode
+                    ? `Score en zona intermedia (${scorePercent}%). Se requiere código TOTP de 6 dígitos.`
+                    : 'Detectamos algunas variaciones en tu ritmo de escritura. Confirma tu identidad con tu código de verificación.')}
+                  {decision === 'REJECT' && (expertMode
+                    ? `El vector rítmico difiere sustancialmente del usuario legítimo (${scorePercent}%).`
+                    : 'Tu forma de escribir no coincidió con la registrada. Intenta de nuevo escribiendo con calma, como sueles hacerlo.')}
                 </div>
               </div>
             </div>
