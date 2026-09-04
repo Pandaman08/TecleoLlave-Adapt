@@ -2,17 +2,34 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta
 from jose import jwt
+import bcrypt
 from app.config import settings
 
 
+def _is_legacy_sha256_hash(hashed_password: str) -> bool:
+    """Los hashes SHA256 (legado, sin sal) son hex de 64 caracteres."""
+    return len(hashed_password) == 64 and all(c in "0123456789abcdef" for c in hashed_password.lower())
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash (SHA256 for MVP compatibility)."""
-    return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
+    """
+    Verifica una contraseña contra su hash.
+    Soporta hashes bcrypt (nuevos) y SHA256 (usuarios creados antes de este fix),
+    para no invalidar cuentas existentes.
+    """
+    if _is_legacy_sha256_hash(hashed_password):
+        return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password using SHA256 (MVP - replace with bcrypt in production)."""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hashea una contraseña con bcrypt (con sal y factor de costo)."""
+    password_bytes = password.encode("utf-8")[:72]
+    hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+    return hashed.decode("utf-8")
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:

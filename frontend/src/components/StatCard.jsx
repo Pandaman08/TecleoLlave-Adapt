@@ -1,28 +1,30 @@
+/**
+ * StatCard.jsx - Migrado a i18n
+ * Stat severities son funciones del valor, no hardcoded
+ */
 import React from 'react';
 import {
-  ShieldCheck,
-  Cpu,
-  Minus,
-  Activity,
-  Layers,
-  Target,
-  RefreshCw,
-  Zap,
-  AlertTriangle,
-  AlertCircle,
-  CheckCircle2
+  ShieldCheck, Cpu, ArrowDown, ArrowUp, Minus, Activity, Layers,
+  Target, RefreshCw, Zap, AlertTriangle, AlertCircle, CheckCircle2
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 /**
- * HeroStatCard: Large prominent card for core system health / active biometric model
+ * Helper: clasifica severidad de un valor 0-1
+ */
+function classify(value, okThreshold, warnThreshold) {
+  if (value === undefined || value === null) return 'neutral';
+  if (value <= okThreshold) return 'ok';
+  if (value <= warnThreshold) return 'warn';
+  return 'bad';
+}
+
+/**
+ * HeroStatCard
  */
 export function HeroStatCard({
-  title,
-  value,
-  badgeText = 'Activo',
-  badgeType = 'active',
-  footerText,
-  icon: Icon = ShieldCheck
+  title, value, badgeText = 'Activo', badgeType = 'active',
+  footerText, icon: Icon = ShieldCheck
 }) {
   return (
     <div className="hero-stat-card">
@@ -35,95 +37,105 @@ export function HeroStatCard({
           {badgeText}
         </span>
       </div>
-      <div className="hero-stat-value">
-        {value}
-      </div>
+      <div className="hero-stat-value">{value}</div>
       {footerText && (
-        <div className="hero-stat-footer">
-          {footerText}
-        </div>
+        <div className="hero-stat-footer">{footerText}</div>
       )}
     </div>
   );
 }
 
 /**
- * CompactStatStrip: Compact tabular metrics strip for security & ML parameters
+ * CompactStatStrip — versión i18n completa
  */
 export function CompactStatStrip({
-  far = 0,
-  frr = 0,
-  eer = 0,
-  adaptations = 0,
-  totalAuth = 0
+  far = 0, frr = 0, eer = 0, adaptations = 0, totalAuth = 0
 }) {
+  const { t } = useTranslation();
+
+  const farSeverity = classify(far, 0.05, 0.15);
+  const frrSeverity = classify(frr, 0.10, 0.20);
+  const eerSeverity = classify(eer, 0.10, 0.20);
+
+  const severityHint = (sev) => {
+    if (sev === 'ok') return t('dashboard.stats.severity_optimal');
+    if (sev === 'warn') return t('dashboard.stats.severity_acceptable');
+    if (sev === 'bad') return t('dashboard.stats.severity_critical');
+    return null;
+  };
+
   const items = [
     {
       id: 'far',
-      label: 'FAR (Falsos Aceptos)',
+      label: t('dashboard.stats.far'),
       value: `${(far * 100).toFixed(2)}%`,
-      severity: far < 0.05 ? 'ok' : far < 0.15 ? 'warn' : 'bad',
-      hint: far < 0.05 ? 'Óptimo' : far < 0.15 ? 'Aceptable' : 'Crítico',
+      severity: farSeverity,
+      hint: severityHint(farSeverity),
+      title: 'False Accept Rate: probability that an impostor is accepted. TARGET: < 5%'
     },
     {
       id: 'frr',
-      label: 'FRR (Falsos Rechazos)',
+      label: t('dashboard.stats.frr'),
       value: `${(frr * 100).toFixed(2)}%`,
-      severity: frr < 0.10 ? 'ok' : frr < 0.20 ? 'warn' : 'bad',
-      hint: frr < 0.10 ? 'Óptimo' : frr < 0.20 ? 'Aceptable' : 'Crítico',
+      severity: frrSeverity,
+      hint: severityHint(frrSeverity),
+      title: 'False Reject Rate: probability that a legitimate user is rejected. TARGET: < 10%'
     },
     {
       id: 'eer',
-      label: 'EER (Error Balance)',
+      label: t('dashboard.stats.eer'),
       value: `${(eer * 100).toFixed(2)}%`,
-      severity: eer < 0.10 ? 'ok' : eer < 0.20 ? 'warn' : 'bad',
-      hint: eer < 0.10 ? 'Óptimo' : eer < 0.20 ? 'Aceptable' : 'Crítico',
+      severity: eerSeverity,
+      hint: severityHint(eerSeverity),
+      title: 'Equal Error Rate: point where FAR = FRR. TARGET: < 10%'
     },
     {
       id: 'adaptations',
-      label: 'Re-entrenamientos',
+      label: t('dashboard.stats.adaptations'),
       value: String(adaptations),
       severity: 'neutral',
-      hint: 'Hot-Swap',
+      hint: t('dashboard.stats.hint_adaptations')
     },
     {
       id: 'attempts',
-      label: 'Sesiones Evaluadas',
+      label: t('dashboard.stats.attempts'),
       value: String(totalAuth),
       severity: 'neutral',
-      hint: 'En Vivo',
-    },
+      hint: t('dashboard.stats.hint_live')
+    }
   ];
+
+  const severityIcon = (sev) => {
+    if (sev === 'bad') return AlertTriangle;
+    if (sev === 'warn') return AlertCircle;
+    if (sev === 'ok') return CheckCircle2;
+    return Minus;
+  };
 
   return (
     <div className="stat-strip-container">
-      {items.map((item) => (
-        <div
-          key={item.id}
-          className="stat-strip-card"
-          title={
-            item.id === 'far' ? 'False Accept Rate: probabilidad de que un impostor sea aceptado. OBJETIVO: < 5%' :
-            item.id === 'frr' ? 'False Reject Rate: probabilidad de que un usuario legítimo sea rechazado. OBJETIVO: < 10%' :
-            item.id === 'eer' ? 'Equal Error Rate: punto donde FAR = FRR. OBJETIVO: < 10%' :
-            item.id === 'adaptations' ? 'Cantidad de re-entrenamientos automáticos ejecutados' :
-            'Total de sesiones de autenticación evaluadas'
-          }
-        >
-          <div className="stat-strip-label">
-            <span>{item.label}</span>
+      {items.map((item) => {
+        const Icon = severityIcon(item.severity);
+        return (
+          <div
+            key={item.id}
+            className="stat-strip-card"
+            title={item.title}
+            data-severity={item.severity}
+          >
+            <div className="stat-strip-label">
+              <span>{item.label}</span>
+            </div>
+            <div className="stat-strip-value-row">
+              <span className="stat-strip-value">{item.value}</span>
+              <span className={`stat-trend-indicator trend-${item.severity}`}>
+                <Icon size={14} strokeWidth={2.5} />
+                {item.hint && <span>{item.hint}</span>}
+              </span>
+            </div>
           </div>
-          <div className="stat-strip-value-row">
-            <span className="stat-strip-value">{item.value}</span>
-            <span className={`stat-trend-indicator trend-${item.severity}`}>
-              {item.severity === 'bad' && <AlertTriangle size={14} strokeWidth={2.5} />}
-              {item.severity === 'warn' && <AlertCircle size={14} strokeWidth={2.5} />}
-              {item.severity === 'ok' && <CheckCircle2 size={14} strokeWidth={2.5} />}
-              {item.severity === 'neutral' && <Minus size={14} strokeWidth={2} />}
-              <span>{item.hint}</span>
-            </span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

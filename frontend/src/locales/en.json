@@ -2,66 +2,169 @@
   "app": {
     "title": "TECLEOLLAVE-ADAPT",
     "subtitle": "Continuous Adaptive Authentication via Keystroke Dynamics",
-    "status": "API Online",
+    "status_online": "API Online",
+    "status_offline": "API Offline",
     "theme_light": "☀️ Light",
-    "theme_dark": "🌙 Dark"
+    "theme_dark": "🌙 Dark",
+    "theme_toggle_light": "Switch to light mode",
+    "theme_toggle_dark": "Switch to dark mode",
+    "language": "Language",
+    "lang_es": "ES",
+    "lang_en": "EN"
   },
   "nav": {
-    "dashboard": "📊 Dashboard",
-    "register": "✍️ Register",
-    "login": "🔑 Login"
+    "dashboard": "Go to Dashboard",
+    "register": "Enrollment",
+    "login": "Terminal Login",
+    "logout": "Log out"
   },
   "login": {
     "title": "Welcome Back",
     "subtitle": "Authenticate using your continuous keystroke dynamics pattern",
+    "auth_badge": "Adaptive Biometric Authentication",
+    "access_title": "System Access",
+    "access_subtitle": "Enter your credentials and then type the biometric phrase in the terminal to verify your identity.",
     "username_label": "Username",
     "username_placeholder": "Enter your username",
     "password_label": "Password",
     "password_placeholder": "Enter your password",
     "submit_btn": "Authenticate Biometrically",
+    "verify_access_btn": "Verify and Access",
     "quick_demo": "Quick Demo Credentials",
     "demo_user1": "User 1 (Demo)",
     "demo_user2": "User 2 (Demo)",
     "seed_demo_btn": "Seed Demo Data",
+    "seed_demo_loading": "Seeding...",
     "keystroke_preview_title": "Keystroke Dynamics Visualizer",
-    "keystroke_preview_desc": "Real-time keypress rhythm evaluation and inter-key latency metering."
+    "keystroke_preview_desc": "Real-time keypress rhythm evaluation and inter-key latency metering.",
+    "errors": {
+      "empty_fields": "Please enter username and password",
+      "auth_failed": "Authentication error",
+      "generic": "Unknown error"
+    },
+    "messages": {
+      "sample_captured": "Sample captured. Click \"Verify and Access\" to evaluate.",
+      "login_success": "Login successful. Redirecting to Dashboard...",
+      "2fa_required": "Biometric score: {{score}}%. 2FA verification required.",
+      "access_rejected": "Biometric access rejected ({{score}}%). Your typing rhythm does not match your registered profile. Try typing more naturally with your usual keyboard.",
+      "access_granted": "Biometric access granted ({{score}}%). Entering...",
+      "2fa_verified": "2FA verification complete. Entering...",
+      "2fa_invalid": "Invalid 2FA code. Please try again.",
+      "seed_success": "Database seeded ({{samples}} samples). Credentials: user1 / password123",
+      "seed_error": "Error seeding demo data: {{error}}"
+    },
+    "stepper": {
+      "step1": "Credentials",
+      "step2": "Biometrics",
+      "step3": "Decision"
+    }
   },
   "register": {
-    "title": "Biometric Enrollment",
-    "subtitle": "Complete account setup and train your unique typing profile",
+    "title": "Biometric Profile Enrollment",
+    "subtitle": "Capture 5 typing samples to initialize your M₀ calibration vector.",
+    "header_title": "New User Registration",
     "step1_title": "1. Account Details",
     "step2_title": "2. Biometric Capture",
     "step3_title": "3. Trained Profile",
     "username_label": "Username",
-    "password_label": "Password",
-    "next_btn": "Continue to Biometric Capture →",
-    "prev_btn": "← Back",
-    "finish_btn": "Complete Enrollment & Train Model",
+    "username_placeholder": "e.g. security.analyst",
+    "password_label": "Password (minimum 6 characters)",
+    "password_placeholder": "Password",
+    "confirm_label": "Confirm Password",
+    "confirm_placeholder": "Repeat your password",
+    "next_btn": "Continue to Biometric Capture",
+    "prev_btn": "Back to Account Details",
+    "finish_btn": "Train model and finish enrollment",
+    "training_btn": "Training M₀ model...",
     "samples_needed": "Typing samples required for initial model training:",
-    "success_message": "Enrollment completed successfully! Model version v1 has been generated."
+    "success_message": "Enrollment completed successfully! Model version v1 has been generated.",
+    "errors": {
+      "sample_error": "Error capturing the sample. Please try again.",
+      "empty_username": "Please enter a username",
+      "short_password": "Password must be at least 6 characters",
+      "password_mismatch": "Passwords do not match",
+      "insufficient_samples": "At least {{required}} biometric typing samples are required.",
+      "register_error": "Error registering user"
+    },
+    "messages": {
+      "all_samples_complete": "You've completed all 5 samples! Review the summary and train your model.",
+      "sample_progress": "Sample {{current}}/{{total}} captured. {{eta}} remaining."
+    },
+    "stepper": {
+      "step1": "Credentials",
+      "step2": "Biometrics ({{current}}/{{total}})",
+      "step3": "M₀ Model"
+    },
+    "progress": {
+      "header": "Capture progress",
+      "eta_start": "~30 seconds"
+    }
   },
   "typing": {
     "phrase_notice": "Technical Notice: The enrollment phrase (\"La seguridad protege la información\") is fixed in the backend. Changing it invalidates existing trained profiles.",
     "type_target": "Type the exact phrase at your natural rhythm:",
     "progress_label": "Samples Captured:",
     "wpm_label": "Speed:",
-    "rhythm_label": "Rhythm:"
+    "rhythm_label": "Rhythm:",
+    "press_enter": "Press Enter to submit",
+    "recapture": "Re-capture",
+    "capture_btn": "Start Capture"
   },
   "dashboard": {
     "title": "Biometric Analytic Dashboard",
     "subtitle": "Real-time adaptive metrics and model version history",
     "select_user": "Select User:",
     "refresh_btn": "Refresh",
+    "refresh_loading": "Refreshing...",
     "export_pdf": "📄 Export PDF",
     "export_excel": "📊 Export Excel",
-    "kpi_active_model": "Active Model",
-    "kpi_far": "FAR (False Acceptance)",
-    "kpi_frr": "FRR (False Rejection)",
-    "kpi_eer": "EER (Equal Error Rate)",
-    "kpi_adaptations": "Successful Adaptations",
-    "kpi_total_auth": "Total Authentications",
+    "hero": {
+      "active_score": "Active Average Biometric Score",
+      "score_high": "High Reliability",
+      "score_medium": "Medium Risk",
+      "score_critical": "Critical State",
+      "score_no_data": "No Data",
+      "score_footer_ok": "Profile evaluated for user {{user}} against security threshold (75%).",
+      "score_footer_warn": "⚠️ Score below threshold (75%) — re-training recommended",
+      "model_state": "Adaptive Model State",
+      "model_improved": "Improved",
+      "model_regressed": "Regressed",
+      "model_unchanged": "No changes",
+      "model_unknown": "No data",
+      "model_footer_delta": "EER {{delta}}% vs v{{prevVersion}} ({{samples}} samples)",
+      "model_footer_default": "Automatically retrained with {{samples}} samples and validated hold-out buffer."
+    },
+    "stats": {
+      "far": "FAR (False Acceptance)",
+      "frr": "FRR (False Rejection)",
+      "eer": "EER (Equal Error Rate)",
+      "adaptations": "Re-trainings",
+      "attempts": "Evaluated Sessions",
+      "severity_optimal": "Optimal",
+      "severity_acceptable": "Acceptable",
+      "severity_critical": "Critical",
+      "hint_adaptations": "Hot-Swap",
+      "hint_live": "Live"
+    },
+    "health": {
+      "ok_title": "System Operating Normally",
+      "ok_msg": "All metrics within optimal range.",
+      "warning_title": "Advisory",
+      "warning_msg": "Metrics within tolerance but approaching thresholds. Monitor trend.",
+      "critical_title": "Action Required",
+      "critical_msg": "Metrics outside operational range. Consider retraining the model or采集 impostor data."
+    },
+    "metadata": {
+      "trained": "Trained",
+      "samples": "Samples",
+      "algorithm": "Algorithm",
+      "last_adaptation": "Last adaptation",
+      "next_eval": "Next evaluation"
+    },
     "chart_score_title": "📈 Biometric Score Evolution (Time Series)",
+    "chart_score_desc": "Temporal dynamics of biometric confidence against decision thresholds",
     "chart_comp_title": "📊 Comparison: Static Model (M0) vs Adaptive Model (Mn)",
+    "chart_comp_desc": "6-dimension comparison: Static baseline vs adaptive model",
     "table_models_title": "Biometric Model Versions",
     "table_timeline_title": "Profile Adaptation Event Timeline",
     "table_col_version": "Version",
@@ -74,6 +177,70 @@
     "filter_all": "All Events",
     "filter_accepted": "Candidates Accepted",
     "filter_rejected": "Candidates Rejected",
-    "search_placeholder": "Search version or reason..."
+    "search_placeholder": "Search version or reason...",
+    "sections": {
+      "overview": "Executive Summary",
+      "analytics": "ML Analytics",
+      "models": "Model History",
+      "audit": "Audit",
+      "cmu": "CMU Benchmark"
+    },
+    "messages": {
+      "loading": "Loading dashboard...",
+      "error": "Error loading dashboard data",
+      "no_data": "No data available"
+    }
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "minutes": "minutes",
+    "seconds": "seconds"
+  },
+  "two_factor": {
+    "title": "Two-Factor Verification",
+    "subtitle": "We've detected a typing pattern outside your usual profile. For security, enter the code from your authenticator app.",
+    "code_label": "6-digit code",
+    "code_placeholder": "000000",
+    "verify_btn": "Verify Code",
+    "verifying_btn": "Verifying...",
+    "cancel_btn": "Cancel",
+    "resend_btn": "Resend code",
+    "resend_loading": "Resending...",
+    "score_label": "Biometric score",
+    "suspicious_label": "⚠️ Suspicious activity detected",
+    "errors": {
+      "invalid_code": "Invalid 2FA code. Please try again.",
+      "expired": "Code has expired. Request a new one.",
+      "generic": "2FA verification error"
+    }
+  },
+  "decision": {
+    "allow_title": "Access Granted",
+    "allow_desc": "Your typing pattern matches your registered biometric profile.",
+    "challenge_title": "Additional Verification Required",
+    "challenge_desc": "Your typing pattern is in the review zone. 2FA is required.",
+    "reject_title": "Access Denied",
+    "reject_desc": "Your typing pattern does not match your registered profile."
+  },
+  "expert_mode": {
+    "label_simple": "Simple mode",
+    "label_expert": "Academic mode",
+    "title_simple": "Switch to simple view",
+    "title_expert": "Switch to academic view (technical details)"
   }
 }

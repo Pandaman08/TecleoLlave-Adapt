@@ -2,66 +2,169 @@
   "app": {
     "title": "TECLEOLLAVE-ADAPT",
     "subtitle": "Autenticación Biométrica Adaptativa por Dinámica de Tecleo",
-    "status": "API En Línea",
+    "status_online": "API En Línea",
+    "status_offline": "API Fuera de Línea",
     "theme_light": "☀️ Claro",
-    "theme_dark": "🌙 Oscuro"
+    "theme_dark": "🌙 Oscuro",
+    "theme_toggle_light": "Cambiar a modo claro",
+    "theme_toggle_dark": "Cambiar a modo oscuro",
+    "language": "Idioma",
+    "lang_es": "ES",
+    "lang_en": "EN"
   },
   "nav": {
-    "dashboard": "📊 Dashboard",
-    "register": "✍️ Registrarse",
-    "login": "🔑 Iniciar Sesión"
+    "dashboard": "Ir al Dashboard",
+    "register": "Enrolamiento",
+    "login": "Terminal Login",
+    "logout": "Cerrar sesión"
   },
   "login": {
     "title": "Bienvenido de Nuevo",
     "subtitle": "Accede mediante tu patrón biométrico de tecleo continuo",
+    "auth_badge": "Autenticación Biométrica Adaptativa",
+    "access_title": "Acceso al Sistema",
+    "access_subtitle": "Ingresa tus credenciales y luego tipea la frase biométrica en la terminal para validar tu identidad.",
     "username_label": "Usuario",
     "username_placeholder": "Ingresa tu nombre de usuario",
     "password_label": "Contraseña",
     "password_placeholder": "Ingresa tu contraseña",
     "submit_btn": "Autenticar Biométricamente",
+    "verify_access_btn": "Verificar y Acceder",
     "quick_demo": "Prueba Rápida con Usuario de Demo",
     "demo_user1": "Usuario 1 (Demo)",
     "demo_user2": "Usuario 2 (Demo)",
     "seed_demo_btn": "Sembrar Datos de Prueba",
+    "seed_demo_loading": "Sembrando...",
     "keystroke_preview_title": "Visualizador de Dinámica de Tecleo",
-    "keystroke_preview_desc": "Evaluación en tiempo real del ritmo de pulsación y latencia inter-tecla."
+    "keystroke_preview_desc": "Evaluación en tiempo real del ritmo de pulsación y latencia inter-tecla.",
+    "errors": {
+      "empty_fields": "Por favor ingresa usuario y contraseña",
+      "auth_failed": "Error en autenticación",
+      "generic": "Error desconocido"
+    },
+    "messages": {
+      "sample_captured": "Muestra capturada. Click en \"Verificar y Acceder\" para evaluar.",
+      "login_success": "Inicio de sesión exitoso. Redirigiendo al Dashboard...",
+      "2fa_required": "Score biométrico: {{score}}%. Se requiere verificación 2FA.",
+      "access_rejected": "Acceso biométrico rechazado ({{score}}%). El ritmo no coincide con tu perfil registrado. Intenta tipear de forma más natural con tu teclado habitual.",
+      "access_granted": "Acceso biométrico concedido ({{score}}%). Entrando...",
+      "2fa_verified": "Verificación 2FA completada. Entrando...",
+      "2fa_invalid": "Código 2FA incorrecto. Intenta de nuevo.",
+      "seed_success": "Base de datos sembrada ({{samples}} muestras). Credenciales: user1 / password123",
+      "seed_error": "Error al sembrar datos demo: {{error}}"
+    },
+    "stepper": {
+      "step1": "Credenciales",
+      "step2": "Biometría",
+      "step3": "Decisión"
+    }
   },
   "register": {
-    "title": "Enrolamiento Biométrico",
-    "subtitle": "Completa el registro y entrena tu perfil único de tecleo",
+    "title": "Enrolamiento de Perfil Biométrico",
+    "subtitle": "Captura 5 muestras de tecleo para inicializar tu vector de calibración M₀.",
+    "header_title": "Registro de Nuevo Usuario",
     "step1_title": "1. Datos de Cuenta",
     "step2_title": "2. Captura Biométrica",
     "step3_title": "3. Perfil Entrenado",
     "username_label": "Nombre de Usuario",
-    "password_label": "Contraseña",
-    "next_btn": "Continuar a Captura Biométrica →",
-    "prev_btn": "← Volver",
-    "finish_btn": "Finalizar Enrolamiento y Crear Modelo",
+    "username_placeholder": "ej: analista.seguridad",
+    "password_label": "Contraseña (mínimo 6 caracteres)",
+    "password_placeholder": "Contraseña",
+    "confirm_label": "Confirmar Contraseña",
+    "confirm_placeholder": "Repite tu contraseña",
+    "next_btn": "Continuar a Captura Biométrica",
+    "prev_btn": "Volver a Datos de Cuenta",
+    "finish_btn": "Entrenar modelo y finalizar enrolamiento",
+    "training_btn": "Entrenando modelo M₀...",
     "samples_needed": "Muestras de tecleo requeridas para entrenamiento:",
-    "success_message": "¡Enrolamiento completado con éxito! Se ha generado tu versión de modelo v1."
+    "success_message": "¡Enrolamiento completado con éxito! Se ha generado tu versión de modelo v1.",
+    "errors": {
+      "sample_error": "Error al capturar la muestra. Por favor intenta de nuevo.",
+      "empty_username": "Por favor ingresa un nombre de usuario",
+      "short_password": "La contraseña debe tener al menos 6 caracteres",
+      "password_mismatch": "Las contraseñas no coinciden",
+      "insufficient_samples": "Se requieren al menos {{required}} muestras biométricas de tecleo.",
+      "register_error": "Error registrando usuario"
+    },
+    "messages": {
+      "all_samples_complete": "¡Has completado las 5 muestras! Revisa el resumen y entrena tu modelo.",
+      "sample_progress": "Muestra {{current}}/{{total}} capturada. {{eta}} restantes."
+    },
+    "stepper": {
+      "step1": "Credenciales",
+      "step2": "Biometría ({{current}}/{{total}})",
+      "step3": "Modelo M₀"
+    },
+    "progress": {
+      "header": "Progreso de captura",
+      "eta_start": "~30 segundos"
+    }
   },
   "typing": {
     "phrase_notice": "Nota Técnica: La frase de enrolamiento (\"La seguridad protege la información\") está fija en el backend. Modificarla invalidará los perfiles entrenados previamente.",
     "type_target": "Escribe la siguiente frase con tu ritmo natural:",
     "progress_label": "Muestras Capturadas:",
     "wpm_label": "Velocidad:",
-    "rhythm_label": "Ritmo:"
+    "rhythm_label": "Ritmo:",
+    "press_enter": "Presiona Enter para enviar",
+    "recapture": "Volver a capturar",
+    "capture_btn": "Iniciar Captura"
   },
   "dashboard": {
     "title": "Dashboard Analítico Biométrico",
     "subtitle": "Métricas adaptativas en tiempo real e historial de modelos",
     "select_user": "Seleccionar Usuario:",
     "refresh_btn": "Actualizar",
+    "refresh_loading": "Actualizando...",
     "export_pdf": "📄 Exportar PDF",
     "export_excel": "📊 Exportar Excel",
-    "kpi_active_model": "Modelo Activo",
-    "kpi_far": "FAR (False Acceptance)",
-    "kpi_frr": "FRR (False Rejection)",
-    "kpi_eer": "EER (Equal Error Rate)",
-    "kpi_adaptations": "Adaptaciones Exitosas",
-    "kpi_total_auth": "Autenticaciones Totales",
+    "hero": {
+      "active_score": "Score Biométrico Promedio Activo",
+      "score_high": "Alta Fiabilidad",
+      "score_medium": "Riesgo Medio",
+      "score_critical": "Estado Crítico",
+      "score_no_data": "Sin Datos",
+      "score_footer_ok": "Perfil evaluado para el usuario {{user}} contra umbral de seguridad (75%).",
+      "score_footer_warn": "⚠️ Score por debajo del umbral (75%) — re-entrenamiento recomendado",
+      "model_state": "Estado del Modelo Adaptativo",
+      "model_improved": "Mejora",
+      "model_regressed": "Regresión",
+      "model_unchanged": "Sin cambios",
+      "model_unknown": "Sin datos",
+      "model_footer_delta": "EER {{delta}}% vs v{{prevVersion}} ({{samples}} muestras)",
+      "model_footer_default": "Re-entrenado automáticamente con {{samples}} muestras y buffer hold-out validado."
+    },
+    "stats": {
+      "far": "FAR (Falsos Aceptos)",
+      "frr": "FRR (Falsos Rechazos)",
+      "eer": "EER (Error Balance)",
+      "adaptations": "Re-entrenamientos",
+      "attempts": "Sesiones Evaluadas",
+      "severity_optimal": "Óptimo",
+      "severity_acceptable": "Aceptable",
+      "severity_critical": "Crítico",
+      "hint_adaptations": "Hot-Swap",
+      "hint_live": "En Vivo"
+    },
+    "health": {
+      "ok_title": "Sistema Operativo Normal",
+      "ok_msg": "Todas las métricas dentro de rango óptimo.",
+      "warning_title": "Vigilancia",
+      "warning_msg": "Métricas dentro de tolerancia pero acercándose a umbrales. Monitorear tendencia.",
+      "critical_title": "Acción Requerida",
+      "critical_msg": "Métricas fuera de rango operativo. Considere re-entrenar el modelo o采集 más datos de impostores."
+    },
+    "metadata": {
+      "trained": "Entrenado",
+      "samples": "Muestras",
+      "algorithm": "Algoritmo",
+      "last_adaptation": "Última adaptación",
+      "next_eval": "Próxima evaluación"
+    },
     "chart_score_title": "📈 Evolución del Score Biométrico (Serie Temporal)",
+    "chart_score_desc": "Dinámica temporal de confianza biométrica frente a los umbrales de decisión",
     "chart_comp_title": "📊 Comparación: Modelo Estático (M0) vs Adaptativo (Mn)",
+    "chart_comp_desc": "Comparativa de 6 dimensiones: Baseline estático frente a modelo adaptativo",
     "table_models_title": "Versiones del Modelo Biométrico",
     "table_timeline_title": "Timeline de Adaptaciones del Perfil",
     "table_col_version": "Versión",
@@ -74,6 +177,70 @@
     "filter_all": "Todos los Eventos",
     "filter_accepted": "Candidatos Aceptados",
     "filter_rejected": "Candidatos Rechazados",
-    "search_placeholder": "Buscar versión o razón..."
+    "search_placeholder": "Buscar versión o razón...",
+    "sections": {
+      "overview": "Resumen Ejecutivo",
+      "analytics": "Analítica ML",
+      "models": "Historial de Modelos",
+      "audit": "Auditoría",
+      "cmu": "Benchmark CMU"
+    },
+    "messages": {
+      "loading": "Cargando dashboard...",
+      "error": "Error cargando datos del dashboard",
+      "no_data": "Sin datos disponibles"
+    }
+  },
+  "common": {
+    "yes": "Sí",
+    "no": "No",
+    "ok": "Aceptar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "close": "Cerrar",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "info": "Información",
+    "back": "Volver",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "confirm": "Confirmar",
+    "minutes": "minutos",
+    "seconds": "segundos"
+  },
+  "two_factor": {
+    "title": "Verificación de Doble Factor",
+    "subtitle": "Hemos detectado un patrón de tecleo fuera de tu perfil habitual. Por seguridad, ingresa el código de tu aplicación autenticadora.",
+    "code_label": "Código de 6 dígitos",
+    "code_placeholder": "000000",
+    "verify_btn": "Verificar Código",
+    "verifying_btn": "Verificando...",
+    "cancel_btn": "Cancelar",
+    "resend_btn": "Reenviar código",
+    "resend_loading": "Reenviando...",
+    "score_label": "Score biométrico",
+    "suspicious_label": "⚠️ Actividad sospechosa detectada",
+    "errors": {
+      "invalid_code": "Código 2FA incorrecto. Intenta de nuevo.",
+      "expired": "El código ha expirado. Solicita uno nuevo.",
+      "generic": "Error en la verificación 2FA"
+    }
+  },
+  "decision": {
+    "allow_title": "Acceso Permitido",
+    "allow_desc": "Tu patrón de tecleo coincide con tu perfil biométrico registrado.",
+    "challenge_title": "Verificación Adicional Requerida",
+    "challenge_desc": "El patrón de tecleo está en zona de revisión. Se requiere 2FA.",
+    "reject_title": "Acceso Denegado",
+    "reject_desc": "El patrón de tecleo no coincide con tu perfil registrado."
+  },
+  "expert_mode": {
+    "label_simple": "Modo simple",
+    "label_expert": "Modo académico",
+    "title_simple": "Cambiar a vista simple",
+    "title_expert": "Cambiar a vista académica (detalle técnico)"
   }
 }

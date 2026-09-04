@@ -1,3 +1,6 @@
+/**
+ * Register.jsx - Totalmente migrado a i18n
+ */
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -8,26 +11,15 @@ import QualityRing from '../components/enrollment/QualityRing';
 import SamplesOverview from '../components/enrollment/SamplesOverview';
 import MetricsPreview from '../components/enrollment/MetricsPreview';
 import EnhancedSuccessStep from '../components/enrollment/EnhancedSuccessStep';
+import LanguageSelector from '../components/LanguageSelector';
 import {
-  UserPlus,
-  User,
-  Lock,
-  Eye,
-  EyeOff,
-  AlertTriangle,
-  ShieldCheck,
-  ArrowRight,
-  ArrowLeft,
-  Sun,
-  Moon,
-  CheckCircle2,
-  Clock,
-  Sparkles
+  UserPlus, User, Lock, Eye, EyeOff, AlertTriangle, ShieldCheck,
+  ArrowRight, ArrowLeft, Sun, Moon, CheckCircle2, Clock, Sparkles
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 export default function Register() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
@@ -44,21 +36,20 @@ export default function Register() {
   const [success, setSuccess] = useState(null);
 
   const REQUIRED_SAMPLES = 5;
-
-  // Tiempo restante estimado: ~6 segundos por muestra (3s tipeo + 3s descanso)
   const ETA_SECONDS = (REQUIRED_SAMPLES - samples.length) * 6;
+
   const etaLabel = useMemo(() => {
-    if (samples.length === 0) return '~30 segundos';
+    if (samples.length === 0) return t('register.progress.eta_start');
     if (samples.length >= REQUIRED_SAMPLES) return null;
-    if (ETA_SECONDS < 60) return `~${ETA_SECONDS}s`;
+    if (ETA_SECONDS < 60) return `~${ETA_SECONDS}${t('common.seconds').charAt(0)}`;
     const m = Math.floor(ETA_SECONDS / 60);
     const s = ETA_SECONDS % 60;
-    return `~${m}m ${s}s`;
-  }, [samples.length, ETA_SECONDS]);
+    return `~${m}${t('common.minutes').charAt(0)} ${s}${t('common.seconds').charAt(0)}`;
+  }, [samples.length, ETA_SECONDS, i18n.language]);
 
   const handleSampleCaptured = (sample) => {
     if (!sample) {
-      setError('Error al capturar la muestra. Por favor intenta de nuevo.');
+      setError(t('register.errors.sample_error'));
       return;
     }
     const enriched = {
@@ -71,9 +62,13 @@ export default function Register() {
     setSampleStartTime(null);
 
     if (updated.length >= REQUIRED_SAMPLES) {
-      setSuccess('¡Has completado las 5 muestras! Revisa el resumen y entrena tu modelo.');
+      setSuccess(t('register.messages.all_samples_complete'));
     } else {
-      setSuccess(`Muestra ${updated.length}/${REQUIRED_SAMPLES} capturada. ${etaLabel} restantes.`);
+      setSuccess(t('register.messages.sample_progress', {
+        current: updated.length,
+        total: REQUIRED_SAMPLES,
+        eta: etaLabel
+      }));
     }
   };
 
@@ -85,15 +80,15 @@ export default function Register() {
     e?.preventDefault();
     setError(null);
     if (!username.trim()) {
-      setError('Por favor ingresa un nombre de usuario');
+      setError(t('register.errors.empty_username'));
       return;
     }
     if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+      setError(t('register.errors.short_password'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
+      setError(t('register.errors.password_mismatch'));
       return;
     }
     setStep(2);
@@ -102,16 +97,14 @@ export default function Register() {
 
   const handleRegisterSubmit = async () => {
     if (samples.length < REQUIRED_SAMPLES) {
-      setError(`Se requieren al menos ${REQUIRED_SAMPLES} muestras biométricas de tecleo.`);
+      setError(t('register.errors.insufficient_samples', { required: REQUIRED_SAMPLES }));
       return;
     }
     setLoading(true);
     setError(null);
     try {
       const res = await api.post('/auth/register', {
-        username,
-        password,
-        samples
+        username, password, samples
       });
       if (res.data?.id) {
         localStorage.setItem('current_user_id', res.data.id);
@@ -119,7 +112,7 @@ export default function Register() {
       }
       setStep(3);
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Error registrando usuario');
+      setError(err.response?.data?.detail || err.message || t('register.errors.register_error'));
     } finally {
       setLoading(false);
     }
@@ -137,16 +130,23 @@ export default function Register() {
           }}>
             <UserPlus size={18} />
           </div>
-          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>TecleoLlave Enrolamiento</span>
+          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t('app.title')}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <NavLink to="/" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
-            Ir al Dashboard
+            {t('nav.dashboard')}
           </NavLink>
           <NavLink to="/login" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
-            Terminal Login
+            {t('nav.login')}
           </NavLink>
-          <button type="button" className="btn-icon" onClick={toggleTheme}>
+          <LanguageSelector variant="compact" />
+          <button
+            type="button"
+            className="btn-icon"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? t('app.theme_toggle_light') : t('app.theme_toggle_dark')}
+            title={theme === 'dark' ? t('app.theme_toggle_light') : t('app.theme_toggle_dark')}
+          >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
@@ -169,15 +169,17 @@ export default function Register() {
               padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem'
             }}>
               <ShieldCheck size={14} />
-              <span>Enrolamiento de Perfil Biométrico</span>
+              <span>{t('register.title')}</span>
             </div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0.25rem 0' }}>Registro de Nuevo Usuario</h2>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0.25rem 0' }}>
+              {t('register.header_title')}
+            </h2>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-              Captura 5 muestras de tecleo para inicializar tu vector de calibración M₀.
+              {t('register.subtitle')}
             </p>
           </div>
 
-          {/* Stepper mejorado */}
+          {/* Stepper */}
           <EnhancedStepper step={step} samplesCount={samples.length} required={REQUIRED_SAMPLES} />
 
           {/* Alerts */}
@@ -188,41 +190,42 @@ export default function Register() {
           {step === 1 && (
             <form onSubmit={handleStep1Next} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <Field
-                label="Nombre de Usuario"
+                label={t('register.username_label')}
                 icon={User}
                 value={username}
                 onChange={setUsername}
-                placeholder="ej: analista.seguridad"
+                placeholder={t('register.username_placeholder')}
                 autoFocus
               />
               <Field
-                label="Contraseña (mínimo 6 caracteres)"
+                label={t('register.password_label')}
                 icon={Lock}
                 value={password}
                 onChange={setPassword}
-                placeholder="Contraseña"
+                placeholder={t('register.password_placeholder')}
                 type={showPassword ? 'text' : 'password'}
                 trailing={
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                    aria-label={showPassword ? t('common.close') : t('common.info')}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 }
               />
               <Field
-                label="Confirmar Contraseña"
+                label={t('register.confirm_label')}
                 icon={Lock}
                 value={confirmPassword}
                 onChange={setConfirmPassword}
-                placeholder="Repite tu contraseña"
+                placeholder={t('register.confirm_placeholder')}
                 type={showPassword ? 'text' : 'password'}
               />
 
               <button type="submit" className="btn-primary" style={{ height: 42, fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                <span>Continuar a Captura Biométrica</span>
+                <span>{t('register.next_btn')}</span>
                 <ArrowRight size={16} />
               </button>
             </form>
@@ -233,7 +236,6 @@ export default function Register() {
             <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <TipsAccordion />
 
-              {/* Header de progreso con ETA */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0.6rem 0.85rem',
@@ -244,7 +246,7 @@ export default function Register() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Sparkles size={14} style={{ color: 'var(--brand-500)' }} />
                   <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Progreso de captura
+                    {t('register.progress.header')}
                   </span>
                 </div>
                 {etaLabel && (
@@ -294,12 +296,12 @@ export default function Register() {
                           borderTopColor: 'transparent',
                           animation: 'spin 0.8s linear infinite'
                         }} />
-                        <span>Entrenando modelo M₀...</span>
+                        <span>{t('register.training_btn')}</span>
                       </>
                     ) : (
                       <>
                         <Sparkles size={18} />
-                        <span>Entrenar modelo y finalizar enrolamiento</span>
+                        <span>{t('register.finish_btn')}</span>
                         <ArrowRight size={16} />
                       </>
                     )}
@@ -315,7 +317,7 @@ export default function Register() {
                 style={{ fontSize: '0.8rem', alignSelf: 'flex-start' }}
               >
                 <ArrowLeft size={14} />
-                <span>Volver a Datos de Cuenta</span>
+                <span>{t('register.prev_btn')}</span>
               </button>
             </div>
           )}
@@ -333,10 +335,16 @@ export default function Register() {
    ========================================================================== */
 
 function EnhancedStepper({ step, samplesCount, required }) {
+  const { t } = useTranslation();
   const stepStates = [
-    { num: 1, label: 'Credenciales', isDone: step > 1, isActive: step === 1 },
-    { num: 2, label: `Biometría (${samplesCount}/${required})`, isDone: step > 2, isActive: step === 2 },
-    { num: 3, label: 'Modelo M₀', isDone: step === 3, isActive: step === 3 }
+    { num: 1, label: t('register.stepper.step1'), isDone: step > 1, isActive: step === 1 },
+    {
+      num: 2,
+      label: t('register.stepper.step2', { current: samplesCount, total: required }),
+      isDone: step > 2,
+      isActive: step === 2
+    },
+    { num: 3, label: t('register.stepper.step3'), isDone: step === 3, isActive: step === 3 }
   ];
   return (
     <div style={{
