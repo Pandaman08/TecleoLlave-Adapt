@@ -152,7 +152,7 @@
       "warning_title": "Vigilancia",
       "warning_msg": "Métricas dentro de tolerancia pero acercándose a umbrales. Monitorear tendencia.",
       "critical_title": "Acción Requerida",
-      "critical_msg": "Métricas fuera de rango operativo. Considere re-entrenar el modelo o采集 más datos de impostores."
+      "critical_msg": "Métricas fuera de rango operativo. Considere re-entrenar el modelo o recopilar más datos de impostores."
     },
     "metadata": {
       "trained": "Entrenado",

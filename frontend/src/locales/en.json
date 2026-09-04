@@ -152,7 +152,7 @@
       "warning_title": "Advisory",
       "warning_msg": "Metrics within tolerance but approaching thresholds. Monitor trend.",
       "critical_title": "Action Required",
-      "critical_msg": "Metrics outside operational range. Consider retraining the model or采集 impostor data."
+      "critical_msg": "Metrics outside operational range. Consider retraining the model or collect more data on impostors."
     },
     "metadata": {
       "trained": "Trained",
