@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTypingCapture } from '../hooks/useTypingCapture';
 import api from '../services/api';
 import { Keyboard, RotateCcw, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
+import { playCaptureCompleteFeedback } from '../utils/captureFeedback';
 
 export default function TypingCapture({
   onSampleCaptured,
@@ -18,6 +19,7 @@ export default function TypingCapture({
     currentIndex,
     isCapturing,
     error,
+    hasError,
     progress,
     targetPhrase,
     phraseLength,
@@ -37,6 +39,20 @@ export default function TypingCapture({
       onSampleCaptured?.(mode === 'auth' ? null : result);
     }
   });
+
+  // Feedback sutil (sonido + vibración) al completar la captura de la frase.
+  // Se dispara una sola vez por captura (no en cada tecla).
+  const feedbackPlayedRef = useRef(false);
+  useEffect(() => {
+    const justCompleted = currentIndex >= phraseLength && !isCapturing;
+    if (justCompleted && !feedbackPlayedRef.current) {
+      feedbackPlayedRef.current = true;
+      playCaptureCompleteFeedback();
+    }
+    if (currentIndex === 0) {
+      feedbackPlayedRef.current = false;
+    }
+  }, [currentIndex, isCapturing, phraseLength]);
 
   return (
     <div style={{ width: '100%' }}>
@@ -84,6 +100,7 @@ export default function TypingCapture({
           const isCurrent = idx === currentIndex && isCapturing;
           const isPendingFirst = idx === currentIndex && !isCapturing;
           const isSpace = char === ' ';
+          const isErrorHere = isCurrent && hasError;
 
           let color = 'var(--text-muted)';
           let bgColor = 'transparent';
@@ -91,6 +108,10 @@ export default function TypingCapture({
 
           if (isTyped) {
             color = 'var(--success)';
+          } else if (isErrorHere) {
+            color = '#ffffff';
+            bgColor = 'var(--danger)';
+            borderBottom = '2px solid #ffffff';
           } else if (isCurrent) {
             color = '#ffffff';
             bgColor = 'var(--brand-600)';
@@ -118,7 +139,9 @@ export default function TypingCapture({
                 whiteSpace: 'pre',
                 textAlign: 'center',
                 margin: 0,
-                padding: '0 1px'
+                padding: '0 1px',
+                transform: isErrorHere ? 'translateX(0)' : undefined,
+                animation: isErrorHere ? 'tecleo-shake 0.26s ease' : undefined
               }}
             >
               {char}

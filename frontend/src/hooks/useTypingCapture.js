@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { unlockAudioContext } from '../utils/captureFeedback';
 
 const TARGET_PHRASE = "La seguridad protege la información";
 const PHRASE_LENGTH = TARGET_PHRASE.length;
@@ -14,6 +15,9 @@ export function useTypingCapture(onComplete) {
   const [isCapturing, setIsCapturing] = useState(false);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [hasError, setHasError] = useState(false);
+
+  const errorTimeoutRef = useRef(null);
   
   const keydownTimes = useRef({});
   const keyupTimes = useRef({});
@@ -28,6 +32,8 @@ export function useTypingCapture(onComplete) {
     setIsCapturing(false);
     setError(null);
     setProgress(0);
+    setHasError(false);
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     keydownTimes.current = {};
     keyupTimes.current = {};
     startTime.current = null;
@@ -38,6 +44,10 @@ export function useTypingCapture(onComplete) {
 
   const handleKeyDown = useCallback((e) => {
     if (!isCapturing) return;
+    
+    // Desbloquear el audio aquí (gesto de usuario síncrono) para que el
+    // sonido de confirmación al completar la captura sí pueda sonar.
+    unlockAudioContext();
     
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;
@@ -84,6 +94,9 @@ export function useTypingCapture(onComplete) {
     const matchesNormalized = !isSpace && (normalizeChar(key) === normalizeChar(expectedChar));
     
     if (!matchesExact && !matchesNormalized) {
+      setHasError(true);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = setTimeout(() => setHasError(false), 260);
       return;
     }
     
@@ -183,6 +196,7 @@ export function useTypingCapture(onComplete) {
     currentIndex,
     isCapturing,
     error,
+    hasError,
     progress,
     targetPhrase: TARGET_PHRASE,
     phraseLength: PHRASE_LENGTH,
@@ -192,4 +206,4 @@ export function useTypingCapture(onComplete) {
   };
 }
 
-export { TARGET_PHRASE, PHRASE_LENGTH };
+export { TARGET_PHRASE, PHRASE_LENGTH };
