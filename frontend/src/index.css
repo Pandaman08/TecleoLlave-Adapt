@@ -1108,3 +1108,40 @@ code, pre, .font-mono {
   60% { transform: translateX(-2px); }
   80% { transform: translateX(2px); }
 }
+
+/* Animación usada por SamplesOverview (chip "actual") */
+@keyframes pulse-soft {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+  50%      { box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.25); }
+}
+
+/* Animación usada por EnhancedSuccessStep (icono de éxito al entrar) */
+@keyframes success-pop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* Animación usada por EnhancedSuccessStep (halo pulsante alrededor del icono) */
+@keyframes ping {
+  0%        { transform: scale(1);   opacity: 0.5; }
+  80%, 100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Animación usada por el botón de loading en Register.jsx */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade,
+  [style*="animate-fade"] {
+    animation: none !important;
+  }
+  [style*="success-pop"],
+  [style*="pulse-soft"],
+  [style*="ping"],
+  [style*="spin"] {
+    animation: none !important;
+  }
+}

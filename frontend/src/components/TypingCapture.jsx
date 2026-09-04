@@ -7,6 +7,7 @@ import { playCaptureCompleteFeedback } from '../utils/captureFeedback';
 
 export default function TypingCapture({
   onSampleCaptured,
+  onStartCapture,
   mode = 'enroll',
   username,
   sampleIndex,
@@ -212,11 +213,14 @@ export default function TypingCapture({
         <button
           type="button"
           className="btn-primary"
-          onClick={startCapture}
-          style={{ width: '100%', marginTop: '0.5rem', height: 42 }}
+          onClick={() => {
+            onStartCapture?.();
+            startCapture();
+          }}
+          style={{ width: '100%', marginTop: '0.5rem', height: 44, fontSize: '0.9rem' }}
         >
           <Keyboard size={16} />
-          <span>Iniciar Captura de Tecleo {sampleIndex ? `(Muestra ${sampleIndex}/${totalSamples})` : ''}</span>
+          <span>Iniciar Captura {sampleIndex ? `(${sampleIndex}/${totalSamples})` : ''}</span>
         </button>
       )}
 
