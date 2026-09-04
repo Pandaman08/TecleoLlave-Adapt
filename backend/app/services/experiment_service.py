@@ -351,7 +351,7 @@ class ExperimentService:
                 
                 # Get current model version after potential adaptation
                 current_model = db.query(ModelVersion).filter(
-                    ModelVersion.user_id == 1,
+                    ModelVersion.user_id == user_id,
                     ModelVersion.is_active == True
                 ).first()
                 current_model_version_id = current_model.id if current_model else current_model_version_id

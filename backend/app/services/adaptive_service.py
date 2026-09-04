@@ -229,13 +229,15 @@ class AdaptiveService:
             os.makedirs(models_dir, exist_ok=True)
             model_output_path = os.path.join(models_dir, f"user_{user_id}_candidate_{candidate.id}")
             
-            # Train using the same function but we need to include pool samples
-            # For simplicity, we'll use the existing train function which uses all enrollment samples
-            # The pool samples are already in typing_samples table
+            # Train the candidate with the historical enrollment data PLUS the
+            # current candidate pool (the new ALLOW samples representing the
+            # user's recent/drifted typing behavior). This is what actually
+            # makes M1 differ from M0 in response to behavioral drift.
             biometric_model, metrics = train_user_model(
                 db=db,
                 user_id=user_id,
-                model_output_path=model_output_path
+                model_output_path=model_output_path,
+                extra_sample_ids=sample_ids
             )
             
             # Update candidate with metrics

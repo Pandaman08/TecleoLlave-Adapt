@@ -19,7 +19,7 @@ from datetime import datetime
 from app.ml.model import BiometricModel, ModelMetadata, create_model, create_scaler
 from app.ml.features import FEATURE_NAMES, N_FEATURES
 from app.config import REPRODUCIBILITY_CONFIG
-from app.models import TypingSample, TypingFeature, ModelVersion
+from app.models import TypingSample, TypingFeature, ModelVersion, CandidateModel, CandidateStatus
 from sqlalchemy.orm import Session
 
 
@@ -35,7 +35,8 @@ class ModelTrainer:
         self, 
         db: Session, 
         user_id: int,
-        min_samples: int = 5
+        min_samples: int = 5,
+        extra_sample_ids: Optional[List[int]] = None
     ) -> Tuple[np.ndarray, np.ndarray, List[int]]:
         """
         Prepare training data from database.
@@ -47,14 +48,53 @@ class ModelTrainer:
         
         For MVP: all enrollment samples are legitimate (1).
         Impostor samples will be added in later phases.
+
+        IMPORTANT (adaptation fix): the legitimate class is not limited to the
+        original enrollment samples. It also includes:
+          1. Samples from previously ACCEPTED adaptation candidates (behavioral
+             drift that was already validated and activated in the past), and
+          2. `extra_sample_ids`, the pool of new ALLOW samples currently being
+             evaluated for the candidate model about to be trained.
+        Without this, a "candidate" model is trained on identical data to the
+        current model and adaptation becomes a no-op that can never reflect
+        genuine drift in the user's typing behavior.
         """
-        # Get validated enrollment samples
-        samples = db.query(TypingSample).filter(
+        # Get validated enrollment samples (original behavioral baseline)
+        enrollment_samples = db.query(TypingSample).filter(
             TypingSample.user_id == user_id,
             TypingSample.source == 'enrollment',
             TypingSample.is_validated == True
         ).all()
-        
+
+        # Collect sample IDs from all previously accepted adaptation pools
+        # (these represent drift that has already been validated and merged
+        # into the user's "historical" legitimate data).
+        accepted_pools = db.query(CandidateModel.source_samples).filter(
+            CandidateModel.user_id == user_id,
+            CandidateModel.status == CandidateStatus.accepted
+        ).all()
+
+        historical_auth_ids = set()
+        for (ids,) in accepted_pools:
+            if ids:
+                historical_auth_ids.update(ids)
+
+        # Add the pool currently under evaluation (not yet accepted, so it
+        # won't show up in accepted_pools above).
+        if extra_sample_ids:
+            historical_auth_ids.update(extra_sample_ids)
+
+        auth_samples = []
+        if historical_auth_ids:
+            auth_samples = db.query(TypingSample).filter(
+                TypingSample.id.in_(historical_auth_ids),
+                TypingSample.user_id == user_id,
+                TypingSample.source == 'auth',
+                TypingSample.is_validated == True
+            ).all()
+
+        samples = enrollment_samples + auth_samples
+
         if len(samples) < min_samples:
             raise ValueError(f"Insufficient samples: {len(samples)} < {min_samples}")
         
@@ -130,15 +170,19 @@ class ModelTrainer:
         user_id: int,
         model_output_path: str,
         test_size: float = 0.2,
-        val_size: float = 0.2
+        val_size: float = 0.2,
+        extra_sample_ids: Optional[List[int]] = None
     ) -> Tuple[BiometricModel, Dict[str, Any]]:
         """
         Train a new model for the user.
+
+        `extra_sample_ids`: pool of new ALLOW auth samples being evaluated as
+        an adaptation candidate. See `prepare_data` for details.
         
         Returns: (BiometricModel, metrics_dict)
         """
         # Prepare data
-        X, y, sample_ids = self.prepare_data(db, user_id)
+        X, y, sample_ids = self.prepare_data(db, user_id, extra_sample_ids=extra_sample_ids)
         n_samples = len(X)
         
         # Split: train / val / test
@@ -165,13 +209,39 @@ class ModelTrainer:
         has_both_classes = len(unique_classes) >= 2
         
         if has_both_classes and len(y_val) >= 10:
-            # Calibrate using cross-validation (cv=5)
-            calibrator = CalibratedClassifierCV(
-                estimator=model,
-                method=self.config['calibration_method'],
-                cv=min(5, len(unique_classes))  # Use up to 5-fold CV
-            )
-            calibrator.fit(X_val, y_val)
+            # Calibrate the model that was ALREADY fit on X_train, using the
+            # held-out validation set only to fit the calibration curve
+            # (this is what REPRODUCIBILITY_CONFIG['calibration_cv'] == 'prefit'
+            # actually intends).
+            #
+            # BUG FIXED: the previous code passed `cv=min(5, len(unique_classes))`.
+            # Since len(unique_classes) is at most 2 for binary classification,
+            # this always evaluated to cv=2 (never the intended 5-fold), AND —
+            # more importantly — because `cv` was an int (not "prefit"/a
+            # FrozenEstimator), CalibratedClassifierCV silently CLONED and
+            # RE-FIT a brand new RandomForest on tiny 2-fold splits of X_val
+            # (often < 10 samples), discarding everything learned from X_train.
+            # The resulting calibrated scores were effectively decoupled from
+            # the actual trained model and could contradict it outright — this
+            # is what produced the FAR spikes / EER≈0.5 (chance level) seen in
+            # experiments/results/*.json regardless of adaptation.
+            # Match the pipeline's preprocessing order (imputer -> scaler)
+            # before handing data to the already-fitted model for calibration.
+            X_val_scaled = scaler.transform(imputer.transform(X_val))
+            try:
+                from sklearn.frozen import FrozenEstimator
+                calibrator = CalibratedClassifierCV(
+                    FrozenEstimator(model),
+                    method=self.config['calibration_method']
+                )
+            except ImportError:
+                # Older sklearn without FrozenEstimator: fall back to cv='prefit'
+                calibrator = CalibratedClassifierCV(
+                    estimator=model,
+                    method=self.config['calibration_method'],
+                    cv='prefit'
+                )
+            calibrator.fit(X_val_scaled, y_val)
         else:
             # Single class or insufficient samples - skip calibration
             # Use model directly without calibration
@@ -344,10 +414,15 @@ def train_user_model(
     db: Session,
     user_id: int,
     model_output_path: str,
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
+    extra_sample_ids: Optional[List[int]] = None
 ) -> Tuple[BiometricModel, Dict[str, Any]]:
     """
     Convenience function to train a user model.
+
+    `extra_sample_ids`: pool of new ALLOW auth samples being evaluated as an
+    adaptation candidate. Leave as None for the initial enrollment training
+    (M0), where only enrollment samples exist anyway.
     """
     trainer = ModelTrainer(config)
-    return trainer.train(db, user_id, model_output_path)
+    return trainer.train(db, user_id, model_output_path, extra_sample_ids=extra_sample_ids)
