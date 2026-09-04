@@ -1,12 +1,32 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { unlockAudioContext } from '../utils/captureFeedback';
+import {
+  unlockAudioContext,
+  playKeyClickFeedback,
+  playKeyErrorFeedback
+} from '../utils/captureFeedback';
 
 const TARGET_PHRASE = "La seguridad protege la información";
 const PHRASE_LENGTH = TARGET_PHRASE.length;
+const MIN_HOLD_TIME = 25;
 
 const normalizeChar = (c) => {
   if (!c) return '';
   return c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
+const pushToKeyStack = (store, key, value) => {
+  if (!store[key]) store[key] = [];
+  store[key].push(value);
+};
+
+const popFromKeyStack = (store, key) => {
+  if (!store[key] || store[key].length === 0) return undefined;
+  return store[key].shift();
+};
+
+const peekFromKeyStack = (store, key) => {
+  if (!store[key] || store[key].length === 0) return undefined;
+  return store[key][0];
 };
 
 export function useTypingCapture(onComplete) {
@@ -18,13 +38,21 @@ export function useTypingCapture(onComplete) {
   const [hasError, setHasError] = useState(false);
 
   const errorTimeoutRef = useRef(null);
-  
-  const keydownTimes = useRef({});
+  const keydownStacks = useRef({});
   const keyupTimes = useRef({});
   const startTime = useRef(null);
   const firstKeydown = useRef(null);
   const deadKeyTime = useRef(null);
   const lastKeydown = useRef({ key: null, time: null });
+  const isCapturingRef = useRef(false);
+  const currentIndexRef = useRef(0);
+  const capturedEventsRef = useRef([]);
+  const onCompleteRef = useRef(onComplete);
+  const prevEventRef = useRef(null);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   const resetCapture = useCallback(() => {
     setCapturedEvents([]);
@@ -33,8 +61,15 @@ export function useTypingCapture(onComplete) {
     setError(null);
     setProgress(0);
     setHasError(false);
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    keydownTimes.current = {};
+    currentIndexRef.current = 0;
+    isCapturingRef.current = false;
+    capturedEventsRef.current = [];
+    prevEventRef.current = null;
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = null;
+    }
+    keydownStacks.current = {};
     keyupTimes.current = {};
     startTime.current = null;
     firstKeydown.current = null;
@@ -43,153 +78,149 @@ export function useTypingCapture(onComplete) {
   }, []);
 
   const handleKeyDown = useCallback((e) => {
-    if (!isCapturing) return;
-    
-    // Desbloquear el audio aquí (gesto de usuario síncrono) para que el
-    // sonido de confirmación al completar la captura sí pueda sonar.
+    if (!isCapturingRef.current) return;
+
     unlockAudioContext();
-    
+
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;
-    
-    // Capturar teclas de acento / teclas muertas
+
     if (key === 'Dead' || key === '´' || key === '`' || key === "'" || key === '^' || key === '~' || key === 'AltGraph') {
       deadKeyTime.current = now;
-      keydownTimes.current['Dead'] = now;
+      pushToKeyStack(keydownStacks.current, 'Dead', now);
       return;
     }
-    
+
     if (firstKeydown.current === null) {
       firstKeydown.current = now;
       startTime.current = now;
     }
-    
+
     lastKeydown.current = { key, time: now };
-    keydownTimes.current[key] = now;
+    pushToKeyStack(keydownStacks.current, key, now);
 
     const norm = normalizeChar(key);
     if (norm) {
-      keydownTimes.current[norm] = now;
+      pushToKeyStack(keydownStacks.current, norm, now);
     }
-  }, [isCapturing]);
+  }, []);
 
   const handleKeyUp = useCallback((e) => {
-    if (!isCapturing) return;
-    
+    if (!isCapturingRef.current) return;
+
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;
-    
-    // Ignorar liberación de teclas muertas o modificadores solos
+
     if (key === 'Dead' || key === '´' || key === '`' || key === '^' || key === '~' || key === 'AltGraph' || key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta') {
       return;
     }
-    
-    const expectedChar = TARGET_PHRASE[currentIndex];
+
+    const idx = currentIndexRef.current;
+    const expectedChar = TARGET_PHRASE[idx];
     if (!expectedChar) return;
 
     const isSpace = expectedChar === ' ';
     const isKeySpace = key === ' ' || key === 'Space';
-    
+
     const matchesExact = isSpace ? isKeySpace : (key === expectedChar);
     const matchesNormalized = !isSpace && (normalizeChar(key) === normalizeChar(expectedChar));
-    
+
     if (!matchesExact && !matchesNormalized) {
+      playKeyErrorFeedback();
       setHasError(true);
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
       errorTimeoutRef.current = setTimeout(() => setHasError(false), 260);
       return;
     }
-    
-    let kdTime = keydownTimes.current[key]
-      || keydownTimes.current[expectedChar]
-      || keydownTimes.current[normalizeChar(key)]
-      || keydownTimes.current[normalizeChar(expectedChar)]
-      || deadKeyTime.current
-      || keydownTimes.current['Dead']
-      || keydownTimes.current['Process']
-      || keydownTimes.current['Unidentified']
-      || lastKeydown.current.time;
-    
+
+    const candidates = [
+      popFromKeyStack(keydownStacks.current, key),
+      popFromKeyStack(keydownStacks.current, expectedChar),
+      popFromKeyStack(keydownStacks.current, normalizeChar(key)),
+      popFromKeyStack(keydownStacks.current, normalizeChar(expectedChar)),
+      deadKeyTime.current,
+      popFromKeyStack(keydownStacks.current, 'Dead'),
+      peekFromKeyStack(keydownStacks.current, 'Process'),
+      peekFromKeyStack(keydownStacks.current, 'Unidentified'),
+      lastKeydown.current.time
+    ];
+
+    let kdTime = candidates.find(v => v !== undefined && v !== null);
+
     if (kdTime === undefined || kdTime === null) {
-      kdTime = now - 50;
+      const prevKu = prevEventRef.current?.keyup_ts;
+      const base = prevKu || firstKeydown.current || (now - MIN_HOLD_TIME);
+      kdTime = Math.max(base + 1, now - MIN_HOLD_TIME);
     }
-    
+
     deadKeyTime.current = null;
     keyupTimes.current[key] = now;
 
-    setCapturedEvents(prevEvents => {
-      const prevEvent = prevEvents[prevEvents.length - 1];
-      if (prevEvent && kdTime < prevEvent.keyup_ts) {
-        kdTime = prevEvent.keyup_ts + 1;
-      }
+    const prevEvent = prevEventRef.current;
+    if (prevEvent && kdTime < prevEvent.keyup_ts) {
+      kdTime = prevEvent.keyup_ts + 1;
+    }
 
-      let kuTime = now;
-      if (kuTime <= kdTime) {
-        kuTime = kdTime + 1;
-      }
-      
-      const event = {
-        key: expectedChar,
-        keydown_ts: kdTime,
-        keyup_ts: kuTime,
-        hold_time: kuTime - kdTime,
-        expected_char: expectedChar,
-        position: currentIndex
-      };
+    let kuTime = now;
+    if (kuTime <= kdTime) {
+      kuTime = kdTime + 1;
+    }
 
-      const newCaptured = [...prevEvents, event];
-      
-      delete keydownTimes.current[key];
-      delete keydownTimes.current[expectedChar];
-      delete keydownTimes.current[normalizeChar(key)];
-      delete keydownTimes.current[normalizeChar(expectedChar)];
-      delete keydownTimes.current['Dead'];
-      delete keydownTimes.current['Process'];
-      
-      const nextIndex = currentIndex + 1;
-      setCurrentIndex(nextIndex);
-      setProgress(nextIndex / PHRASE_LENGTH);
-      
-      if (nextIndex >= PHRASE_LENGTH) {
-        setIsCapturing(false);
-        const totalDuration = kuTime - (startTime.current || kuTime);
-        onComplete?.({
-          events: newCaptured,
-          total_duration: totalDuration,
-          phrase_typed: TARGET_PHRASE
-        });
-      }
+    const event = {
+      key: expectedChar,
+      keydown_ts: kdTime,
+      keyup_ts: kuTime,
+      hold_time: kuTime - kdTime,
+      expected_char: expectedChar,
+      position: idx
+    };
 
-      return newCaptured;
-    });
+    prevEventRef.current = event;
+    capturedEventsRef.current = [...capturedEventsRef.current, event];
+    setCapturedEvents(capturedEventsRef.current);
+    playKeyClickFeedback(expectedChar);
 
-  }, [isCapturing, currentIndex, onComplete]);
+    const nextIndex = idx + 1;
+    currentIndexRef.current = nextIndex;
+    setCurrentIndex(nextIndex);
+    setProgress(nextIndex / PHRASE_LENGTH);
+
+    if (nextIndex >= PHRASE_LENGTH) {
+      isCapturingRef.current = false;
+      setIsCapturing(false);
+      const totalDuration = kuTime - (startTime.current || kuTime);
+      onCompleteRef.current?.({
+        events: capturedEventsRef.current,
+        total_duration: totalDuration,
+        phrase_typed: TARGET_PHRASE
+      });
+    }
+  }, []);
 
   const handlePaste = useCallback((e) => {
-    if (!isCapturing) return;
+    if (!isCapturingRef.current) return;
     e.preventDefault();
     setError("⚠️ Intento de pegado (paste) detectado. Por seguridad la captura biométrica requiere tecleo manual.");
     resetCapture();
-  }, [isCapturing, resetCapture]);
+  }, [resetCapture]);
 
   const startCapture = useCallback(() => {
     resetCapture();
+    isCapturingRef.current = true;
     setIsCapturing(true);
     setError(null);
   }, [resetCapture]);
 
   useEffect(() => {
-    if (isCapturing) {
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('keyup', handleKeyUp);
-      window.addEventListener('paste', handlePaste);
-    }
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('paste', handlePaste);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('paste', handlePaste);
     };
-  }, [isCapturing, handleKeyDown, handleKeyUp, handlePaste]);
+  }, [handleKeyDown, handleKeyUp, handlePaste]);
 
   return {
     capturedEvents,

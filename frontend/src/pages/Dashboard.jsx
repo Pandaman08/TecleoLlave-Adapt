@@ -37,6 +37,7 @@ import KeystrokeHeatmap from '../components/KeystrokeHeatmap';
 import BenchmarkCMUCard from '../components/BenchmarkCMUCard';
 import ReportPreviewModal from '../components/ReportPreviewModal';
 import EventLogGroup from '../components/EventLogGroup';
+import SystemHealthBanner from '../components/SystemHealthBanner';
 
 // Charts
 import RadarComparison from '../components/charts/RadarComparison';
@@ -351,25 +352,75 @@ export default function Dashboard() {
               ========================================================================= */}
           {activeSection === 'overview' && (
             <div className="animate-fade">
+              {/* Banner de salud general */}
+              <SystemHealthBanner
+                far={authMetrics?.far}
+                frr={authMetrics?.frr}
+                eer={authMetrics?.eer}
+                score={authMetrics?.avg_score}
+              />
+
               {/* 1. Hero 2 Large Stat Cards */}
               <div className="hero-stat-grid">
                 <HeroStatCard
                   title="Score Biométrico Promedio Activo"
                   value={authMetrics ? `${((authMetrics.avg_score || 0.94) * 100).toFixed(1)}%` : '94.8%'}
-                  badgeText="Alta Fiabilidad"
-                  badgeType="active"
-                  footerText={`Perfil evaluado para el usuario ${summary?.username || 'user1'} contra umbral de seguridad (75%).`}
+                  badgeText={
+                    !authMetrics ? 'Sin Datos' :
+                    authMetrics.avg_score >= 0.85 ? 'Alta Fiabilidad' :
+                    authMetrics.avg_score >= 0.70 ? 'Riesgo Medio' :
+                    'Estado Crítico'
+                  }
+                  badgeType={
+                    !authMetrics ? 'neutral' :
+                    authMetrics.avg_score >= 0.85 ? 'active' :
+                    authMetrics.avg_score >= 0.70 ? 'warn' :
+                    'danger'
+                  }
+                  footerText={
+                    authMetrics && authMetrics.avg_score < 0.70
+                      ? `⚠️ Score por debajo del umbral (75%) — re-entrenamiento recomendado`
+                      : `Perfil evaluado para el usuario ${summary?.username || 'user1'} contra umbral de seguridad (75%).`
+                  }
                   icon={CheckCircle2}
                 />
                 <HeroStatCard
                   title="Estado del Modelo Adaptativo"
                   value={`v${summary?.active_model_version || '1'}`}
-                  badgeText="Hot-Swap Calibrado"
-                  badgeType="brand"
-                  footerText={`Re-entrenado automáticamente con ${summary?.total_samples || 15} muestras y buffer hold-out validado.`}
+                  badgeText={
+                    summary?.delta_eer_percent < 0 ? 'Mejora' :
+                    summary?.delta_eer_percent > 0 ? 'Regresión' :
+                    'Sin cambios'
+                  }
+                  badgeType={
+                    summary?.delta_eer_percent < 0 ? 'active' :
+                    summary?.delta_eer_percent > 0 ? 'danger' :
+                    'neutral'
+                  }
+                  footerText={
+                    summary?.delta_eer_percent !== undefined
+                      ? `EER ${summary.delta_eer_percent > 0 ? '+' : ''}${summary.delta_eer_percent.toFixed(1)}% vs v${summary.active_model_version - 1} (${summary?.total_samples || 0} muestras)`
+                      : `Re-entrenado automáticamente con ${summary?.total_samples || 15} muestras y buffer hold-out validado.`
+                  }
                   icon={Activity}
                 />
               </div>
+
+              {/* Metadata del modelo activo */}
+              {summary?.active_model_id && (
+                <div style={{
+                  display: 'flex', gap: '1.5rem', fontSize: '0.78rem',
+                  color: 'var(--text-muted)', padding: '0.6rem 1rem',
+                  background: 'var(--bg-soft)', borderRadius: 'var(--radius-sm)',
+                  marginBottom: '1.25rem', flexWrap: 'wrap'
+                }}>
+                  <span>📅 Entrenado: {summary?.active_model_created_at || '—'}</span>
+                  <span>📊 Muestras: {summary?.active_model_samples || '—'}</span>
+                  <span>🧬 Algoritmo: {summary?.active_model_algorithm || 'IsolationForest'}</span>
+                  <span>🔄 Última adaptación: {summary?.last_adaptation_at || '—'}</span>
+                  <span>⏱️ Próxima evaluación: {summary?.next_eval_in || '3 ALLOW'}</span>
+                </div>
+              )}
 
               {/* 2. Compact Stat Strip (FAR, FRR, EER, Adaptaciones, Intentos) */}
               <CompactStatStrip

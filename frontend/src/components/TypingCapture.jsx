@@ -1,9 +1,21 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTypingCapture } from '../hooks/useTypingCapture';
 import api from '../services/api';
-import { Keyboard, RotateCcw, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
-import { playCaptureCompleteFeedback } from '../utils/captureFeedback';
+import {
+  Keyboard,
+  RotateCcw,
+  CheckCircle2,
+  AlertTriangle,
+  Sparkles,
+  Volume2,
+  VolumeX
+} from 'lucide-react';
+import {
+  playCaptureCompleteFeedback,
+  isSoundEnabled,
+  toggleSoundEnabled
+} from '../utils/captureFeedback';
 
 export default function TypingCapture({
   onSampleCaptured,
@@ -44,6 +56,8 @@ export default function TypingCapture({
   // Feedback sutil (sonido + vibración) al completar la captura de la frase.
   // Se dispara una sola vez por captura (no en cada tecla).
   const feedbackPlayedRef = useRef(false);
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+
   useEffect(() => {
     const justCompleted = currentIndex >= phraseLength && !isCapturing;
     if (justCompleted && !feedbackPlayedRef.current) {
@@ -54,6 +68,38 @@ export default function TypingCapture({
       feedbackPlayedRef.current = false;
     }
   }, [currentIndex, isCapturing, phraseLength]);
+
+  const handleToggleSound = useCallback(() => {
+    const next = toggleSoundEnabled();
+    setSoundOn(next);
+  }, []);
+
+  const SoundToggleButton = (
+    <button
+      type="button"
+      onClick={handleToggleSound}
+      title={soundOn ? 'Silenciar sonidos de tecleo' : 'Activar sonidos de tecleo'}
+      className="btn-icon"
+      style={{
+        width: 34,
+        height: 34,
+        minWidth: 34,
+        minHeight: 34,
+        padding: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--border-subtle)',
+        backgroundColor: 'var(--bg-surface)',
+        color: soundOn ? 'var(--brand-500)' : 'var(--text-muted)',
+        cursor: 'pointer',
+        flexShrink: 0
+      }}
+    >
+      {soundOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
+    </button>
+  );
 
   return (
     <div style={{ width: '100%' }}>
@@ -68,12 +114,16 @@ export default function TypingCapture({
         lineHeight: 1.4,
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem'
+        justifyContent: 'space-between',
+        gap: '0.75rem'
       }}>
-        <Sparkles size={15} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--brand-500)' }} />
-        <span>
-          Frase biométrica: <strong>"La seguridad protege la información"</strong>
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+          <Sparkles size={15} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--brand-500)' }} />
+          <span style={{ minWidth: 0, display: 'inline' }}>
+            Frase biométrica: <strong>"La seguridad protege la información"</strong>
+          </span>
+        </div>
+        {SoundToggleButton}
       </div>
 
       {/* Streamer Monospace de Caracteres Fijo (Sin saltos de espacio ni tracking roto) */}
@@ -177,16 +227,33 @@ export default function TypingCapture({
           fontSize: '0.75rem',
           color: 'var(--text-muted)',
           marginTop: '0.4rem',
-          fontFamily: "'JetBrains Mono', monospace"
+          fontFamily: "'JetBrains Mono', monospace",
+          gap: '0.5rem',
+          flexWrap: 'wrap'
         }}>
           <span>Progreso: <b style={{ color: 'var(--text-primary)' }}>{currentIndex} / {phraseLength}</b></span>
-          <span style={{ color: isCapturing ? 'var(--brand-500)' : currentIndex >= phraseLength ? 'var(--success)' : 'var(--text-muted)' }}>
-            {isCapturing
-              ? '⚡ Capturando pulsaciones en vivo...'
-              : currentIndex >= phraseLength
-              ? '✅ Muestra completada'
-              : 'Listo para iniciar'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span
+              title={soundOn ? 'Sonidos de tecleo activados' : 'Sonidos de tecleo silenciados'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.2rem',
+                fontSize: '0.7rem',
+                color: soundOn ? 'var(--brand-500)' : 'var(--text-muted)'
+              }}
+            >
+              {soundOn ? <Volume2 size={12} /> : <VolumeX size={12} />}
+              {soundOn ? 'Audio ON' : 'Audio OFF'}
+            </span>
+            <span style={{ color: isCapturing ? 'var(--brand-500)' : currentIndex >= phraseLength ? 'var(--success)' : 'var(--text-muted)' }}>
+              {isCapturing
+                ? '⚡ Capturando pulsaciones en vivo...'
+                : currentIndex >= phraseLength
+                ? '✅ Muestra completada'
+                : 'Listo para iniciar'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -258,7 +325,10 @@ export default function TypingCapture({
           <button
             type="button"
             className="btn-primary"
-            onClick={startCapture}
+            onClick={() => {
+              onStartCapture?.();
+              startCapture();
+            }}
             style={{ width: '100%', height: 42 }}
           >
             <CheckCircle2 size={16} />

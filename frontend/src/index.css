@@ -547,6 +547,18 @@ code, pre, .font-mono {
   border: 1px solid var(--danger-border);
 }
 
+.badge-warn {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.badge-neutral {
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+
 .hero-stat-value {
   font-size: 2.25rem;
   font-weight: 700;
@@ -642,6 +654,18 @@ code, pre, .font-mono {
 
 .trend-neutral {
   color: var(--text-muted);
+}
+
+.trend-ok {
+  color: var(--success);
+}
+
+.trend-warn {
+  color: var(--warning);
+}
+
+.trend-bad {
+  color: var(--danger);
 }
 
 /* ==========================================================================
