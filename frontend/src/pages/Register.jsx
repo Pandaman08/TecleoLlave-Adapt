@@ -35,7 +35,7 @@ export default function Register() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  const REQUIRED_SAMPLES = 5;
+  const REQUIRED_SAMPLES = 10;
   const ETA_SECONDS = (REQUIRED_SAMPLES - samples.length) * 6;
 
   const etaLabel = useMemo(() => {

@@ -35,7 +35,7 @@ class ModelTrainer:
         self, 
         db: Session, 
         user_id: int,
-        min_samples: int = 5,
+        min_samples: int = 10,
         extra_sample_ids: Optional[List[int]] = None
     ) -> Tuple[np.ndarray, np.ndarray, List[int]]:
         """
@@ -117,9 +117,19 @@ class ModelTrainer:
         y_legit = np.ones(len(feature_vectors), dtype=int)
         
         # Get background impostor samples from other users or generate realistic synthetic impostors
+        # BUG FIXED: pulling ALL historical samples from other users (including
+        # their 'auth' session samples) meant that any user whose demo/auth
+        # history includes simulated concept drift (e.g. demo_user's typing
+        # getting progressively slower over sessions) contributed a very
+        # wide, diffuse "impostor" class spanning almost the entire feature
+        # range. That diluted the decision boundary and made the classifier
+        # too permissive. Restricting to 'enrollment'-source samples uses a
+        # stable, representative reference of how each other person types,
+        # without injected drift noise.
         other_samples = db.query(TypingSample).filter(
             TypingSample.user_id != user_id,
-            TypingSample.is_validated == True
+            TypingSample.is_validated == True,
+            TypingSample.source == 'enrollment'
         ).all()
         
         impostor_vectors = []
@@ -128,15 +138,49 @@ class ModelTrainer:
             if f and f.feature_vector:
                 impostor_vectors.append(f.feature_vector)
                 
-        # Supplement with realistic synthetic impostor variations
+        # Supplement with synthetic impostors, calibrated to the user's OWN
+        # natural intra-class variability (not a flat noise ratio).
+        #
+        # BUG FIXED: the previous approach perturbed each legit vector by a
+        # flat +/-35% multiplicative Gaussian noise, regardless of how much
+        # the user's own samples naturally varied from each other. If the
+        # user's real session-to-session variability (fatigue, mood, device)
+        # was comparable to or larger than that 35% band for some features,
+        # the "impostor" class overlapped with genuine future variation of
+        # the SAME legitimate user — teaching the model to reject the real
+        # user's own natural typing drift. Here we instead measure the
+        # user's actual per-feature standard deviation across their own
+        # enrollment/auth samples, and push synthetic impostors several
+        # standard deviations away from that band, so they don't collide
+        # with genuine variation of the legitimate user.
         n_needed = max(len(feature_vectors), 8)
         if len(impostor_vectors) < n_needed:
-            np.random.seed(42 + user_id)
-            for vec in feature_vectors:
-                # Add timing perturbations typical of different typing rhythms
-                noise = np.random.normal(0.0, 0.35, size=len(vec))
-                synth_vec = (np.array(vec) * (1.0 + noise)).tolist()
-                impostor_vectors.append(synth_vec)
+            X_legit_arr = np.array(feature_vectors, dtype=np.float64)
+
+            if len(feature_vectors) >= 2:
+                legit_std = X_legit_arr.std(axis=0)
+            else:
+                # Only one legit sample available: no observed variability yet,
+                # fall back to a conservative baseline proportional to the
+                # feature's own magnitude.
+                legit_std = np.abs(X_legit_arr[0]) * 0.12
+
+            # Floor to avoid zero-width bands on near-constant features
+            # (would otherwise make the "impostor" identical to the legit
+            # vector on that feature).
+            magnitude_floor = np.abs(X_legit_arr.mean(axis=0)) * 0.05 + 1e-6
+            spread = np.maximum(legit_std, magnitude_floor)
+
+            rng = np.random.default_rng(42 + user_id)
+            n_to_generate = n_needed - len(impostor_vectors)
+            for _ in range(n_to_generate):
+                base_vec = X_legit_arr[rng.integers(0, len(feature_vectors))]
+                direction = rng.choice([-1.0, 1.0], size=base_vec.shape)
+                # 2.5x-5x the user's own observed std: clearly beyond their
+                # natural variability band, rather than overlapping with it.
+                n_sigmas = rng.uniform(2.5, 5.0, size=base_vec.shape)
+                synth_vec = base_vec + direction * n_sigmas * spread
+                impostor_vectors.append(synth_vec.tolist())
                 
         X_imp = np.array(impostor_vectors[:max(len(feature_vectors) * 2, 8)])
         y_imp = np.zeros(len(X_imp), dtype=int)
