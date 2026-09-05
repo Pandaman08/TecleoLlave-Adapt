@@ -358,6 +358,7 @@ export default function Dashboard() {
                 frr={authMetrics?.frr}
                 eer={authMetrics?.eer}
                 score={authMetrics?.avg_score}
+                metricsReliable={authMetrics?.metrics_reliable}
               />
 
               {/* 1. Hero 2 Large Stat Cards */}
@@ -429,6 +430,8 @@ export default function Dashboard() {
                 eer={authMetrics?.eer !== undefined && authMetrics?.eer !== null ? authMetrics?.eer : Math.max(authMetrics?.far || 0, authMetrics?.frr || 0)}
                 adaptations={summary?.total_adaptations || 0}
                 totalAuth={summary?.total_auth_attempts || authMetrics?.total_attempts || 0}
+                metricsReliable={authMetrics?.metrics_reliable}
+                reliabilityNote={authMetrics?.reliability_note}
               />
 
               {/* 3. Heatmap de Tecleo Aislado */}

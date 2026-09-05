@@ -3,6 +3,19 @@ import { Terminal, ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2, Lock, 
 import TypingCapture from './TypingCapture';
 import { useTheme } from '../context/ThemeContext';
 
+// Umbrales REALES de decisión (deben coincidir con los defaults de
+// AdaptationConfig en el backend: threshold_challenge=0.70, threshold_allow=0.85).
+// BUG FIXED: esta UI mostraba "θ_low=45%, θ_high=75%" hardcodeado, un valor
+// que nunca coincidió con lo que el backend realmente aplica para decidir
+// ACCEPT/CHALLENGE/REJECT. Si en el futuro se agrega una pantalla para que
+// cada usuario personalice sus propios umbrales, estos valores deberían
+// obtenerse de GET /adaptive/config/{user_id} en vez de quedar fijos aquí.
+const THRESHOLD_CHALLENGE = 0.70;
+const THRESHOLD_ALLOW = 0.85;
+const REJECT_WIDTH_PCT = THRESHOLD_CHALLENGE * 100;
+const CHALLENGE_WIDTH_PCT = (THRESHOLD_ALLOW - THRESHOLD_CHALLENGE) * 100;
+const ACCEPT_WIDTH_PCT = (1 - THRESHOLD_ALLOW) * 100;
+
 export default function LoginTerminal({
   typingSample,
   setTypingSample,
@@ -118,7 +131,7 @@ export default function LoginTerminal({
             }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <Cpu size={14} style={{ color: 'var(--brand-500)' }} />
-                {expertMode ? 'Motor de Decisión Tri-Zona (θ_low=45%, θ_high=75%)' : 'Nivel de confianza'}
+                {expertMode ? `Motor de Decisión Tri-Zona (θ_low=${(THRESHOLD_CHALLENGE * 100).toFixed(0)}%, θ_high=${(THRESHOLD_ALLOW * 100).toFixed(0)}%)` : 'Nivel de confianza'}
               </span>
               {decision && (
                 <span style={{
@@ -152,9 +165,9 @@ export default function LoginTerminal({
               marginBottom: '0.65rem',
               border: '1px solid var(--border-subtle)'
             }}>
-              <div style={{ width: '45%', backgroundColor: isDark ? 'rgba(239, 68, 68, 0.5)' : 'rgba(239, 68, 68, 0.7)' }} title="Zona REJECT (<45%)" />
-              <div style={{ width: '30%', backgroundColor: isDark ? 'rgba(245, 158, 11, 0.5)' : 'rgba(245, 158, 11, 0.7)' }} title="Zona CHALLENGE (45% - 75%)" />
-              <div style={{ width: '25%', backgroundColor: isDark ? 'rgba(16, 185, 129, 0.5)' : 'rgba(16, 185, 129, 0.7)' }} title="Zona ACCEPT (≥75%)" />
+              <div style={{ width: `${REJECT_WIDTH_PCT}%`, backgroundColor: isDark ? 'rgba(239, 68, 68, 0.5)' : 'rgba(239, 68, 68, 0.7)' }} title={`Zona REJECT (<${(THRESHOLD_CHALLENGE * 100).toFixed(0)}%)`} />
+              <div style={{ width: `${CHALLENGE_WIDTH_PCT}%`, backgroundColor: isDark ? 'rgba(245, 158, 11, 0.5)' : 'rgba(245, 158, 11, 0.7)' }} title={`Zona CHALLENGE (${(THRESHOLD_CHALLENGE * 100).toFixed(0)}% - ${(THRESHOLD_ALLOW * 100).toFixed(0)}%)`} />
+              <div style={{ width: `${ACCEPT_WIDTH_PCT}%`, backgroundColor: isDark ? 'rgba(16, 185, 129, 0.5)' : 'rgba(16, 185, 129, 0.7)' }} title={`Zona ACCEPT (≥${(THRESHOLD_ALLOW * 100).toFixed(0)}%)`} />
               
               {score !== null && (
                 <div
@@ -182,8 +195,8 @@ export default function LoginTerminal({
               fontWeight: 600
             }}>
               <span style={{ color: 'var(--danger)' }}>{expertMode ? '0% REJECT' : 'Bajo'}</span>
-              <span style={{ color: 'var(--warning)' }}>{expertMode ? '45% CHALLENGE' : 'Medio'}</span>
-              <span style={{ color: 'var(--success)' }}>{expertMode ? '75% ACCEPT' : 'Alto'}</span>
+              <span style={{ color: 'var(--warning)' }}>{expertMode ? `${(THRESHOLD_CHALLENGE * 100).toFixed(0)}% CHALLENGE` : 'Medio'}</span>
+              <span style={{ color: 'var(--success)' }}>{expertMode ? `${(THRESHOLD_ALLOW * 100).toFixed(0)}% ACCEPT` : 'Alto'}</span>
             </div>
           </div>
 

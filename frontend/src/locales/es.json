@@ -152,7 +152,9 @@
       "warning_title": "Vigilancia",
       "warning_msg": "Métricas dentro de tolerancia pero acercándose a umbrales. Monitorear tendencia.",
       "critical_title": "Acción Requerida",
-      "critical_msg": "Métricas fuera de rango operativo. Considere re-entrenar el modelo o recopilar más datos de impostores."
+      "critical_msg": "Métricas fuera de rango operativo. Considere re-entrenar el modelo o recopilar más datos de impostores.",
+      "low_confidence_title": "Métricas Estabilizándose",
+      "low_confidence_msg": "Aún hay muy pocas muestras de prueba para que FAR/FRR/EER sean estadísticamente confiables. El sistema sigue funcionando; el número mejorará con más uso."
     },
     "metadata": {
       "trained": "Entrenado",

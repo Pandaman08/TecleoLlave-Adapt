@@ -152,7 +152,9 @@
       "warning_title": "Advisory",
       "warning_msg": "Metrics within tolerance but approaching thresholds. Monitor trend.",
       "critical_title": "Action Required",
-      "critical_msg": "Metrics outside operational range. Consider retraining the model or collect more data on impostors."
+      "critical_msg": "Metrics outside operational range. Consider retraining the model or collect more data on impostors.",
+      "low_confidence_title": "Metrics Still Stabilizing",
+      "low_confidence_msg": "There are still too few test samples for FAR/FRR/EER to be statistically reliable. The system is still working; the number will improve with more usage."
     },
     "metadata": {
       "trained": "Trained",

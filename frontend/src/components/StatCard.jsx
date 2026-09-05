@@ -49,13 +49,22 @@ export function HeroStatCard({
  * CompactStatStrip — versión i18n completa
  */
 export function CompactStatStrip({
-  far = 0, frr = 0, eer = 0, adaptations = 0, totalAuth = 0
+  far = 0, frr = 0, eer = 0, adaptations = 0, totalAuth = 0,
+  metricsReliable = null, reliabilityNote = null
 }) {
   const { t } = useTranslation();
 
-  const farSeverity = classify(far, 0.05, 0.15);
-  const frrSeverity = classify(frr, 0.10, 0.20);
-  const eerSeverity = classify(eer, 0.10, 0.20);
+  // BUG FIXED: FAR/FRR/EER previously rendered as a bare percentage even
+  // when computed on a near-empty test set (as few as 1-2 samples), where a
+  // single misclassification swings the number to a scary, misleading
+  // "100%". When the backend flags the underlying test set as too small
+  // (metricsReliable === false), show an explicit low-confidence badge
+  // instead of pretending the percentage is a solid measurement.
+  const isLowConfidence = metricsReliable === false;
+
+  const farSeverity = isLowConfidence ? 'neutral' : classify(far, 0.05, 0.15);
+  const frrSeverity = isLowConfidence ? 'neutral' : classify(frr, 0.10, 0.20);
+  const eerSeverity = isLowConfidence ? 'neutral' : classify(eer, 0.10, 0.20);
 
   const severityHint = (sev) => {
     if (sev === 'ok') return t('dashboard.stats.severity_optimal');
@@ -70,24 +79,30 @@ export function CompactStatStrip({
       label: t('dashboard.stats.far'),
       value: `${(far * 100).toFixed(2)}%`,
       severity: farSeverity,
-      hint: severityHint(farSeverity),
-      title: 'False Accept Rate: probability that an impostor is accepted. TARGET: < 5%'
+      hint: isLowConfidence ? '⚠️ Muestra insuficiente' : severityHint(farSeverity),
+      title: isLowConfidence
+        ? reliabilityNote || 'Muestra de prueba insuficiente para una estimación confiable.'
+        : 'False Accept Rate: probability that an impostor is accepted. TARGET: < 5%'
     },
     {
       id: 'frr',
       label: t('dashboard.stats.frr'),
       value: `${(frr * 100).toFixed(2)}%`,
       severity: frrSeverity,
-      hint: severityHint(frrSeverity),
-      title: 'False Reject Rate: probability that a legitimate user is rejected. TARGET: < 10%'
+      hint: isLowConfidence ? '⚠️ Muestra insuficiente' : severityHint(frrSeverity),
+      title: isLowConfidence
+        ? reliabilityNote || 'Muestra de prueba insuficiente para una estimación confiable.'
+        : 'False Reject Rate: probability that a legitimate user is rejected. TARGET: < 10%'
     },
     {
       id: 'eer',
       label: t('dashboard.stats.eer'),
       value: `${(eer * 100).toFixed(2)}%`,
       severity: eerSeverity,
-      hint: severityHint(eerSeverity),
-      title: 'Equal Error Rate: point where FAR = FRR. TARGET: < 10%'
+      hint: isLowConfidence ? '⚠️ Muestra insuficiente' : severityHint(eerSeverity),
+      title: isLowConfidence
+        ? reliabilityNote || 'Muestra de prueba insuficiente para una estimación confiable.'
+        : 'Equal Error Rate: point where FAR = FRR. TARGET: < 10%'
     },
     {
       id: 'adaptations',
