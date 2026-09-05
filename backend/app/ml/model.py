@@ -27,6 +27,46 @@ class ModelMetadata:
     training_config: Dict[str, Any]
 
 
+class PrefitIsotonicCalibrator:
+    """
+    Lightweight prefit + isotonic calibration wrapper.
+
+    BUG FIXED: sklearn's CalibratedClassifierCV, even when wrapping a
+    FrozenEstimator (whose .fit() is a no-op), still internally performs
+    cross_val_predict with a default cv=5 to build the calibration curve.
+    With the very small validation sets typical of per-user keystroke-dynamics
+    models (as few as 4-10 samples), this either:
+      - raises "n_splits=5 greater than the number of samples" outright, or
+      - silently degenerates into calibrating on tiny 1-2-sample folds,
+        producing an unstable/near-arbitrary calibration curve that can
+        contradict the underlying (correctly discriminating) RandomForest.
+
+    This class instead fits a single IsotonicRegression directly on the
+    already-fitted base model's raw validation predictions vs the true
+    validation labels -- the actual "prefit" semantics the codebase always
+    intended (REPRODUCIBILITY_CONFIG['calibration_cv'] == 'prefit'), with
+    no internal re-splitting, so it works reliably down to a handful of
+    validation samples per class.
+    """
+
+    def __init__(self, base_model, legit_class_index: int = 1):
+        self.base_model = base_model
+        self.legit_class_index = legit_class_index
+        from sklearn.isotonic import IsotonicRegression
+        self.isotonic = IsotonicRegression(out_of_bounds='clip', y_min=0.0, y_max=1.0)
+        self.classes_ = np.array([0, 1])
+
+    def fit(self, X_scaled: np.ndarray, y: np.ndarray) -> "PrefitIsotonicCalibrator":
+        raw_proba = self.base_model.predict_proba(X_scaled)[:, self.legit_class_index]
+        self.isotonic.fit(raw_proba, y)
+        return self
+
+    def predict_proba(self, X_scaled: np.ndarray) -> np.ndarray:
+        raw_proba = self.base_model.predict_proba(X_scaled)[:, self.legit_class_index]
+        calibrated_legit = np.clip(self.isotonic.predict(raw_proba), 0.0, 1.0)
+        return np.column_stack([1.0 - calibrated_legit, calibrated_legit])
+
+
 class BiometricModel:
     """
     Wrapper for RandomForest classifier with calibration.

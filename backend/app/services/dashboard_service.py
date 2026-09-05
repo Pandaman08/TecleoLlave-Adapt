@@ -160,6 +160,9 @@ class DashboardService:
         model_far = float(model_metrics.get('far') or 0.012)
         model_frr = float(model_metrics.get('frr') or 0.018)
         model_eer = float(model_metrics.get('eer') or ((model_far + model_frr) / 2.0))
+        metrics_reliable = model_metrics.get('metrics_reliable', None)
+        reliability_note = model_metrics.get('reliability_note')
+        test_set_size = model_metrics.get('test_set_size')
         
         attempts = db.query(AuthAttempt).filter(
             AuthAttempt.user_id == user_id,
@@ -177,7 +180,10 @@ class DashboardService:
                 'eer': model_eer,
                 'avg_score': 0.0,
                 'period_start': start_date.isoformat(),
-                'period_end': datetime.now().isoformat()
+                'period_end': datetime.now().isoformat(),
+                'metrics_reliable': metrics_reliable,
+                'reliability_note': reliability_note,
+                'test_set_size': test_set_size
             }
         
         total = len(attempts)
@@ -203,7 +209,10 @@ class DashboardService:
             'eer': eer,
             'avg_score': avg_score,
             'period_start': start_date.isoformat(),
-            'period_end': datetime.now().isoformat()
+            'period_end': datetime.now().isoformat(),
+            'metrics_reliable': metrics_reliable,
+            'reliability_note': reliability_note,
+            'test_set_size': test_set_size
         }
     
     def get_auth_time_series(

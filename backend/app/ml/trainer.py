@@ -16,7 +16,7 @@ from sklearn.pipeline import Pipeline
 import joblib
 from datetime import datetime
 
-from app.ml.model import BiometricModel, ModelMetadata, create_model, create_scaler
+from app.ml.model import BiometricModel, ModelMetadata, create_model, create_scaler, PrefitIsotonicCalibrator
 from app.ml.features import FEATURE_NAMES, N_FEATURES
 from app.config import REPRODUCIBILITY_CONFIG
 from app.models import TypingSample, TypingFeature, ModelVersion, CandidateModel, CandidateStatus
@@ -252,39 +252,34 @@ class ModelTrainer:
         unique_classes = np.unique(y_val)
         has_both_classes = len(unique_classes) >= 2
         
-        if has_both_classes and len(y_val) >= 10:
+        if has_both_classes and len(y_val) >= 4:
             # Calibrate the model that was ALREADY fit on X_train, using the
             # held-out validation set only to fit the calibration curve
             # (this is what REPRODUCIBILITY_CONFIG['calibration_cv'] == 'prefit'
             # actually intends).
             #
-            # BUG FIXED: the previous code passed `cv=min(5, len(unique_classes))`.
-            # Since len(unique_classes) is at most 2 for binary classification,
-            # this always evaluated to cv=2 (never the intended 5-fold), AND —
-            # more importantly — because `cv` was an int (not "prefit"/a
-            # FrozenEstimator), CalibratedClassifierCV silently CLONED and
-            # RE-FIT a brand new RandomForest on tiny 2-fold splits of X_val
-            # (often < 10 samples), discarding everything learned from X_train.
-            # The resulting calibrated scores were effectively decoupled from
-            # the actual trained model and could contradict it outright — this
-            # is what produced the FAR spikes / EER≈0.5 (chance level) seen in
-            # experiments/results/*.json regardless of adaptation.
-            # Match the pipeline's preprocessing order (imputer -> scaler)
-            # before handing data to the already-fitted model for calibration.
+            # BUG FIXED (round 1): the previous code passed
+            # `cv=min(5, len(unique_classes))`. Since len(unique_classes) is
+            # at most 2 for binary classification, this always evaluated to
+            # cv=2 (never the intended 5-fold), AND — more importantly —
+            # because `cv` was an int (not "prefit"/a FrozenEstimator),
+            # CalibratedClassifierCV silently CLONED and RE-FIT a brand new
+            # RandomForest on tiny 2-fold splits of X_val (often < 10 samples),
+            # discarding everything learned from X_train.
+            #
+            # BUG FIXED (round 2): even after wrapping the model in
+            # FrozenEstimator (whose .fit() is a no-op) to avoid re-fitting,
+            # CalibratedClassifierCV still internally calls cross_val_predict
+            # with a default cv=5, which either crashes outright when
+            # len(y_val) < 5, or degenerates into calibrating on near-empty
+            # per-fold splits. We now use PrefitIsotonicCalibrator instead,
+            # which fits a single IsotonicRegression directly on the frozen
+            # model's raw predictions over the *entire* validation set, with
+            # no internal re-splitting — reliable down to a handful of
+            # validation samples per class.
             X_val_scaled = scaler.transform(imputer.transform(X_val))
-            try:
-                from sklearn.frozen import FrozenEstimator
-                calibrator = CalibratedClassifierCV(
-                    FrozenEstimator(model),
-                    method=self.config['calibration_method']
-                )
-            except ImportError:
-                # Older sklearn without FrozenEstimator: fall back to cv='prefit'
-                calibrator = CalibratedClassifierCV(
-                    estimator=model,
-                    method=self.config['calibration_method'],
-                    cv='prefit'
-                )
+            legit_class_index = list(model.classes_).index(1)
+            calibrator = PrefitIsotonicCalibrator(model, legit_class_index)
             calibrator.fit(X_val_scaled, y_val)
         else:
             # Single class or insufficient samples - skip calibration
@@ -387,6 +382,26 @@ class ModelTrainer:
             metrics['auc'] = 0.985
         
         # Calculate genuine biometric metrics: FAR, FRR, and EER
+        # BUG FIXED: with as few as 1-6 samples in the test set (typical given
+        # this system's small per-user sample counts), a single misclassified
+        # sample produces a "100%" FAR or FRR — technically correct given the
+        # denominator, but statistically meaningless and alarming/misleading
+        # when shown to a user with no context. We now compute how many
+        # samples of EACH class actually appear in the test set, and expose
+        # that alongside a `metrics_reliable` flag + a human-readable note,
+        # so the frontend can show a caveat instead of a bare, scary percentage.
+        n_test = len(y)
+        n_impostor_test = int(np.sum(y == 0))
+        n_legit_test = int(np.sum(y == 1))
+        # Rule of thumb: need a handful of samples of EACH class in the test
+        # set before a FAR/FRR percentage is even remotely stable. Below this,
+        # a single misclassification swings the reported rate by 20-100%.
+        MIN_SAMPLES_PER_CLASS_FOR_RELIABLE_METRICS = 5
+        metrics_reliable = (
+            n_impostor_test >= MIN_SAMPLES_PER_CLASS_FOR_RELIABLE_METRICS and
+            n_legit_test >= MIN_SAMPLES_PER_CLASS_FOR_RELIABLE_METRICS
+        )
+
         if len(np.unique(y)) >= 2:
             tn, fp, fn, tp = confusion_matrix(y, y_pred, labels=[0, 1]).ravel()
             raw_far = float(fp / (fp + tn)) if (fp + tn) > 0 else 0.0
@@ -407,6 +422,18 @@ class ModelTrainer:
             metrics['far'] = 0.012
             metrics['frr'] = float(max(1.0 - metrics.get('recall', 0.98), 0.015))
             metrics['eer'] = float((metrics['far'] + metrics['frr']) / 2.0)
+
+        metrics['test_set_size'] = n_test
+        metrics['test_set_legit_count'] = n_legit_test
+        metrics['test_set_impostor_count'] = n_impostor_test
+        metrics['metrics_reliable'] = metrics_reliable
+        if not metrics_reliable:
+            metrics['reliability_note'] = (
+                f"FAR/FRR/EER calculados sobre solo {n_legit_test} muestra(s) legítima(s) y "
+                f"{n_impostor_test} de impostor en el set de prueba — el número puede no ser "
+                f"representativo. Se necesitan más muestras (idealmente ≥{MIN_SAMPLES_PER_CLASS_FOR_RELIABLE_METRICS} "
+                f"de cada clase) para una estimación estable."
+            )
         
         return metrics
     

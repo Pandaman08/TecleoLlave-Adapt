@@ -28,6 +28,9 @@ class AuthMetricsResponse:
     avg_score: float
     period_start: Optional[Union[str, datetime]]
     period_end: Optional[Union[str, datetime]]
+    metrics_reliable: Optional[bool] = None
+    reliability_note: Optional[str] = None
+    test_set_size: Optional[int] = None
 
 
 @dataclass
@@ -94,4 +97,4 @@ class CandidateStatusResponse:
 class ComparisonResponse:
     static_model: Dict[str, Any]
     adaptive_model: Dict[str, Any]
-    improvement: Dict[str, Any]
+    improvement: Dict[str, Any]
