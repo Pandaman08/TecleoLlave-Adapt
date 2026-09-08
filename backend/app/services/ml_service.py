@@ -105,35 +105,63 @@ class MLService:
     
     def predict_score(self, db: Session, user_id: int, feature_vector: list) -> Dict[str, Any]:
         """Compute biometric score for a feature vector."""
-        predictor = self.load_predictor(db, user_id)
-        if not predictor:
+        # BUG FIXED: same class of bug as predict_decision() below — this
+        # used to call get_active_model() up to twice more separately (once
+        # inside load_predictor, again inline in the return statement,
+        # sometimes twice in the same expression), risking a mismatch that
+        # could return model_version_id=None even when a predictor was
+        # successfully loaded. Query once and reuse.
+        model_version = self.get_active_model(db, user_id)
+        if not model_version:
             raise ValueError("No active model for user")
-        
+
+        try:
+            model = load_user_model(model_version.model_path)
+            predictor = BiometricPredictor(model)
+        except Exception as e:
+            raise ValueError(f"Failed to load model for user: {e}")
+
         import numpy as np
         features = np.array(feature_vector, dtype=np.float64)
         score = predictor.predict_score(features)
-        
+
         return {
             'score': score,
-            'model_version_id': self.get_active_model(db, user_id).id if self.get_active_model(db, user_id) else None
+            'model_version_id': model_version.id
         }
     
     def predict_decision(self, db: Session, user_id: int, feature_vector: list) -> Dict[str, Any]:
         """Compute biometric score and make decision."""
-        predictor = self.load_predictor(db, user_id)
-        if not predictor:
+        # BUG FIXED: this previously called self.load_predictor(db, user_id)
+        # (which internally runs its own get_active_model query) and THEN
+        # called self.get_active_model(db, user_id) again separately to get
+        # model_version_id. When these two queries disagreed (e.g. right
+        # after an adaptive promotion swapped which ModelVersion row has
+        # is_active=True), predict_decision could end up with a working
+        # predictor but model_version=None, producing a response with
+        # model_version_id=None — which the AuthenticateResponse schema
+        # doesn't allow, crashing with a 500 pydantic ValidationError instead
+        # of a clean, actionable error message. Querying the active model
+        # ONCE and reusing it for both loading and reporting eliminates the
+        # possibility of the two answers ever disagreeing.
+        model_version = self.get_active_model(db, user_id)
+        if not model_version:
             raise ValueError("No active model for user")
-        
+
+        try:
+            model = load_user_model(model_version.model_path)
+            predictor = BiometricPredictor(model)
+        except Exception as e:
+            raise ValueError(f"Failed to load model for user: {e}")
+
         import numpy as np
         features = np.array(feature_vector, dtype=np.float64)
         decision, score = predictor.predict_decision(features)
-        
-        model_version = self.get_active_model(db, user_id)
-        
+
         return {
             'decision': decision,
             'score': score,
-            'model_version_id': model_version.id if model_version else None
+            'model_version_id': model_version.id
         }
 
 

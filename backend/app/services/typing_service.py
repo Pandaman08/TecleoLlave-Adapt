@@ -152,7 +152,14 @@ class TypingService:
             "decision": decision,
             "score": score,
             "message": message,
-            "model_version_id": model_version_id,
+            # BUG FIXED: when there's no active model, model_version_id stays
+            # None from the ValueError branch above. The DB row two lines up
+            # already normalizes this to 0 (`model_version_id or 0`) — this
+            # response dict must match, since AuthenticateResponse requires
+            # a non-nullable int. Without this, a "no model yet" reject
+            # crashed with a 500 pydantic ValidationError instead of cleanly
+            # reporting the reject decision.
+            "model_version_id": model_version_id or 0,
             "auth_attempt_id": auth_attempt.id,
             "sample_id": sample.id,
             "feature_id": feature.id,
