@@ -29,6 +29,9 @@ class TypingSample(Base):
     is_validated = Column(Boolean, default=False)
     consistency_score = Column(JSON, nullable=True)
     sample_quality = Column(SQLEnum(SampleQuality), nullable=True)
+    context_tag = Column(String(50), default="normal", nullable=True)
+    session_id = Column(String(50), default="1", nullable=True)
+    capture_time_label = Column(String(50), nullable=True)
 
     user = relationship("User", back_populates="typing_samples")
     features = relationship("TypingFeature", back_populates="sample", uselist=False)

@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Shield,
   KeyRound,
-  UserPlus
+  UserPlus,
+  Zap
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -110,8 +111,18 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Quick Nav Links (Login / Register) */}
+      {/* Quick Nav Links (Live Demo / Login / Register) */}
       <div className="sidebar-footer">
+        <NavLink
+          to="/live-demo"
+          className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+          style={{ color: 'var(--brand-500)', fontWeight: 600 }}
+          title={isCollapsed ? 'Demo en Vivo (Sustentación)' : undefined}
+        >
+          <Zap size={18} strokeWidth={2} className="nav-icon" style={{ color: 'var(--brand-500)' }} />
+          {!isCollapsed && <span className="nav-label">Demo en Vivo ⚡</span>}
+        </NavLink>
+
         <NavLink
           to="/login"
           className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}

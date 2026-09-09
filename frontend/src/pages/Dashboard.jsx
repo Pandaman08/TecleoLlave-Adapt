@@ -46,6 +46,7 @@ import FeatureImportanceChart from '../components/charts/FeatureImportanceChart'
 import ThresholdGauge from '../components/charts/ThresholdGauge';
 import ModelHistoryTrend, { ModelSparkline } from '../components/charts/ModelHistoryTrend';
 import ScoreEvolutionChart from '../components/charts/ScoreEvolutionChart';
+import ModelComparisonPanel from '../components/ModelComparisonPanel';
 
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
@@ -417,7 +418,21 @@ export default function Dashboard() {
                 }}>
                   <span>📅 Entrenado: {summary?.active_model_created_at || '—'}</span>
                   <span>📊 Muestras: {summary?.active_model_samples || '—'}</span>
-                  <span>🧬 Algoritmo: {summary?.active_model_algorithm || 'IsolationForest'}</span>
+                  <span>
+                    🏆 Algoritmo Óptimo:{' '}
+                    <strong
+                      style={{ color: 'var(--brand-500)', cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => setActiveSection('models')}
+                      title="Ver comparativa de algoritmos candidatos"
+                    >
+                      {summary?.active_model_algorithm || 'Random Forest'}
+                    </strong>
+                    {summary?.active_model_eer !== undefined && summary?.active_model_eer !== null && (
+                      <span style={{ color: 'var(--success)', fontWeight: 700, marginLeft: '0.25rem' }}>
+                        (EER: {(summary.active_model_eer * 100).toFixed(2)}%)
+                      </span>
+                    )}
+                  </span>
                   <span>🔄 Última adaptación: {summary?.last_adaptation_at || '—'}</span>
                   <span>⏱️ Próxima evaluación: {summary?.next_eval_in || '3 ALLOW'}</span>
                 </div>
@@ -542,11 +557,14 @@ export default function Dashboard() {
           )}
 
           {/* =========================================================================
-              SECCIÓN 3: HISTORIAL DE MODELOS
+              SECCIÓN 3: HISTORIAL DE MODELOS & SELECCIÓN DE ALGORITMO
               ========================================================================= */}
           {activeSection === 'models' && (
-            <div className="animate-fade">
-              {/* Gráfico de Evolución Temporal de Modelos (Score & Allow Rate) */}
+            <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* 1. Panel de Comparación y Selección Automática de Algoritmos (Evaluación de 3 modelos) */}
+              <ModelComparisonPanel userId={userId} onModelUpdated={loadDashboard} />
+
+              {/* 2. Gráfico de Evolución Temporal de Modelos (Score & Allow Rate) */}
               <div className="table-panel">
                 <div className="table-panel-header">
                   <div>
@@ -563,13 +581,13 @@ export default function Dashboard() {
                 <ModelHistoryTrend models={models} />
               </div>
 
-              {/* Tabla de Versiones con Sparklines */}
+              {/* 3. Tabla de Versiones con Sparklines y Algoritmo */}
               <div className="table-panel">
                 <div className="table-panel-header">
                   <div>
                     <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Registro Histórico de Versiones</h3>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.2rem 0 0' }}>
-                      Trazabilidad de parámetros con mini sparkline de consistencia por versión
+                      Trazabilidad de parámetros, estimador óptimo seleccionado y consistencia
                     </p>
                   </div>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -593,6 +611,7 @@ export default function Dashboard() {
                           Versión {sortField === 'version_id' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                         </th>
                         <th>Estado</th>
+                        <th>Algoritmo</th>
                         <th>Tendencia</th>
                         <th>Muestras</th>
                         <th>Sesiones</th>
@@ -628,6 +647,15 @@ export default function Dashboard() {
                                   </span>
                                 )}
                               </td>
+                              <td>
+                                <span style={{
+                                  fontSize: '0.78rem',
+                                  fontWeight: 600,
+                                  color: m.is_active ? 'var(--brand-500)' : 'var(--text-secondary)'
+                                }}>
+                                  {m.algorithm || 'Random Forest'}
+                                </span>
+                              </td>
                               {/* Sparkline Column */}
                               <td>
                                 <ModelSparkline values={sparkValues} color={m.is_active ? '#10b981' : '#6366f1'} />
@@ -648,7 +676,7 @@ export default function Dashboard() {
                         })
                       ) : (
                         <tr>
-                          <td colSpan={8} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+                          <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                             No se encontraron versiones de modelo registradas.
                           </td>
                         </tr>

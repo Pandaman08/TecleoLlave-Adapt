@@ -23,8 +23,9 @@ class ModelMetadata:
     hyperparameters: Dict[str, Any]
     feature_names: list
     feature_schema: Dict[str, Any]
-    metrics: Dict[str, float]
+    metrics: Dict[str, Any]
     training_config: Dict[str, Any]
+    algorithm: str = "RandomForestClassifier"
 
 
 class PrefitIsotonicCalibrator:
@@ -78,12 +79,14 @@ class BiometricModel:
         model=None,
         scaler=None,
         calibrator=None,
-        metadata: Optional[ModelMetadata] = None
+        metadata: Optional[ModelMetadata] = None,
+        algorithm: Optional[str] = None
     ):
         self.model = model
         self.scaler = scaler
         self.calibrator = calibrator
         self.metadata = metadata
+        self.algorithm = algorithm or (metadata.algorithm if metadata else "RandomForestClassifier")
     
     @property
     def is_fitted(self) -> bool:
@@ -178,10 +181,73 @@ class BiometricModel:
         return cls(model=model, scaler=scaler, calibrator=calibrator, metadata=metadata)
 
 
-def create_model(hyperparameters: Dict[str, Any]):
-    """Create a new RandomForest model with given hyperparameters."""
-    from sklearn.ensemble import RandomForestClassifier
-    return RandomForestClassifier(**hyperparameters)
+def create_model(hyperparameters: Optional[Dict[str, Any]] = None, algorithm: str = "RandomForestClassifier"):
+    """
+    Create a new ML model instance for biometric classification.
+    Supports:
+    - 'RandomForestClassifier' / 'random_forest'
+    - 'SVC' / 'svm_rbf' (SVM with RBF kernel and calibrated probability)
+    - 'GradientBoostingClassifier' / 'gradient_boosting' / 'HistGradientBoostingClassifier'
+    """
+    hyperparameters = (hyperparameters or {}).copy()
+    algo = str(algorithm).lower()
+    
+    if "svm" in algo or "svc" in algo:
+        from sklearn.svm import SVC
+        svm_params = {
+            "kernel": "rbf",
+            "C": 2.0,
+            "gamma": "scale",
+            "probability": True,
+            "class_weight": "balanced",
+            "random_state": 42
+        }
+        for k in ["C", "gamma", "kernel", "random_state", "probability"]:
+            if k in hyperparameters:
+                svm_params[k] = hyperparameters[k]
+        return SVC(**svm_params)
+        
+    elif "hist" in algo:
+        from sklearn.ensemble import HistGradientBoostingClassifier
+        hgb_params = {
+            "max_iter": 100,
+            "learning_rate": 0.1,
+            "max_depth": 5,
+            "random_state": 42
+        }
+        for k in ["max_iter", "learning_rate", "max_depth", "random_state"]:
+            if k in hyperparameters:
+                hgb_params[k] = hyperparameters[k]
+        return HistGradientBoostingClassifier(**hgb_params)
+
+    elif "gradient" in algo or "boosting" in algo:
+        from sklearn.ensemble import GradientBoostingClassifier
+        gb_params = {
+            "n_estimators": 100,
+            "learning_rate": 0.1,
+            "max_depth": 3,
+            "subsample": 0.85,
+            "random_state": 42
+        }
+        for k in ["n_estimators", "learning_rate", "max_depth", "subsample", "random_state"]:
+            if k in hyperparameters:
+                gb_params[k] = hyperparameters[k]
+        return GradientBoostingClassifier(**gb_params)
+        
+    else:
+        from sklearn.ensemble import RandomForestClassifier
+        rf_params = {
+            "n_estimators": 200,
+            "max_depth": 10,
+            "min_samples_split": 5,
+            "min_samples_leaf": 3,
+            "max_features": "sqrt",
+            "class_weight": "balanced",
+            "random_state": 42,
+            "n_jobs": -1
+        }
+        rf_params.update(hyperparameters)
+        return RandomForestClassifier(**rf_params)
 
 
 def create_scaler(scaler_type: str = "RobustScaler"):

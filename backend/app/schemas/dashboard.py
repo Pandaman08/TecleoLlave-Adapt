@@ -14,6 +14,10 @@ class UserSummaryResponse:
     auth_samples: int
     total_auth_attempts: int
     total_adaptations: int
+    active_model_algorithm: Optional[str] = None
+    candidate_comparison: Optional[List[Dict[str, Any]]] = None
+    selection_reason: Optional[str] = None
+    active_model_eer: Optional[float] = None
 
 
 @dataclass
@@ -55,6 +59,8 @@ class ModelMetricsResponse:
     auth_count: int
     allow_rate: float
     avg_score: float
+    algorithm: Optional[str] = None
+    selection_reason: Optional[str] = None
 
 
 @dataclass

@@ -197,6 +197,20 @@ export default function Login() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <NavLink
+            to="/live-demo"
+            className="btn-secondary"
+            style={{
+              fontSize: '0.8rem',
+              padding: '0.35rem 0.75rem',
+              backgroundColor: 'rgba(99, 102, 241, 0.12)',
+              color: 'var(--brand-500)',
+              borderColor: 'var(--brand-500)',
+              fontWeight: 600
+            }}
+          >
+            Demo en Vivo ⚡
+          </NavLink>
           <NavLink to="/" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
             {t('nav.dashboard')}
           </NavLink>

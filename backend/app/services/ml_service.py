@@ -14,12 +14,24 @@ class MLService:
         self.models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
         os.makedirs(self.models_dir, exist_ok=True)
     
-    def train_model(self, db: Session, user_id: int) -> Dict[str, Any]:
+    def train_model(
+        self,
+        db: Session,
+        user_id: int,
+        select_best: bool = True,
+        algorithm_override: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Train a new model for the user.
+        If select_best is True, runs automatic cross-validation comparison across
+        RandomForestClassifier, SVC (RBF), and GradientBoostingClassifier with
+        user samples, registered impostors, and CMU benchmark impostors,
+        automatically selecting the algorithm with the lowest EER.
         
-        Returns: dict with model info and metrics
+        Returns: dict with model info, metrics, and candidate comparison
         """
+        from app.ml.model_selector import model_selector
+
         # Verify user exists
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -45,12 +57,22 @@ class MLService:
         model_filename = f"user_{user_id}_v{new_version}"
         model_path = os.path.join(self.models_dir, model_filename)
         
-        # Train model
-        biometric_model, metrics = train_user_model(
-            db=db,
-            user_id=user_id,
-            model_output_path=model_path
-        )
+        if select_best:
+            # Automatic comparison & selection across candidate algorithms
+            biometric_model, metrics, comparison, selection_reason = model_selector.select_and_train_best_model(
+                db=db,
+                user_id=user_id,
+                model_output_path=model_path
+            )
+        else:
+            # Fallback direct training with default configuration
+            biometric_model, metrics = train_user_model(
+                db=db,
+                user_id=user_id,
+                model_output_path=model_path
+            )
+            comparison = metrics.get('candidate_comparison', [])
+            selection_reason = metrics.get('selection_reason', 'Modelo base entrenado.')
         
         # Update metadata with correct version
         biometric_model.metadata.version = new_version
@@ -76,12 +98,81 @@ class MLService:
         db.commit()
         db.refresh(model_version)
         
+        winner_algo = metrics.get('algorithm', 'RandomForestClassifier')
+        eer_pct = metrics.get('eer', 0.0) * 100.0
+
         return {
             'model_version_id': model_version.id,
             'version': new_version,
             'model_path': model_path + '.joblib',
             'metrics': metrics,
-            'message': f'Model v{new_version} trained successfully'
+            'selected_algorithm': winner_algo,
+            'selection_reason': selection_reason,
+            'candidate_comparison': comparison,
+            'message': f"Modelo v{new_version} entrenado. Algoritmo óptimo seleccionado: {winner_algo} (EER: {eer_pct:.2f}%)."
+        }
+    
+    def get_model_comparison(self, db: Session, user_id: int) -> Dict[str, Any]:
+        """
+        Returns the multi-algorithm comparison (FAR, FRR, EER, AUC) and selection rationale
+        for the specified user. If the active model doesn't have it yet, evaluates it on-demand.
+        """
+        from app.ml.model_selector import model_selector, CANDIDATE_ALGORITHMS
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError(f"Usuario {user_id} no encontrado")
+
+        active_model = self.get_active_model(db, user_id)
+        
+        # If active model has candidate comparison recorded, return it
+        if active_model and active_model.metrics and "candidate_comparison" in active_model.metrics:
+            metrics = active_model.metrics
+            return {
+                "user_id": user_id,
+                "username": user.username,
+                "model_version": active_model.id,
+                "selected_algorithm": metrics.get("algorithm", "RandomForestClassifier"),
+                "selected_algorithm_family": metrics.get("algorithm_family", "Ensemble"),
+                "selection_reason": metrics.get("selection_reason", ""),
+                "eer": metrics.get("eer", 0.0),
+                "far": metrics.get("far", 0.0),
+                "frr": metrics.get("frr", 0.0),
+                "auc": metrics.get("auc", 0.0),
+                "accuracy": metrics.get("accuracy", 0.0),
+                "candidate_comparison": metrics.get("candidate_comparison", []),
+                "data_stats": metrics.get("data_stats", {})
+            }
+
+        # Otherwise, run the evaluation on the user's data
+        X, y, data_stats = model_selector.prepare_dataset(db, user_id)
+        comparison = model_selector.evaluate_candidates(X, y, n_splits=5)
+        winner = comparison[0]
+
+        other_candidates_summary = ", ".join(
+            [f"{c['name']} (EER: {c['eer']*100:.1f}%)" for c in comparison[1:]]
+        )
+        selection_reason = (
+            f"Algoritmo '{winner['name']}' seleccionado automáticamente para '{user.username}' "
+            f"al obtener la menor tasa de error EER ({winner['eer']*100:.2f}%) y separación AUC de {winner['auc']*100:.1f}%, "
+            f"superando a {other_candidates_summary}. Evaluado con validación cruzada sobre {data_stats['n_legit']} muestras legítimas "
+            f"frente a {data_stats['n_registered_impostors']} impostores registrados y {data_stats['n_cmu_impostors']} impostores CMU Benchmark."
+        )
+
+        return {
+            "user_id": user_id,
+            "username": user.username,
+            "model_version": active_model.id if active_model else 1,
+            "selected_algorithm": winner["name"],
+            "selected_algorithm_family": winner["family"],
+            "selection_reason": selection_reason,
+            "eer": winner["eer"],
+            "far": winner["far_at_allow"],
+            "frr": winner["frr_at_allow"],
+            "auc": winner["auc"],
+            "accuracy": winner["accuracy"],
+            "candidate_comparison": comparison,
+            "data_stats": data_stats
         }
     
     def get_active_model(self, db: Session, user_id: int) -> Optional[ModelVersion]:

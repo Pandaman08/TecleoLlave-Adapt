@@ -124,6 +124,20 @@ class DashboardService:
             AdaptationEvent.user_id == user_id
         ).count()
         
+        # Algorithm and model selection metadata
+        active_algo = "Random Forest"
+        comparison_list = None
+        selection_reason = None
+        active_eer = None
+        if active_model and active_model.metrics:
+            m = active_model.metrics
+            active_algo = m.get("algorithm") or (
+                active_model.training_config.get("selected_algorithm") if active_model.training_config else "Random Forest"
+            )
+            comparison_list = m.get("candidate_comparison")
+            selection_reason = m.get("selection_reason")
+            active_eer = m.get("eer")
+
         return {
             'user_id': user_id,
             'username': user.username,
@@ -138,7 +152,11 @@ class DashboardService:
             'enrollment_samples': enrollment_samples,
             'auth_samples': auth_samples,
             'total_auth_attempts': total_auth,
-            'total_adaptations': total_adaptations
+            'total_adaptations': total_adaptations,
+            'active_model_algorithm': active_algo,
+            'candidate_comparison': sanitize_json_val(comparison_list) if comparison_list else None,
+            'selection_reason': selection_reason,
+            'active_model_eer': active_eer
         }
     
     def get_auth_metrics(
@@ -288,6 +306,11 @@ class DashboardService:
             clean_metrics = sanitize_json_val(model.metrics or {})
 
             created_at_val = model.created_at.isoformat() if hasattr(model.created_at, 'isoformat') else str(model.created_at) if model.created_at else None
+            algo = (model.metrics or {}).get('algorithm') or (
+                model.training_config.get('selected_algorithm') if model.training_config else 'Random Forest'
+            )
+            reason = (model.metrics or {}).get('selection_reason')
+
             result.append({
                 'version_id': model.id,
                 'user_id': model.user_id,
@@ -297,7 +320,9 @@ class DashboardService:
                 'metrics': clean_metrics,
                 'auth_count': auth_count,
                 'allow_rate': allow_count / auth_count if auth_count > 0 else 0,
-                'avg_score': float(avg_score)
+                'avg_score': float(avg_score),
+                'algorithm': algo,
+                'selection_reason': reason
             })
         
         return result

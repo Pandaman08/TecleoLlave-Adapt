@@ -34,6 +34,14 @@ class TypingService:
         if not feature_result['valid']:
             raise ValueError(f"Invalid sample: {feature_result['error']}")
         
+        # Si se especificó username, resolver el user_id correspondiente
+        if request.username:
+            target_user = db.query(User).filter(User.username == request.username).first()
+            if target_user:
+                user_id = target_user.id
+
+        capture_label = request.capture_time_label or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         # Crear muestra
         sample = TypingSample(
             user_id=user_id,
@@ -42,7 +50,10 @@ class TypingService:
             source=SampleSource.enrollment,
             is_validated=True,
             consistency_score=feature_result['consistency_score'],
-            sample_quality=SampleQuality(feature_result['sample_quality'])
+            sample_quality=SampleQuality(feature_result['sample_quality']),
+            context_tag=request.context_tag or "normal",
+            session_id=str(request.session_id or "1"),
+            capture_time_label=capture_label
         )
         db.add(sample)
         db.flush()
@@ -171,6 +182,73 @@ class TypingService:
     
     def get_user_samples(self, db: Session, user_id: int) -> List[TypingSample]:
         return db.query(TypingSample).filter(TypingSample.user_id == user_id).all()
+
+    def get_user_multi_session_status(self, db: Session, user_id: int) -> dict:
+        """
+        Retorna el estado del enrolamiento multi-sesión y multi-contexto del usuario.
+        """
+        from collections import defaultdict
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+
+        samples = db.query(TypingSample).filter(
+            TypingSample.user_id == user_id,
+            TypingSample.source == SampleSource.enrollment,
+            TypingSample.is_validated == True
+        ).order_by(TypingSample.created_at.asc()).all()
+
+        total_samples = len(samples)
+
+        session_map = defaultdict(list)
+        context_distribution = defaultdict(int)
+
+        for s in samples:
+            sess_key = str(s.session_id or "1")
+            session_map[sess_key].append(s)
+            c_tag = s.context_tag or "normal"
+            context_distribution[c_tag] += 1
+
+        sessions_info = []
+        for sess_id in sorted(session_map.keys(), key=lambda x: int(x) if x.isdigit() else str(x)):
+            sess_samples = session_map[sess_id]
+            s_ctx = defaultdict(int)
+            for s in sess_samples:
+                s_ctx[s.context_tag or "normal"] += 1
+
+            first_ts = sess_samples[0].capture_time_label or sess_samples[0].created_at.strftime("%H:%M")
+            last_ts = sess_samples[-1].capture_time_label or sess_samples[-1].created_at.strftime("%H:%M")
+
+            sessions_info.append({
+                "session_id": sess_id,
+                "samples_count": len(sess_samples),
+                "context_counts": dict(s_ctx),
+                "first_captured": first_ts,
+                "last_captured": last_ts
+            })
+
+        sessions_count = len(session_map)
+        is_ready = total_samples >= 30 and sessions_count >= 3
+
+        active_model = db.query(ModelVersion).filter(
+            ModelVersion.user_id == user_id,
+            ModelVersion.is_active == True
+        ).first()
+
+        return {
+            "user_id": user.id,
+            "username": user.username,
+            "total_samples": total_samples,
+            "target_samples_min": 30,
+            "target_samples_max": 40,
+            "sessions_count": sessions_count,
+            "min_sessions_required": 3,
+            "is_ready_for_training": is_ready,
+            "context_distribution": dict(context_distribution),
+            "sessions": sessions_info,
+            "active_model_version": active_model.id if active_model else None
+        }
 
 
 typing_service = TypingService()

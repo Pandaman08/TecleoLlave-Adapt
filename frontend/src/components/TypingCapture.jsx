@@ -23,7 +23,10 @@ export default function TypingCapture({
   mode = 'enroll',
   username,
   sampleIndex,
-  totalSamples
+  totalSamples,
+  contextTag = 'normal',
+  sessionId = '1',
+  captureTimeLabel = null
 }) {
   const { t } = useTranslation();
 
@@ -44,7 +47,15 @@ export default function TypingCapture({
       const endpoint = isAuth ? '/typing/authenticate' : '/typing/enroll';
       const payload = isAuth
         ? { raw_timestamps: result.events, phrase_typed: result.phrase_typed, username }
-        : { raw_timestamps: result.events, phrase_typed: result.phrase_typed, source: mode };
+        : {
+            raw_timestamps: result.events,
+            phrase_typed: result.phrase_typed,
+            source: mode,
+            username,
+            context_tag: contextTag || 'normal',
+            session_id: String(sessionId || '1'),
+            capture_time_label: captureTimeLabel
+          };
       const response = await api.post(endpoint, payload);
       onSampleCaptured?.(response.data);
     } catch (err) {
