@@ -63,8 +63,7 @@ export default function Login() {
       try {
         tokenRes = await api.post('/auth/login', { username: u, password: p });
       } catch (authErr) {
-        // Mensaje genérico de acceso denegado para no dar pistas
-        setError('Usuario, contraseña o verificación incorrectos.');
+        setError(`Usuario o contraseña incorrectos.`);
         setLoading(false);
         return;
       }
@@ -84,7 +83,7 @@ export default function Login() {
 
       // RESPUESTA DEL SISTEMA SEGÚN DECISIÓN TRI-ZONA:
 
-      // CASO 1: ACCEPT / ALLOW -> Acceso concedido directo (cero métricas expuestas)
+      // CASO 1: ACCEPT / ALLOW -> Acceso concedido
       if (decision === 'allow' || decision === 'accept') {
         localStorage.setItem('token', token);
         if (userId) {
@@ -93,7 +92,7 @@ export default function Login() {
         } else {
           localStorage.setItem('current_username', u);
         }
-        setSuccess('Acceso concedido. Redirigiendo a su sesión...');
+        setSuccess(`¡Identidad confirmada! Bienvenido, ${u}.`);
         setTimeout(() => navigate('/'), 700);
         return;
       }
@@ -106,11 +105,11 @@ export default function Login() {
         return;
       }
 
-      // CASO 3: REJECT -> Acceso denegado con mensaje genérico de seguridad
-      setError('Usuario, contraseña o verificación incorrectos.');
+      // CASO 3: REJECT -> La biometría detectó que quien teclea NO es el dueño de la cuenta
+      setError(`Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`);
       setTypingSample(null);
     } catch (err) {
-      setError('Usuario, contraseña o verificación incorrectos.');
+      setError(`Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`);
       setTypingSample(null);
     } finally {
       setLoading(false);
@@ -142,7 +141,11 @@ export default function Login() {
 
   const handleFillDemo = (u) => {
     setUsername(u);
-    setPassword('password123');
+    if (u === 'demo_user') {
+      setPassword('demo123456');
+    } else {
+      setPassword('123456');
+    }
   };
 
   return (
@@ -446,18 +449,26 @@ export default function Login() {
                     <button
                       type="button"
                       className="btn-secondary"
-                      onClick={() => handleFillDemo('user1')}
+                      onClick={() => handleFillDemo('demo_user')}
                       style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
                     >
-                      user1
+                      demo_user
                     </button>
                     <button
                       type="button"
                       className="btn-secondary"
-                      onClick={() => handleFillDemo('user2')}
+                      onClick={() => handleFillDemo('alexis')}
                       style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
                     >
-                      user2
+                      alexis
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => handleFillDemo('profesor')}
+                      style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+                    >
+                      profesor
                     </button>
                   </div>
                 )}
