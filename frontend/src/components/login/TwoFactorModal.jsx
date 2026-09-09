@@ -166,10 +166,10 @@ export default function TwoFactorModal({
             fontWeight: 700,
             margin: '0 0 0.5rem',
             textAlign: 'center',
-            color: isSuspicious ? 'var(--danger)' : 'var(--warning)'
+            color: 'var(--warning)'
           }}
         >
-          {isSuspicious ? 'Verificación adicional requerida' : 'Confirma con tu código 2FA'}
+          Verificación adicional requerida
         </h3>
 
         {/* Description */}
@@ -182,9 +182,7 @@ export default function TwoFactorModal({
             textAlign: 'center'
           }}
         >
-          {isSuspicious
-            ? `Detectamos un patrón rítmico inusual (${(score * 100).toFixed(0)}%). Por seguridad, confirma tu identidad con un código TOTP.`
-            : `Tu score biométrico (${(score * 100).toFixed(0)}%) está en zona intermedia. Ingresa tu código de 6 dígitos de la app autenticadora.`}
+          Por motivos de seguridad, ingrese su código de verificación temporal de 6 dígitos para completar el acceso.
         </p>
 
         {error && (

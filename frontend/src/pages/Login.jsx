@@ -1,136 +1,117 @@
-/**
- * Login.jsx - Totalmente migrado a i18n
- */
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
-import LoginTerminal from '../components/LoginTerminal';
-import AuthStepper from '../components/login/AuthStepper';
-import CredentialsForm from '../components/login/CredentialsForm';
+import CaptchaPhraseInput from '../components/login/CaptchaPhraseInput';
 import TwoFactorModal from '../components/login/TwoFactorModal';
-import DecisionExplainer from '../components/login/DecisionExplainer';
 import LanguageSelector from '../components/LanguageSelector';
-import { ShieldCheck, KeyRound, Sun, Moon, GraduationCap, User2 } from 'lucide-react';
+import { ShieldCheck, KeyRound, Sun, Moon, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-
-const EXPERT_MODE_STORAGE_KEY = 'tecleollave_expert_mode';
 
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  const [expertMode, setExpertMode] = useState(() => {
-    try {
-      return localStorage.getItem(EXPERT_MODE_STORAGE_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-
-  const toggleExpertMode = () => {
-    setExpertMode((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(EXPERT_MODE_STORAGE_KEY, next ? '1' : '0');
-      } catch { /* ignore */ }
-      return next;
-    });
-  };
-
-  // Estado
+  // Estados de los 3 campos
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [typingSample, setTypingSample] = useState(null);
 
+  // Estados de feedback y carga
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [seedLoading, setSeedLoading] = useState(false);
-
-  const [decisionResult, setDecisionResult] = useState(null);
 
   // 2FA modal
   const [show2FaModal, setShow2FaModal] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState(null);
-  const [pendingCredentials, setPendingCredentials] = useState(null);
-
-  // Stepper state
-  const [currentStep, setCurrentStep] = useState(1);
+  const [pendingToken, setPendingToken] = useState(null);
 
   const isDev = Boolean(import.meta.env.DEV);
-  const devUsers = ['user1', 'user2'];
 
-  // Update stepper based on state
-  useEffect(() => {
-    if (decisionResult) setCurrentStep(3);
-    else if (typingSample) setCurrentStep(2);
-    else setCurrentStep(1);
-  }, [typingSample, decisionResult]);
-
-  // Reset error/success when inputs change
+  // Limpiar errores al cambiar credenciales
   useEffect(() => {
     if (error) setError(null);
   }, [username, password]);
 
-  const handleSubmit = async ({ username: u, password: p }) => {
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
     setError(null);
     setSuccess(null);
-    setDecisionResult(null);
+
+    const u = username.trim();
+    const p = password;
 
     if (!u || !p) {
-      setError(t('login.errors.empty_fields'));
+      setError('Por favor complete su usuario y contraseña.');
+      return;
+    }
+
+    if (!typingSample || !typingSample.events || typingSample.events.length < 35) {
+      setError('Por favor complete la frase de verificación de seguridad en la sección derecha.');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Step 1: Validate credentials
-      const tokenRes = await api.post('/auth/login', { username: u, password: p });
+      // PASO 1: Validación de credenciales de usuario (Paso 1 del login)
+      let tokenRes;
+      try {
+        tokenRes = await api.post('/auth/login', { username: u, password: p });
+      } catch (authErr) {
+        // Mensaje genérico de acceso denegado para no dar pistas
+        setError('Usuario, contraseña o verificación incorrectos.');
+        setLoading(false);
+        return;
+      }
+
       const token = tokenRes.data.access_token;
-      localStorage.setItem('token', token);
-      if (tokenRes.data.user_id) {
-        localStorage.setItem('current_user_id', tokenRes.data.user_id);
-        localStorage.setItem('current_username', tokenRes.data.username);
-      } else {
-        localStorage.setItem('current_username', u);
+      const userId = tokenRes.data.user_id;
+
+      // PASO 2: Evaluación biométrica silenciosa del patrón de tecleo capturado
+      const authPayload = {
+        raw_timestamps: typingSample.events,
+        phrase_typed: typingSample.phrase_typed,
+        username: u
+      };
+
+      const bioRes = await api.post('/typing/authenticate', authPayload);
+      const decision = String(bioRes.data.decision || '').toLowerCase();
+
+      // RESPUESTA DEL SISTEMA SEGÚN DECISIÓN TRI-ZONA:
+
+      // CASO 1: ACCEPT / ALLOW -> Acceso concedido directo (cero métricas expuestas)
+      if (decision === 'allow' || decision === 'accept') {
+        localStorage.setItem('token', token);
+        if (userId) {
+          localStorage.setItem('current_user_id', userId);
+          localStorage.setItem('current_username', tokenRes.data.username || u);
+        } else {
+          localStorage.setItem('current_username', u);
+        }
+        setSuccess('Acceso concedido. Redirigiendo a su sesión...');
+        setTimeout(() => navigate('/'), 700);
+        return;
       }
 
-      // Step 2: If biometric sample exists, process decision
-      if (typingSample && typingSample.decision) {
-        const decision = typingSample.decision;
-        const score = typingSample.score;
-        const decisionUpper = decision.toUpperCase();
-        const scorePercent = (score * 100).toFixed(1);
-
-        setDecisionResult({ decision: decisionUpper, score });
-
-        if (decisionUpper === 'CHALLENGE') {
-          setPendingCredentials({ u, p });
-          setShow2FaModal(true);
-          setSuccess(t('login.messages.2fa_required', { score: scorePercent }));
-          setLoading(false);
-          return;
-        }
-
-        if (decisionUpper === 'REJECT') {
-          setError(t('login.messages.access_rejected', { score: scorePercent }));
-          setLoading(false);
-          return;
-        }
-
-        // ACCEPT
-        setSuccess(t('login.messages.access_granted', { score: scorePercent }));
-      } else {
-        setSuccess(t('login.messages.login_success'));
+      // CASO 2: CHALLENGE -> Desafío 2FA/TOTP sin exponer score biométrico
+      if (decision === 'challenge') {
+        setPendingToken({ token, userId, username: tokenRes.data.username || u });
+        setShow2FaModal(true);
+        setLoading(false);
+        return;
       }
 
-      setTimeout(() => navigate('/'), 1100);
+      // CASO 3: REJECT -> Acceso denegado con mensaje genérico de seguridad
+      setError('Usuario, contraseña o verificación incorrectos.');
+      setTypingSample(null);
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || t('login.errors.auth_failed'));
+      setError('Usuario, contraseña o verificación incorrectos.');
+      setTypingSample(null);
     } finally {
       setLoading(false);
     }
@@ -141,36 +122,21 @@ export default function Login() {
     setOtpLoading(true);
     try {
       const res = await api.post('/auth/verify-2fa', {
-        username: pendingCredentials?.u || username,
+        username: pendingToken?.username || username,
         otp_code: code
       });
-      localStorage.setItem('token', res.data.access_token);
-      if (res.data.user_id) {
-        localStorage.setItem('current_user_id', res.data.user_id);
-        localStorage.setItem('current_username', res.data.username);
+      localStorage.setItem('token', res.data.access_token || pendingToken?.token);
+      if (pendingToken?.userId) {
+        localStorage.setItem('current_user_id', pendingToken.userId);
+        localStorage.setItem('current_username', pendingToken.username);
       }
-      setSuccess(t('login.messages.2fa_verified'));
+      setSuccess('Verificación completada exitosamente.');
       setShow2FaModal(false);
-      setTimeout(() => navigate('/'), 800);
+      setTimeout(() => navigate('/'), 600);
     } catch (err) {
-      setOtpError(err.response?.data?.detail || t('login.messages.2fa_invalid'));
+      setOtpError('Código de verificación incorrecto o expirado.');
     } finally {
       setOtpLoading(false);
-    }
-  };
-
-  const handleSeedDemo = async () => {
-    setSeedLoading(true);
-    setError(null);
-    try {
-      const seedRes = await api.post('/auth/seed-demo');
-      setSuccess(t('login.messages.seed_success', { samples: seedRes.data.samples_created }));
-    } catch (err) {
-      setError(t('login.messages.seed_error', {
-        error: err.response?.data?.detail || err.message
-      }));
-    } finally {
-      setSeedLoading(false);
     }
   };
 
@@ -180,8 +146,13 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-canvas)', display: 'flex', flexDirection: 'column' }}>
-      {/* Topbar */}
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: 'var(--bg-canvas)',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* Topbar limpia */}
       <header className="topbar-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
@@ -193,9 +164,10 @@ export default function Login() {
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.1 }}>{t('app.title')}</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{t('app.subtitle')}</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Portal de Autenticación Segura</div>
           </div>
         </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <NavLink
             to="/live-demo"
@@ -209,32 +181,11 @@ export default function Login() {
               fontWeight: 600
             }}
           >
-            Demo en Vivo ⚡
-          </NavLink>
-          <NavLink to="/" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
-            {t('nav.dashboard')}
+            Demo en Vivo (Sustentación) ⚡
           </NavLink>
           <NavLink to="/register" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
-            {t('nav.register')}
+            Crear Cuenta (Enrolamiento)
           </NavLink>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={toggleExpertMode}
-            title={expertMode ? t('expert_mode.title_simple') : t('expert_mode.title_expert')}
-            style={{
-              fontSize: '0.75rem',
-              padding: '0.35rem 0.7rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              color: expertMode ? 'var(--brand-500)' : undefined,
-              borderColor: expertMode ? 'var(--brand-500)' : undefined
-            }}
-          >
-            {expertMode ? <GraduationCap size={14} /> : <User2 size={14} />}
-            <span>{expertMode ? t('expert_mode.label_expert') : t('expert_mode.label_simple')}</span>
-          </button>
           <LanguageSelector variant="compact" />
           <button
             type="button"
@@ -248,95 +199,334 @@ export default function Login() {
         </div>
       </header>
 
-      {/* Stepper global */}
-      <div style={{ maxWidth: '1280px', width: '100%', margin: '1.5rem auto 0', padding: '0 1.5rem' }}>
-        <AuthStepper
-          step={currentStep}
-          hasSample={!!typingSample}
-          hasDecision={!!decisionResult}
-        />
-      </div>
-
-      {/* Main Split Grid */}
-      <div style={{
+      {/* Contenedor central: Tarjeta en 2 Columnas Horizontales */}
+      <main style={{
         flex: 1,
-        maxWidth: '1280px',
-        width: '100%',
-        margin: '0 auto 1.5rem',
-        padding: '0 1.5rem',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(340px, 460px) 1fr',
-        gap: '1.75rem',
-        alignItems: 'stretch'
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1.5rem 1.5rem'
       }}>
-        {/* Column 1: Credentials */}
         <div style={{
+          maxWidth: '860px',
+          width: '100%',
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-xl)',
-          padding: '2rem',
-          boxShadow: 'var(--shadow-md)',
-          display: 'flex',
-          flexDirection: 'column'
+          padding: '2rem 2.25rem',
+          boxShadow: 'var(--shadow-lg)'
         }}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-              fontSize: '0.72rem', fontWeight: 600, color: 'var(--brand-500)',
-              backgroundColor: 'rgba(99, 102, 241, 0.1)',
-              padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem'
+          {/* Encabezado compacto */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1.5rem',
+            paddingBottom: '1rem',
+            borderBottom: '1px solid var(--border-subtle)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                color: 'var(--brand-500)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Iniciar Sesión
+                </h1>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Credenciales de acceso con verificación de seguridad integrada
+                </p>
+              </div>
+            </div>
+
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              padding: '0.2rem 0.55rem',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'rgba(99, 102, 241, 0.08)',
+              color: 'var(--brand-500)',
+              border: '1px solid rgba(99, 102, 241, 0.2)'
             }}>
-              <ShieldCheck size={14} />
-              <span>{t('login.auth_badge')}</span>
-            </div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0.25rem 0' }}>
-              {t('login.access_title')}
-            </h2>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-              {t('login.access_subtitle')}
-            </p>
-            <div style={{ marginTop: '0.6rem' }}>
-              <DecisionExplainer />
-            </div>
+              Acceso Seguro
+            </span>
           </div>
 
-          <CredentialsForm
-            username={username}
-            password={password}
-            onUsernameChange={setUsername}
-            onPasswordChange={setPassword}
-            onSubmit={handleSubmit}
-            loading={loading}
-            error={error}
-            success={success}
-            hasBiometricSample={!!typingSample}
-            isDev={isDev}
-            devUsers={devUsers}
-            onSeedDemo={handleSeedDemo}
-            seedLoading={seedLoading}
-            onFillDemo={handleFillDemo}
-          />
-        </div>
+          {/* Alertas de error o éxito */}
+          {error && (
+            <div style={{
+              backgroundColor: 'var(--danger-bg)',
+              border: '1px solid var(--danger-border)',
+              color: 'var(--danger)',
+              padding: '0.65rem 0.9rem',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.82rem',
+              marginBottom: '1.25rem',
+              textAlign: 'center',
+              lineHeight: 1.4
+            }}>
+              {error}
+            </div>
+          )}
 
-        {/* Column 2: Biometric Terminal */}
-        <div>
-          <LoginTerminal
-            typingSample={typingSample}
-            setTypingSample={(sample) => {
-              setTypingSample(sample);
-              if (sample) {
-                setSuccess(t('login.messages.sample_captured'));
-              }
-            }}
-            decisionResult={decisionResult}
-            isEvaluating={loading}
-            username={username}
-            expertMode={expertMode}
-          />
-        </div>
-      </div>
+          {success && (
+            <div style={{
+              backgroundColor: 'var(--success-bg)',
+              border: '1px solid var(--success-border)',
+              color: 'var(--success)',
+              padding: '0.65rem 0.9rem',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.82rem',
+              marginBottom: '1.25rem',
+              textAlign: 'center',
+              lineHeight: 1.4
+            }}>
+              {success}
+            </div>
+          )}
 
-      {/* 2FA Modal */}
+          {/* Formulario en 2 Secciones (Grid de 2 Columnas) */}
+          <form onSubmit={handleSubmit}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+              gap: '1.75rem',
+              alignItems: 'stretch',
+              marginBottom: '1.5rem'
+            }}>
+              {/* SECCIÓN 1 (IZQUIERDA): Credenciales de Usuario */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '1.1rem'
+              }}>
+                <div>
+                  <div style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}>
+                    <User size={14} style={{ color: 'var(--brand-500)' }} />
+                    <span>1. Credenciales de Cuenta</span>
+                  </div>
+
+                  {/* Campo 1: Usuario */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      marginBottom: '0.4rem'
+                    }}>
+                      Usuario
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="ej. alexis o user1"
+                        autoComplete="username"
+                        disabled={loading}
+                        style={{
+                          width: '100%',
+                          height: 44,
+                          padding: '0 0.85rem 0 2.5rem',
+                          backgroundColor: 'var(--bg-canvas)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-md)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          transition: 'border-color 0.15s ease'
+                        }}
+                      />
+                      <User size={16} style={{
+                        position: 'absolute',
+                        left: 12,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'var(--text-muted)'
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Campo 2: Contraseña */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      marginBottom: '0.4rem'
+                    }}>
+                      Contraseña
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        disabled={loading}
+                        style={{
+                          width: '100%',
+                          height: 44,
+                          padding: '0 2.75rem 0 2.5rem',
+                          backgroundColor: 'var(--bg-canvas)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-md)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          transition: 'border-color 0.15s ease'
+                        }}
+                      />
+                      <Lock size={16} style={{
+                        position: 'absolute',
+                        left: 12,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'var(--text-muted)'
+                      }} />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: 'absolute',
+                          right: 10,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '0.25rem',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Atajos rápidos en desarrollo */}
+                {isDev && (
+                  <div style={{
+                    paddingTop: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    flexWrap: 'wrap'
+                  }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Atajos demo:
+                    </span>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => handleFillDemo('user1')}
+                      style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+                    >
+                      user1
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => handleFillDemo('user2')}
+                      style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+                    >
+                      user2
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* SECCIÓN 2 (DERECHA): Verificación de Seguridad en Bloque Unificado */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <CaptchaPhraseInput
+                  onSampleComplete={setTypingSample}
+                  disabled={loading}
+                  error={error}
+                />
+              </div>
+            </div>
+
+            {/* Botón Principal (Abarca todo el ancho) */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary"
+              style={{
+                width: '100%',
+                height: 48,
+                fontSize: '0.98rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                borderRadius: 'var(--radius-md)'
+              }}
+            >
+              {loading ? (
+                <>
+                  <span style={{
+                    width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block',
+                    animation: 'spin 0.8s linear infinite'
+                  }} />
+                  <span>Verificando acceso...</span>
+                </>
+              ) : (
+                <>
+                  <span>Iniciar Sesión</span>
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Pie con enlace a registro */}
+          <div style={{
+            marginTop: '1.25rem',
+            textAlign: 'center',
+            fontSize: '0.82rem',
+            color: 'var(--text-muted)'
+          }}>
+            ¿No tiene una cuenta?{' '}
+            <NavLink
+              to="/register"
+              style={{ color: 'var(--brand-500)', fontWeight: 600, textDecoration: 'none' }}
+            >
+              Crear cuenta nueva
+            </NavLink>
+          </div>
+        </div>
+      </main>
+
+      {/* Modal 2FA genérico cuando el motor tri-zona activa CHALLENGE */}
       <TwoFactorModal
         isOpen={show2FaModal}
         onClose={() => {
@@ -346,9 +536,9 @@ export default function Login() {
           }
         }}
         onVerify={handleVerify2FA}
-        username={pendingCredentials?.u || username}
-        score={decisionResult?.score || 0.6}
-        isSuspicious={(decisionResult?.score || 0.6) < 0.5}
+        username={pendingToken?.username || username}
+        score={0.75}
+        isSuspicious={false}
         loading={otpLoading}
         error={otpError}
       />
