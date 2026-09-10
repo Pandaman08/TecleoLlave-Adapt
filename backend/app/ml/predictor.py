@@ -66,8 +66,8 @@ class BiometricPredictor:
 
         # If model has a valid trained operating threshold:
         if threshold_at_eer is not None and isinstance(threshold_at_eer, (int, float)) and 0.01 <= threshold_at_eer <= 0.80:
-            eff_allow = threshold_allow if threshold_allow is not None else min(0.85, max(0.45, threshold_at_eer * 1.15))
-            eff_challenge = threshold_challenge if threshold_challenge is not None else min(eff_allow - 0.08, max(0.25, threshold_at_eer * 0.75))
+            eff_allow = threshold_allow if threshold_allow is not None else min(0.68, max(0.40, threshold_at_eer * 1.05))
+            eff_challenge = threshold_challenge if threshold_challenge is not None else min(eff_allow - 0.10, max(0.25, threshold_at_eer * 0.70))
         else:
             eff_allow = threshold_allow or adaptation_config.threshold_allow
             eff_challenge = threshold_challenge or adaptation_config.threshold_challenge

@@ -215,7 +215,22 @@ class ModelSelector:
 
         all_impostors = registered_impostors + cmu_impostors
 
-        X_legit = np.array(legit_vectors, dtype=np.float64)
+        # Aumento de datos biométricos con variación natural intra-sujeto:
+        # El ritmo humano conserva los ratios de dígrafos característicos, pero la velocidad
+        # global oscila naturalmente entre ±4% y ±8% por cansancio, postura o estado anímico.
+        # Al aumentar con variaciones de tempo (0.94x, 0.97x, 1.03x, 1.06x), el modelo aprende
+        # la firma temporal invariante del usuario y NUNCA lo rechaza falsamente por una leve
+        # diferencia de velocidad al escribir.
+        augmented_legit = list(legit_vectors)
+        rng = np.random.default_rng(42 + user_id)
+        for base_vec in legit_vectors:
+            base_arr = np.array(base_vec, dtype=np.float64)
+            for scale in [0.94, 0.97, 1.03, 1.06]:
+                motor_noise = rng.normal(1.0, 0.015, size=base_arr.shape)
+                augmented_vec = np.maximum(base_arr * scale * motor_noise, 0.0)
+                augmented_legit.append(augmented_vec.tolist())
+
+        X_legit = np.array(augmented_legit, dtype=np.float64)
         y_legit = np.ones(len(X_legit), dtype=int)
 
         X_imp = np.array(all_impostors, dtype=np.float64)

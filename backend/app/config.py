@@ -45,9 +45,9 @@ class Settings(BaseSettings):
 
 
 class AdaptationConfig(BaseSettings):
-    threshold_allow: float = 0.85
-    threshold_challenge: float = 0.70
-    threshold_reject: float = 0.60
+    threshold_allow: float = 0.65
+    threshold_challenge: float = 0.45
+    threshold_reject: float = 0.40
     min_candidate_samples: int = 10
     candidate_window_size: int = 50
     max_far_degradation: float = 0.0
@@ -96,9 +96,9 @@ REPRODUCIBILITY_CONFIG = {
     "imputer": "median",
     "scaler": "RobustScaler",
     "score_definition": "Calibrated P(class=legitimate | features) ∈ [0,1]",
-    "threshold_allow": 0.85,
-    "threshold_challenge": 0.70,
-    "threshold_reject": 0.60,
+    "threshold_allow": 0.65,
+    "threshold_challenge": 0.45,
+    "threshold_reject": 0.40,
     "adaptation": {
         "min_candidate_samples": 10,
         "candidate_window_size": 50,
