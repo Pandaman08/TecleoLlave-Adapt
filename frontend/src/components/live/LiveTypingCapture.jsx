@@ -117,10 +117,13 @@ export default function LiveTypingCapture({
         className="typing-streamer-container"
         style={{
           fontFamily: "'JetBrains Mono', 'Consolas', monospace",
-          fontSize: '1.12rem',
+          fontSize: 'clamp(0.92rem, 1.35vw, 1.12rem)',
           letterSpacing: 'normal',
           display: 'flex',
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          whiteSpace: 'nowrap',
           alignItems: 'center',
           padding: '1.1rem 1.25rem',
           backgroundColor: 'var(--bg-canvas)',
@@ -169,6 +172,7 @@ export default function LiveTypingCapture({
                 alignItems: 'center',
                 justifyContent: 'center',
                 minWidth: isSpace ? '0.75ch' : '1.1ch',
+                flexShrink: 0,
                 height: '1.6em',
                 color,
                 backgroundColor: bgColor,

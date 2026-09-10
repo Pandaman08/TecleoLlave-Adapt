@@ -80,6 +80,11 @@ export function useTypingCapture(onComplete) {
   const handleKeyDown = useCallback((e) => {
     if (!isCapturingRef.current) return;
 
+    // Evitar que la barra espaciadora desplace la página hacia abajo al teclear
+    if (e.key === ' ' || e.code === 'Space' || e.keyCode === 32) {
+      e.preventDefault();
+    }
+
     unlockAudioContext();
 
     const now = performance.now();
@@ -107,6 +112,10 @@ export function useTypingCapture(onComplete) {
 
   const handleKeyUp = useCallback((e) => {
     if (!isCapturingRef.current) return;
+
+    if (e.key === ' ' || e.code === 'Space' || e.keyCode === 32) {
+      e.preventDefault();
+    }
 
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;

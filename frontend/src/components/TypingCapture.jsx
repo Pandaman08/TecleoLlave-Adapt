@@ -142,10 +142,13 @@ export default function TypingCapture({
         className="typing-streamer-container"
         style={{
           fontFamily: "'JetBrains Mono', 'Consolas', monospace",
-          fontSize: '1.05rem',
+          fontSize: 'clamp(0.92rem, 1.3vw, 1.08rem)',
           letterSpacing: 'normal',
           display: 'flex',
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          whiteSpace: 'nowrap',
           alignItems: 'center',
           padding: '1rem 1.25rem',
           backgroundColor: 'var(--bg-canvas)',
@@ -192,6 +195,7 @@ export default function TypingCapture({
                 alignItems: 'center',
                 justifyContent: 'center',
                 minWidth: isSpace ? '0.7ch' : '1.05ch',
+                flexShrink: 0,
                 height: '1.6em',
                 color,
                 backgroundColor: bgColor,

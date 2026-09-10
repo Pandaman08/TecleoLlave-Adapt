@@ -59,6 +59,11 @@ export default function CaptchaPhraseInput({
 
     if (isComplete) return;
 
+    // Evitar que la barra espaciadora desplace la página hacia abajo
+    if (e.key === ' ' || e.code === 'Space' || e.keyCode === 32) {
+      e.preventDefault();
+    }
+
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;
 
@@ -86,6 +91,10 @@ export default function CaptchaPhraseInput({
 
   const handleKeyUp = (e) => {
     if (disabled || isComplete || e.key === 'Backspace') return;
+
+    if (e.key === ' ' || e.code === 'Space' || e.keyCode === 32) {
+      e.preventDefault();
+    }
 
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;
