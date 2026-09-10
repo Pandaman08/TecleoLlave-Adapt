@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { RotateCcw, CheckCircle2, Shield, Keyboard } from 'lucide-react';
 
 const TARGET_PHRASE = "La seguridad protege la información";
