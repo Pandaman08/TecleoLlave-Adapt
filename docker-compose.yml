@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tecleollave-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_PATH=/app/data/tecleollave.db
+      - MODELS_DIR=/app/data/models
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - db_data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: tecleollave-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+    name: tecleollave_db_data

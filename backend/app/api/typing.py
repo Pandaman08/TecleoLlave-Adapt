@@ -29,8 +29,18 @@ def enroll_typing_sample(
     Registra una muestra de dinámica de tecleo para enrolamiento.
     """
     try:
+        if request.username:
+            from app.models import User
+            user = db.query(User).filter(User.username == request.username).first()
+            if user and getattr(user, "role", "user") == "admin":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El usuario administrador no utiliza biometría conductual ni captura de tecleo."
+                )
         result = typing_service.enroll_sample(db, request)
         return result
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -52,9 +62,16 @@ def authenticate_typing(
             user = db.query(User).filter(User.username == request.username).first()
             if not user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            if getattr(user, "role", "user") == "admin":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El usuario administrador no utiliza biometría conductual."
+                )
             user_id = user.id
         result = typing_service.authenticate_sample(db, request, user_id=user_id)
         return result
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -67,7 +84,7 @@ def get_enrolled_users(db: Session = Depends(get_db)):
     Lista usuarios con perfiles biométricos para demostración en vivo.
     """
     from app.models import User, ModelVersion, TypingSample
-    users = db.query(User).all()
+    users = db.query(User).filter(User.role != "admin").all()
     results = []
     for u in users:
         active_model = db.query(ModelVersion).filter(
@@ -320,6 +337,9 @@ def train_user_profile(
 
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if getattr(user, "role", "user") == "admin":
+        raise HTTPException(status_code=400, detail="Los usuarios administradores no tienen perfil biométrico entrenable.")
 
     try:
         train_result = ml_service.train_model(db, user.id)

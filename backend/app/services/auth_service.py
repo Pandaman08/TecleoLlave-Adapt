@@ -15,11 +15,12 @@ class AuthService:
         if existing:
             raise ValueError("Username already exists")
         
-        # Crear usuario con frase fija
+        # Crear usuario con frase fija y rol user forzado
         user = User(
             username=username,
             password_hash=get_password_hash(password),
-            phrase=settings.PHRASE
+            phrase=settings.PHRASE,
+            role="user"
         )
         db.add(user)
         db.commit()
@@ -56,6 +57,26 @@ class AuthService:
                 print(f"Nota: Entrenamiento automático tras registro para {username}: {e}")
         
         return user
+
+    def create_admin_user(self, db: Session, username: str, password: str) -> User:
+        """
+        Crea un usuario con rol 'admin'.
+        No crea AdaptationConfig ni requiere muestras ni entrena modelos biométricos.
+        """
+        existing = db.query(User).filter(User.username == username).first()
+        if existing:
+            raise ValueError(f"El usuario '{username}' ya existe")
+        
+        user = User(
+            username=username,
+            password_hash=get_password_hash(password),
+            phrase="[ADMIN - SIN BIOMETRIA]",
+            role="admin"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
     
     def authenticate_user(self, db: Session, username: str, password: str) -> Optional[User]:
         user = db.query(User).filter(User.username == username).first()
@@ -67,8 +88,8 @@ class AuthService:
             return None
         return user
     
-    def create_access_token(self, user_id: int) -> str:
-        return create_access_token(data={"sub": str(user_id)})
+    def create_access_token(self, user_id: int, role: str = "user") -> str:
+        return create_access_token(data={"sub": str(user_id), "role": role})
 
 
 auth_service = AuthService()

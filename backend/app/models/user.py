@@ -14,6 +14,7 @@ class User(Base):
     phrase = Column(String(200), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    role = Column(String(20), nullable=False, default="user")
     current_model_version_id = Column(Integer, ForeignKey("model_versions.id"), nullable=True)
 
     typing_samples = relationship("TypingSample", back_populates="user")

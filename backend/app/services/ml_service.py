@@ -11,7 +11,7 @@ from app.config import settings
 
 class MLService:
     def __init__(self):
-        self.models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+        self.models_dir = os.getenv("MODELS_DIR", os.path.join(os.path.dirname(__file__), '..', '..', 'models'))
         os.makedirs(self.models_dir, exist_ok=True)
     
     def train_model(

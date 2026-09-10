@@ -16,6 +16,7 @@ class UserResponse(UserBase):
     id: int
     created_at: datetime
     is_active: bool
+    role: str = "user"
 
     class Config:
         orm_mode = True
@@ -26,3 +27,4 @@ class Token(BaseModel):
     token_type: str
     user_id: Optional[int] = None
     username: Optional[str] = None
+    role: Optional[str] = "user"

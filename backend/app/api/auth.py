@@ -64,13 +64,48 @@ async def login_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token = auth_service.create_access_token(user.id)
+    access_token = auth_service.create_access_token(user.id, role=getattr(user, "role", "user"))
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user_id": user.id,
-        "username": user.username
+        "username": user.username,
+        "role": getattr(user, "role", "user")
     }
+
+
+@router.get("/me")
+def get_current_user_profile(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Obtiene el perfil y rol del usuario autenticado a partir del token JWT."""
+    from app.utils.security import decode_token
+    from app.models import User
+
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token no proporcionado o formato inválido"
+        )
+    token = auth_header.split(" ", 1)[1]
+    try:
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token sin identificador de usuario")
+        user = db.query(User).filter(User.id == int(user_id)).first()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+        return {
+            "id": user.id,
+            "username": user.username,
+            "role": getattr(user, "role", "user"),
+            "is_active": user.is_active
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Token inválido: {str(e)}")
 
 
 @router.post("/seed-demo")

@@ -180,11 +180,78 @@ Para ejecutar la validación científica que compara el **Modelo Estático ($M_0
 
 ---
 
+## 👥 Sistema de Roles (`admin` vs `user`)
+
+TecleoLlave-Adapt cuenta con un modelo estricto de **2 roles diferenciados**:
+
+| Rol | Biometría Conductual | Flujo de Login | Destino tras Login | Creación |
+| :--- | :--- | :--- | :--- | :--- |
+| **`admin`** | **Deshabilitada** (no captura tecleo ni tiene modelo) | Solo credenciales (usuario/contraseña); omite `/typing/authenticate` | **`/`** (Dashboard Ejecutivo) | Exclusivo por CLI (`create_admin.py`) |
+| **`user`** | **Obligatoria** (evaluación tri-zona: allow/challenge/reject) | Credenciales + análisis del patrón dinámico de tecleo | **`/entrenamiento`** (Entrenamiento Continuo de Perfil) | Registro público (`/register`) |
+
+### Creación de Administradores
+Por seguridad, el registro público (`/api/auth/register`) **siempre asigna `role="user"`** e ignora cualquier intento de auto-asignación de permisos de administración.
+
+Para crear un administrador:
+```bash
+# En entorno local:
+python backend/create_admin.py --username admin --password <contraseña_segura>
+
+# En entorno Docker:
+docker compose exec backend python create_admin.py --username admin --password <contraseña_segura>
+```
+
+---
+
+## 🐳 Despliegue con Docker Compose (Recomendado)
+
+El proyecto incluye orquestación completa con **Docker Compose** y un volumen nombrado persistente (`db_data`) que asegura que la base de datos SQLite (`tecleollave.db`) y los modelos entrenados (`.joblib`) no se pierdan al reconstruir o reiniciar los contenedores.
+
+### 1. Modo Desarrollo (Hot-Reload)
+En desarrollo, se activa automáticamente `docker-compose.override.yml`, montando el código fuente en caliente:
+```bash
+# Levantar backend (con --reload) y frontend (Vite dev server en puerto 5173):
+docker compose up
+
+# O en segundo plano:
+docker compose up -d
+```
+* **Frontend:** `http://localhost:5173`
+* **Backend API:** `http://localhost:8000`
+* **Swagger Docs:** `http://localhost:8000/docs`
+
+### 2. Modo Producción (Multi-Stage Nginx + FastAPI)
+Para producción, se construye la imagen estática optimizada con Nginx:
+```bash
+# Construir y levantar servicios de producción:
+docker compose -f docker-compose.yml up -d --build
+```
+* **Aplicación Web (Nginx):** `http://localhost` (puerto 80 con proxy `/api/` hacia el backend)
+* **Backend Interno:** `http://backend:8000`
+
+### 3. Crear el Administrador en Docker
+Una vez que los contenedores estén corriendo:
+```bash
+docker compose exec backend python create_admin.py --username admin --password <tu_contraseña>
+```
+
+### 4. Reiniciar o Resetear Base de Datos en Docker
+```bash
+# Detener contenedores preservando datos:
+docker compose down
+
+# Detener contenedores y BORRAR la base de datos y modelos (reset total):
+docker compose down -v
+```
+
+---
+
 ## 🔐 Seguridad y Privacidad
 
-* **Zero Plaintext Storage**: Ninguna contraseña se almacena en texto plano; se utiliza derivación y hashing robusto con sal criptográfica.
+* **Zero Plaintext Storage**: Ninguna contraseña se almacena en texto plano; se utiliza derivación y hashing robusto con sal criptográfica (Bcrypt).
+* **Control de Acceso por Roles (RBAC)**: Rutas protegidas mediante `AuthContext` y `ProtectedRoute` en el Frontend, y validación estricta de roles en endpoints biométricos del Backend.
 * **Privacidad Biométrica**: Las muestras de tecleo no guardan texto sensible fuera del contexto de autenticación; se transforman inmediatamente en vectores estadísticos de diferencias temporales ($HT$, $FT$).
-* **Protección contra Inyección y Suplantación**: Validación estricta en esquemas de entrada y aislamiento de perfiles de usuario.
+* **Protección contra Inyección y Suplantación**: Validación estricta en esquemas Pydantic y aislamiento total de perfiles de usuario.
 
 ---
 

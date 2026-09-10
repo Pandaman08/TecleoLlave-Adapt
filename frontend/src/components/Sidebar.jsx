@@ -12,8 +12,11 @@ import {
   Shield,
   KeyRound,
   UserPlus,
-  Zap
+  Zap,
+  Sparkles,
+  LogOut
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({
   activeSection,
@@ -25,6 +28,7 @@ export default function Sidebar({
   eventsCount = 0
 }) {
   const { t } = useTranslation();
+  const { role, username, isAuthenticated, logout } = useAuth();
 
   const navItems = [
     {
@@ -111,8 +115,21 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Quick Nav Links (Live Demo / Login / Register) */}
+      {/* Quick Nav Links (Live Demo / Login / Register / Entrenamiento) */}
       <div className="sidebar-footer">
+        {/* Enlace a Entrenamiento Continuo: solo visible para role === 'user' */}
+        {role === 'user' && (
+          <NavLink
+            to="/entrenamiento"
+            className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+            style={{ color: 'var(--brand-500)', fontWeight: 600 }}
+            title={isCollapsed ? 'Entrenar mi Perfil' : undefined}
+          >
+            <Sparkles size={18} strokeWidth={2} className="nav-icon" style={{ color: 'var(--brand-500)' }} />
+            {!isCollapsed && <span className="nav-label">Entrenar mi Perfil ✨</span>}
+          </NavLink>
+        )}
+
         <NavLink
           to="/live-demo"
           className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
@@ -140,6 +157,48 @@ export default function Sidebar({
           <UserPlus size={18} strokeWidth={1.75} className="nav-icon" />
           {!isCollapsed && <span className="nav-label">Enrolamiento</span>}
         </NavLink>
+
+        {isAuthenticated && !isCollapsed && (
+          <div style={{
+            padding: '0.4rem 0.6rem',
+            marginTop: '0.5rem',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: 'var(--bg-canvas)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.72rem'
+          }}>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {username || 'Sesión Activa'}
+            </span>
+            <span style={{
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              fontSize: '0.62rem',
+              padding: '0.1rem 0.4rem',
+              borderRadius: '3px',
+              backgroundColor: role === 'admin' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+              color: role === 'admin' ? 'var(--danger)' : 'var(--success)'
+            }}>
+              {role}
+            </span>
+          </div>
+        )}
+
+        {isAuthenticated && (
+          <button
+            type="button"
+            className="sidebar-nav-item"
+            onClick={() => logout()}
+            style={{ color: 'var(--danger)', marginTop: '0.25rem' }}
+            title={isCollapsed ? 'Cerrar Sesión' : undefined}
+          >
+            <LogOut size={18} strokeWidth={1.75} className="nav-icon" />
+            {!isCollapsed && <span className="nav-label">Cerrar Sesión</span>}
+          </button>
+        )}
       </div>
     </aside>
   );

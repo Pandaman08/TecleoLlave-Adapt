@@ -7,11 +7,13 @@ import TwoFactorModal from '../components/login/TwoFactorModal';
 import LanguageSelector from '../components/LanguageSelector';
 import { ShieldCheck, KeyRound, Sun, Moon, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { login: authLogin } = useAuth();
 
   // Estados de los 3 campos
   const [username, setUsername] = useState('');
@@ -50,11 +52,6 @@ export default function Login() {
       return;
     }
 
-    if (!typingSample || !typingSample.events || typingSample.events.length < 35) {
-      setError('Por favor complete la frase de verificación de seguridad en la sección derecha.');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -63,13 +60,37 @@ export default function Login() {
       try {
         tokenRes = await api.post('/auth/login', { username: u, password: p });
       } catch (authErr) {
-        setError(`Usuario o contraseña incorrectos.`);
+        setError('Usuario o contraseña incorrectos.');
         setLoading(false);
         return;
       }
 
       const token = tokenRes.data.access_token;
       const userId = tokenRes.data.user_id;
+      const userRole = tokenRes.data.role || 'user';
+      const currentUname = tokenRes.data.username || u;
+
+      // REGLA DE NEGOCIO ADMIN:
+      // El admin NO tiene ni requiere patrón biométrico, omite /typing/authenticate y va al Dashboard (/)
+      if (userRole === 'admin') {
+        authLogin({
+          token,
+          userId,
+          username: currentUname,
+          role: 'admin'
+        });
+        setSuccess(`¡Acceso de Administrador confirmado! Bienvenido, ${currentUname}.`);
+        setTimeout(() => navigate('/'), 600);
+        return;
+      }
+
+      // REGLA DE NEGOCIO USER:
+      // Requiere obligatoriamente captura de tecleo y verificación biométrica
+      if (!typingSample || !typingSample.events || typingSample.events.length < 35) {
+        setError('Por favor complete la frase de verificación de seguridad en la sección derecha.');
+        setLoading(false);
+        return;
+      }
 
       // PASO 2: Evaluación biométrica silenciosa del patrón de tecleo capturado
       const authPayload = {
@@ -83,23 +104,22 @@ export default function Login() {
 
       // RESPUESTA DEL SISTEMA SEGÚN DECISIÓN TRI-ZONA:
 
-      // CASO 1: ACCEPT / ALLOW -> Acceso concedido
+      // CASO 1: ACCEPT / ALLOW -> Acceso concedido, redirigir a /entrenamiento
       if (decision === 'allow' || decision === 'accept') {
-        localStorage.setItem('token', token);
-        if (userId) {
-          localStorage.setItem('current_user_id', userId);
-          localStorage.setItem('current_username', tokenRes.data.username || u);
-        } else {
-          localStorage.setItem('current_username', u);
-        }
-        setSuccess(`¡Identidad confirmada! Bienvenido, ${u}.`);
-        setTimeout(() => navigate('/'), 700);
+        authLogin({
+          token,
+          userId,
+          username: currentUname,
+          role: 'user'
+        });
+        setSuccess(`¡Identidad biométrica confirmada! Bienvenido, ${currentUname}. Redirigiendo a tu perfil de entrenamiento...`);
+        setTimeout(() => navigate('/entrenamiento'), 700);
         return;
       }
 
       // CASO 2: CHALLENGE -> Desafío 2FA/TOTP sin exponer score biométrico
       if (decision === 'challenge') {
-        setPendingToken({ token, userId, username: tokenRes.data.username || u });
+        setPendingToken({ token, userId, username: currentUname, role: 'user' });
         setShow2FaModal(true);
         setLoading(false);
         return;
@@ -129,14 +149,16 @@ export default function Login() {
         username: pendingToken?.username || username,
         otp_code: code
       });
-      localStorage.setItem('token', res.data.access_token || pendingToken?.token);
-      if (pendingToken?.userId) {
-        localStorage.setItem('current_user_id', pendingToken.userId);
-        localStorage.setItem('current_username', pendingToken.username);
-      }
+      const validToken = res.data.access_token || pendingToken?.token;
+      authLogin({
+        token: validToken,
+        userId: pendingToken?.userId,
+        username: pendingToken?.username || username,
+        role: pendingToken?.role || 'user'
+      });
       setSuccess('Verificación completada exitosamente.');
       setShow2FaModal(false);
-      setTimeout(() => navigate('/'), 600);
+      setTimeout(() => navigate('/entrenamiento'), 600);
     } catch (err) {
       setOtpError('Código de verificación incorrecto o expirado.');
     } finally {
@@ -146,7 +168,9 @@ export default function Login() {
 
   const handleFillDemo = (u) => {
     setUsername(u);
-    if (u === 'demo_user') {
+    if (u === 'admin') {
+      setPassword('AdminSecret123');
+    } else if (u === 'demo_user') {
       setPassword('demo123456');
     } else {
       setPassword('123456');
@@ -451,6 +475,22 @@ export default function Login() {
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                       Atajos demo:
                     </span>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => handleFillDemo('admin')}
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '0.15rem 0.5rem',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderColor: 'rgba(239, 68, 68, 0.3)',
+                        color: 'var(--danger)',
+                        fontWeight: 700
+                      }}
+                      title="Administrador del sistema (Sin biometría)"
+                    >
+                      👑 admin
+                    </button>
                     <button
                       type="button"
                       className="btn-secondary"

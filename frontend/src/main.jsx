@@ -5,13 +5,16 @@ import App from './App'
 import './index.css'
 import './i18n'
 import { ThemeProvider } from './context/ThemeContext'
+import { AuthProvider } from './context/AuthContext'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   </React.StrictMode>
 )

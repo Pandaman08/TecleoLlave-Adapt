@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+tecleollave.db
+tecleollave.db-journal
+tecleollave.db-wal
+.env
+.git/
+.gitignore
+.pytest_cache/

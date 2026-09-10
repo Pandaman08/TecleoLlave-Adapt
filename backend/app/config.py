@@ -12,7 +12,7 @@ import json
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "tecleollave.db")
+DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DIR, "tecleollave.db"))
 
 
 class Settings(BaseSettings):
@@ -30,7 +30,14 @@ class Settings(BaseSettings):
     PHRASE_LENGTH: int = 35
     N_FEATURES: int = 100
 
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost",
+        "http://localhost:80",
+        "http://127.0.0.1",
+        "http://127.0.0.1:80"
+    ]
 
     class Config:
         env_file = ".env"
