@@ -161,7 +161,8 @@ export default function TrainProfile() {
 
   const handleContinueTraining = () => {
     setShowPostTrainModal(false);
-    setInfoMessage('¡Excelente! Puedes continuar capturando más muestras en cualquiera de las sesiones para seguir enriqueciendo tu perfil conductual.');
+    setError(null);
+    setInfoMessage(null);
   };
 
   const handleLogout = () => {
@@ -376,48 +377,6 @@ export default function TrainProfile() {
             }}>
               <CheckCircle2 size={16} />
               <span>{infoMessage}</span>
-            </div>
-          )}
-
-          {/* Resultado de Entrenamiento Exitoso */}
-          {trainSuccessResult && (
-            <div style={{
-              backgroundColor: 'var(--success-bg)',
-              border: '1px solid var(--success-border)',
-              color: 'var(--success)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '1.25rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckCircle2 size={20} style={{ flexShrink: 0 }} />
-                <span style={{ fontWeight: 700, fontSize: '0.98rem' }}>
-                  {trainSuccessResult.message || '¡Modelo reentrenado y actualizado con éxito!'}
-                </span>
-              </div>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: '0.75rem',
-                fontSize: '0.8rem',
-                color: 'var(--text-primary)'
-              }}>
-                <div style={{ backgroundColor: 'var(--bg-surface)', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Algoritmo Óptimo:</span>
-                  <strong>{trainSuccessResult.metrics?.algorithm || 'Random Forest Classifier'}</strong>
-                </div>
-                <div style={{ backgroundColor: 'var(--bg-surface)', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Tasa de Error (EER):</span>
-                  <strong>{((trainSuccessResult.metrics?.eer ?? 0) * 100).toFixed(2)}%</strong>
-                </div>
-                <div style={{ backgroundColor: 'var(--bg-surface)', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Muestras Entrenadas:</span>
-                  <strong>{trainSuccessResult.metrics?.n_samples_train ?? totalSamples} muestras</strong>
-                </div>
-              </div>
             </div>
           )}
 
@@ -781,11 +740,11 @@ export default function TrainProfile() {
                 border: '1px solid rgba(99, 102, 241, 0.2)',
                 textAlign: 'center'
               }}>
-                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--brand-500)', marginBottom: '0.2rem' }}>
-                  ¿Qué deseas hacer ahora?
+                <div style={{ fontWeight: 700, fontSize: '0.94rem', color: 'var(--brand-500)', marginBottom: '0.25rem' }}>
+                  ¿Deseas volver al inicio de sesión o seguir reentrenando?
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  ¿Deseas iniciar sesión para probar tu nuevo modelo o prefieres seguir reentrenando con más muestras?
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Tu modelo biométrico ya se reentrenó con éxito. Puedes volver a iniciar sesión para probar tu acceso con el modelo actualizado, o permanecer aquí para seguir enriqueciendo tu perfil.
                 </div>
               </div>
 
@@ -814,7 +773,7 @@ export default function TrainProfile() {
                   className="btn-primary"
                   onClick={handleGoToLogin}
                   style={{
-                    flex: 1.25,
+                    flex: 1.35,
                     height: 44,
                     display: 'flex',
                     alignItems: 'center',
@@ -826,7 +785,7 @@ export default function TrainProfile() {
                   }}
                 >
                   <LogIn size={16} />
-                  <span>Iniciar Sesión</span>
+                  <span>Volver al Inicio de Sesión</span>
                   <ArrowRight size={16} />
                 </button>
               </div>
