@@ -34,6 +34,7 @@ class ModelMetadata:
     metrics: Dict[str, Any]
     training_config: Dict[str, Any]
     algorithm: str = "RandomForestClassifier"
+    template_data: Optional[Dict[str, Any]] = None
 
 
 class PrefitIsotonicCalibrator:

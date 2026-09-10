@@ -85,15 +85,15 @@ class ModelSelector:
     def generate_cmu_benchmark_impostors(
         self,
         n_features: int,
-        count: int = 16,
-        random_seed: int = 42
+        count: int = 24,
+        random_seed: int = 42,
+        legit_mean_dur: Optional[float] = None
     ) -> List[List[float]]:
         """
-        Generates realistic impostor feature vectors modeled after the CMU Keystroke
-        Benchmark Dataset (Killourhy & Maxion) inter-subject statistical distributions:
-        - 51 distinct typists with distinct inter-keystroke distributions
-        - Hold times: log-normal with mu ~ 4.5, sigma ~ 0.35 (75ms - 150ms)
-        - Latencies: log-normal with mu ~ 4.7, sigma ~ 0.45 (60ms - 220ms)
+        Generates realistic impostor feature vectors modeled after diverse typist archetypes
+        with unique per-key timing habits (as documented in the CMU Keystroke Benchmark):
+        - Distinct personas with unique finger delays, digraph transitions, and hand speed biases.
+        - Personas typing across different speeds (fast, medium, slow, and speed-matched).
         - Extracted through the full feature extraction pipeline to guarantee 100% schema alignment.
         """
         from app.ml.features import extract_features
@@ -102,41 +102,54 @@ class ModelSelector:
         rng = np.random.default_rng(random_seed)
         cmu_impostors = []
         phrase = settings.PHRASE
+        n_chars = len(phrase)
 
-        for subj_idx in range(count):
-            subj_hold_mean = float(rng.uniform(65.0, 140.0))
-            subj_lat_mean = float(rng.uniform(70.0, 200.0))
-            subj_hold_jitter = float(rng.uniform(0.08, 0.20))
-            subj_lat_jitter = float(rng.uniform(0.10, 0.25))
+        # Generate distinct impostor personas
+        n_personas = max(15, count // 3)
+        samples_per_persona = max(2, (count + n_personas - 1) // n_personas)
 
-            events = []
-            kd = 1000.0
-            prev_ku = 0.0
+        for p_idx in range(n_personas):
+            # Persona speed profile (speed-matched or general population)
+            if legit_mean_dur and p_idx % 3 == 0:
+                p_hold_mean = float(rng.uniform(70.0, 130.0))
+                p_lat_mean = float(max(25.0, (legit_mean_dur - p_hold_mean * n_chars) / max(1, n_chars - 1)))
+            else:
+                p_hold_mean = float(rng.uniform(55.0, 160.0))
+                p_lat_mean = float(rng.uniform(45.0, 220.0))
 
-            for i, ch in enumerate(phrase):
-                key = "Space" if ch == " " else ch
-                h = max(35.0, float(rng.normal(subj_hold_mean, subj_hold_mean * subj_hold_jitter)))
-                lat = max(20.0, float(rng.normal(subj_lat_mean, subj_lat_mean * subj_lat_jitter)))
+            # Unique per-key signature for this persona (individual finger biomechanics)
+            p_hold_profile = rng.lognormal(0.0, 0.28, size=n_chars)
+            p_lat_profile = rng.lognormal(0.0, 0.38, size=n_chars - 1)
 
-                if i == 0:
-                    current_kd = kd
-                else:
-                    current_kd = prev_ku + lat
+            for rep in range(samples_per_persona):
+                if len(cmu_impostors) >= count:
+                    break
 
-                current_ku = current_kd + h
-                prev_ku = current_ku
+                events = []
+                kd = 1000.0 + rep * 150.0
+                prev_ku = 0.0
 
-                events.append({
-                    "key": key,
-                    "keydown_ts": round(current_kd, 2),
-                    "keyup_ts": round(current_ku, 2)
-                })
+                for i, ch in enumerate(phrase):
+                    key = "Space" if ch == " " else ch
+                    h = max(35.0, float(p_hold_mean * p_hold_profile[i] * rng.normal(1.0, 0.09)))
+                    l = max(15.0, float(p_lat_mean * p_lat_profile[i - 1] * rng.normal(1.0, 0.12))) if i > 0 else 0.0
 
-            feat_res = extract_features(events, phrase)
-            if feat_res["valid"]:
-                cmu_impostors.append(feat_res["feature_vector"][:n_features])
+                    cur_kd = kd if i == 0 else prev_ku + l
+                    cur_ku = cur_kd + h
+                    prev_ku = cur_ku
+
+                    events.append({
+                        "key": key,
+                        "keydown_ts": round(cur_kd, 2),
+                        "keyup_ts": round(cur_ku, 2)
+                    })
+
+                feat_res = extract_features(events, phrase)
+                if feat_res["valid"]:
+                    cmu_impostors.append(feat_res["feature_vector"][:n_features])
 
         return cmu_impostors
+
 
     def prepare_dataset(
         self,
@@ -204,16 +217,21 @@ class ModelSelector:
             if f and f.feature_vector and len(f.feature_vector) == n_features:
                 registered_impostors.append(f.feature_vector)
 
-        # 3. CMU benchmark dataset impostors
-        # We ensure a balanced evaluation with high-quality benchmark impostors
-        n_cmu_needed = max(n_legit * 2 - len(registered_impostors), 12)
+        # 3. Diverse typist archetypes & speed-matched impostors
+        # Calculate mean legitimate typing duration
+        legit_durations = [v[69] for v in legit_vectors if len(v) > 69 and v[69] > 1000]
+        mean_dur = float(np.mean(legit_durations)) if legit_durations else None
+
+        n_cmu_needed = max(n_legit * 3 - len(registered_impostors), 36)
         cmu_impostors = self.generate_cmu_benchmark_impostors(
             n_features=n_features,
             count=n_cmu_needed,
-            random_seed=100 + user_id
+            random_seed=100 + user_id,
+            legit_mean_dur=mean_dur
         )
 
         all_impostors = registered_impostors + cmu_impostors
+
 
         # Aumento de datos biométricos con variación natural intra-sujeto:
         # El ritmo humano conserva los ratios de dígrafos característicos, pero la velocidad
@@ -426,6 +444,17 @@ class ModelSelector:
             "threshold_at_eer": winner["threshold_at_eer"]
         }
 
+        # Template data for multi-modal fusion & anti-impostor discrimination
+        legit_arr = X[y == 1]
+        template_data = {
+            "exemplars": [list(v) for v in legit_arr],
+            "n_exemplars": len(legit_arr),
+            "median_ht": [float(x) for x in np.median(legit_arr[:, :35], axis=0)],
+            "median_lt": [float(x) for x in np.median(legit_arr[:, 35:69], axis=0)],
+            "mean_duration": float(np.mean(legit_arr[:, 69])) if legit_arr.shape[1] > 69 else 0.0
+        }
+
+
         # BiometricModel object
         biometric_model = BiometricModel(
             model=final_estimator,
@@ -453,9 +482,11 @@ class ModelSelector:
                     "dataset_composition": data_stats,
                     "evaluation_date": datetime.utcnow().isoformat()
                 },
-                algorithm=winner["name"]
+                algorithm=winner["name"],
+                template_data=template_data
             )
         )
+
 
         biometric_model.save(model_output_path)
 

@@ -245,15 +245,37 @@ class MLService:
         except Exception as e:
             raise ValueError(f"Failed to load model for user: {e}")
 
+
+        # Retrieve user enrollment exemplars to power anti-impostor discrimination
+        exemplars = None
+
+        if hasattr(model, "metadata") and model.metadata and getattr(model.metadata, "template_data", None):
+            exemplars = model.metadata.template_data.get("exemplars")
+
+        if not exemplars:
+            from app.models import TypingSample, TypingFeature
+            samples = db.query(TypingSample).filter(
+                TypingSample.user_id == user_id,
+                TypingSample.source == "enrollment",
+                TypingSample.is_validated == True
+            ).all()
+            if samples:
+                sample_ids = [s.id for s in samples]
+                feats = db.query(TypingFeature.feature_vector).filter(
+                    TypingFeature.sample_id.in_(sample_ids)
+                ).all()
+                exemplars = [f[0] for f in feats if f and f[0]]
+
         import numpy as np
         features = np.array(feature_vector, dtype=np.float64)
-        decision, score = predictor.predict_decision(features)
+        decision, score = predictor.predict_decision(features, exemplars=exemplars)
 
         return {
             'decision': decision,
             'score': score,
             'model_version_id': model_version.id
         }
+
 
 
 ml_service = MLService()
