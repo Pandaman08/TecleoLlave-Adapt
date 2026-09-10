@@ -374,7 +374,7 @@ export default function Login() {
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        placeholder="ej. alexis o user1"
+                        placeholder="ej. mi_usuario"
                         autoComplete="username"
                         disabled={loading}
                         style={{
@@ -473,7 +473,7 @@ export default function Login() {
                     flexWrap: 'wrap'
                   }}>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      Atajos demo:
+                      Atajo:
                     </span>
                     <button
                       type="button"
@@ -481,7 +481,7 @@ export default function Login() {
                       onClick={() => handleFillDemo('admin')}
                       style={{
                         fontSize: '0.72rem',
-                        padding: '0.15rem 0.5rem',
+                        padding: '0.15rem 0.55rem',
                         backgroundColor: 'rgba(239, 68, 68, 0.1)',
                         borderColor: 'rgba(239, 68, 68, 0.3)',
                         color: 'var(--danger)',
@@ -490,30 +490,6 @@ export default function Login() {
                       title="Administrador del sistema (Sin biometría)"
                     >
                       👑 admin
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => handleFillDemo('demo_user')}
-                      style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
-                    >
-                      demo_user
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => handleFillDemo('alexis')}
-                      style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
-                    >
-                      alexis
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => handleFillDemo('profesor')}
-                      style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
-                    >
-                      profesor
                     </button>
                   </div>
                 )}

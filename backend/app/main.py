@@ -49,26 +49,6 @@ app.include_router(cmu_benchmark_router, prefix="/api/experiments")
 @app.on_event("startup")
 async def startup_event():
     init_db()
-    # Check if database has users, if empty auto-seed demo user
-    from app.database import SessionLocal
-    from app.models import User
-    db = SessionLocal()
-    try:
-        user_count = db.query(User).count()
-        if user_count == 0:
-            print("🌱 Auto-seeding default demo user...")
-            from demo_setup import run_demo_setup
-            run_demo_setup(
-                username="demo_user",
-                password="demo123456",
-                n_enroll=10,
-                n_auth_sessions=12,
-                drift_profile="gradual"
-            )
-    except Exception as e:
-        print(f"⚠️ Error auto-seeding db: {e}")
-    finally:
-        db.close()
 
 
 @app.get("/")
