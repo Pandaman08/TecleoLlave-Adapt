@@ -109,7 +109,12 @@ export default function Login() {
       setError(`Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`);
       setTypingSample(null);
     } catch (err) {
-      setError(`Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`);
+      const detail = err.response?.data?.detail;
+      if (detail && !detail.toLowerCase().includes('denegado') && !detail.toLowerCase().includes('credenciales')) {
+        setError(`Error en la verificación: ${detail}`);
+      } else {
+        setError(`Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`);
+      }
       setTypingSample(null);
     } finally {
       setLoading(false);

@@ -69,9 +69,7 @@ class BiometricPredictor:
 
 
 def load_user_model(model_path: str) -> BiometricModel:
-    """Load a user's biometric model from disk."""
-    if not Path(model_path).exists():
-        raise FileNotFoundError(f"Model not found: {model_path}")
+    """Load a user's biometric model from disk with portable fallback."""
     return BiometricModel.load(model_path)
 
 

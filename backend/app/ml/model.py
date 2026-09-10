@@ -8,8 +8,8 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
-from datetime import datetime
 import json
+import os
 
 
 @dataclass
@@ -158,22 +158,36 @@ class BiometricModel:
     @classmethod
     def load(cls, base_path: str) -> 'BiometricModel':
         """Load model components from disk with portable fallback for cross-PC sharing."""
+        clean_path_str = str(base_path).replace('\\', '/')
+        fname = os.path.basename(clean_path_str)
+        stem = fname[:-7] if fname.endswith('.joblib') else (fname[:-5] if fname.endswith('.json') else fname)
+        
         path = Path(base_path)
+        model_path_obj = path if str(path).endswith('.joblib') else path.with_suffix('.joblib')
         
         # Resolución portátil: si la ruta absoluta original no existe en esta máquina
-        # (ej. transferido a la PC del compañero), buscar el archivo en la carpeta 'models' local
-        model_path_obj = path.with_suffix('.joblib')
-        if not model_path_obj.exists():
+        # (ej. transferido de Linux a Windows o entre compañeros), buscar en la carpeta 'models' local
+        try:
+            exists = model_path_obj.exists()
+        except Exception:
+            exists = False
+
+        if not exists:
             local_models_dir = Path(__file__).resolve().parent.parent.parent / "models"
-            candidate = local_models_dir / path.stem
-            if candidate.with_suffix('.joblib').exists():
-                path = candidate
-                model_path_obj = path.with_suffix('.joblib')
+            candidate = local_models_dir / f"{stem}.joblib"
+            if candidate.exists():
+                path = local_models_dir / stem
+                model_path_obj = candidate
+            else:
+                raise FileNotFoundError(f"Model not found at '{base_path}' nor in local models dir '{local_models_dir}'")
+        else:
+            if str(path).endswith('.joblib'):
+                path = path.with_name(stem)
 
         model_path = str(model_path_obj)
-        scaler_path = str(path.with_name(path.stem + '_scaler.joblib'))
-        calibrator_path = str(path.with_name(path.stem + '_calibrator.joblib'))
-        metadata_path = str(path.with_name(path.stem + '_metadata.json'))
+        scaler_path = str(path.with_name(stem + '_scaler.joblib'))
+        calibrator_path = str(path.with_name(stem + '_calibrator.joblib'))
+        metadata_path = str(path.with_name(stem + '_metadata.json'))
         
         model = joblib.load(model_path)
         scaler = joblib.load(scaler_path)
@@ -184,7 +198,7 @@ class BiometricModel:
         
         metadata = None
         if Path(metadata_path).exists():
-            with open(metadata_path, 'r') as f:
+            with open(metadata_path, 'r', encoding='utf-8') as f:
                 meta_dict = json.load(f)
             metadata = ModelMetadata(**meta_dict)
         

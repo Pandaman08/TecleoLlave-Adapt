@@ -50,6 +50,9 @@ export default function CaptchaPhraseInput({
         setTypedText(newText);
         setIsComplete(false);
         onSampleComplete?.(null);
+        // Limpiar stacks pendientes para evitar contaminación con timestamps antiguos
+        keydownStacks.current = {};
+        deadKeyTime.current = null;
       }
       return;
     }
@@ -100,13 +103,16 @@ export default function CaptchaPhraseInput({
     const matchesExact = isSpace ? isKeySpace : (key === expectedChar);
     const matchesNormalized = !isSpace && (normalizeChar(key) === normalizeChar(expectedChar));
 
-    // Si la tecla no coincide con el siguiente carácter esperado
+    // Si la tecla no coincide con el siguiente carácter esperado, descartar de la pila para evitar timestamps viejos
     if (!matchesExact && !matchesNormalized) {
+      keydownStacks.current[key]?.shift();
+      const norm = normalizeChar(key);
+      if (norm) keydownStacks.current[norm]?.shift();
       return;
     }
 
-    // Resolver tiempo de bajada (keydown)
-    const candidates = [
+    // Resolver tiempo de bajada (keydown) reciente (descartando si tiene más de 900ms para evitar distorsiones por pausa)
+    const rawCandidates = [
       keydownStacks.current[key]?.shift(),
       keydownStacks.current[expectedChar]?.shift(),
       keydownStacks.current[normalizeChar(key)]?.shift(),
@@ -115,11 +121,13 @@ export default function CaptchaPhraseInput({
       keydownStacks.current['Dead']?.shift()
     ];
 
-    let kdTime = candidates.find(v => v !== undefined && v !== null);
+    // Filtrar candidatos válidos y no obsoletos (< 900ms)
+    let kdTime = rawCandidates.find(v => v !== undefined && v !== null && (now - v) < 900);
     if (kdTime === undefined || kdTime === null) {
       const prevKu = prevEventRef.current?.keyup_ts;
-      const base = prevKu || firstKeydown.current || (now - MIN_HOLD_TIME);
-      kdTime = Math.max(base + 1, now - MIN_HOLD_TIME);
+      // Estimar hold time natural de 80ms
+      const fallbackBase = prevKu ? prevKu + 15 : now - 80;
+      kdTime = Math.max(fallbackBase, now - 120);
     }
 
     deadKeyTime.current = null;
@@ -131,7 +139,7 @@ export default function CaptchaPhraseInput({
 
     let kuTime = now;
     if (kuTime <= kdTime) {
-      kuTime = kdTime + 1;
+      kuTime = kdTime + Math.max(MIN_HOLD_TIME, 40);
     }
 
     const event = {
