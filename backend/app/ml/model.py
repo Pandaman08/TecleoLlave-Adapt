@@ -157,10 +157,20 @@ class BiometricModel:
     
     @classmethod
     def load(cls, base_path: str) -> 'BiometricModel':
-        """Load model components from disk."""
+        """Load model components from disk with portable fallback for cross-PC sharing."""
         path = Path(base_path)
         
-        model_path = str(path.with_suffix('.joblib'))
+        # Resolución portátil: si la ruta absoluta original no existe en esta máquina
+        # (ej. transferido a la PC del compañero), buscar el archivo en la carpeta 'models' local
+        model_path_obj = path.with_suffix('.joblib')
+        if not model_path_obj.exists():
+            local_models_dir = Path(__file__).resolve().parent.parent.parent / "models"
+            candidate = local_models_dir / path.stem
+            if candidate.with_suffix('.joblib').exists():
+                path = candidate
+                model_path_obj = path.with_suffix('.joblib')
+
+        model_path = str(model_path_obj)
         scaler_path = str(path.with_name(path.stem + '_scaler.joblib'))
         calibrator_path = str(path.with_name(path.stem + '_calibrator.joblib'))
         metadata_path = str(path.with_name(path.stem + '_metadata.json'))

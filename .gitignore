@@ -14,9 +14,11 @@ build/
 # Backend
 backend/.env
 *.db
+!backend/tecleollave.db
 *.db-journal
 backend/*.joblib
-backend/models/
+backend/models/test_*
+!backend/models/user_*
 
 # Frontend
 frontend/node_modules/
@@ -42,5 +44,6 @@ Thumbs.db
 
 # ML artifacts
 *.joblib
+!backend/models/user_*
 *.pkl
 *.model
