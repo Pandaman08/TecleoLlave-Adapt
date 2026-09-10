@@ -47,6 +47,7 @@ import ThresholdGauge from '../components/charts/ThresholdGauge';
 import ModelHistoryTrend, { ModelSparkline } from '../components/charts/ModelHistoryTrend';
 import ScoreEvolutionChart from '../components/charts/ScoreEvolutionChart';
 import ModelComparisonPanel from '../components/ModelComparisonPanel';
+import SecuritySettingsPanel from '../components/admin/SecuritySettingsPanel';
 
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
@@ -707,6 +708,15 @@ export default function Dashboard() {
                 cmuLoading={cmuLoading}
                 onRunBenchmark={loadCmuBenchmark}
               />
+            </div>
+          )}
+
+          {/* =========================================================================
+              SECCIÓN 6: POLÍTICAS DE SEGURIDAD & BLOQUEO (EXCLUSIVO ADMIN)
+              ========================================================================= */}
+          {activeSection === 'security' && (
+            <div className="animate-fade">
+              <SecuritySettingsPanel />
             </div>
           )}
 

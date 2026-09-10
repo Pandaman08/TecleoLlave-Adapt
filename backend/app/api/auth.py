@@ -56,6 +56,17 @@ async def login_user(
             detail="Username and password are required"
         )
 
+    from app.services.security_service import security_service
+    from app.models import User
+    existing_user = db.query(User).filter(User.username == username).first()
+    if existing_user:
+        is_locked, lock_msg, _ = security_service.check_user_lockout(db, existing_user)
+        if is_locked:
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                detail=lock_msg
+            )
+
     user = auth_service.authenticate_user(db, username, password)
     if not user:
         raise HTTPException(
@@ -162,6 +173,9 @@ async def verify_2fa(request: Request, db: Session = Depends(get_db)):
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
+        from app.services.security_service import security_service
+        security_service.reset_phrase_failures(db, user)
+
         access_token = auth_service.create_access_token(user.id)
         return {
             "verified": True,

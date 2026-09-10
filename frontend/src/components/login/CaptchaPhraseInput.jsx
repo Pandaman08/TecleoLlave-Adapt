@@ -13,7 +13,8 @@ const normalizeChar = (c) => {
 export default function CaptchaPhraseInput({
   onSampleComplete,
   disabled = false,
-  error = null
+  error = null,
+  resetTrigger = 0
 }) {
   const [typedText, setTypedText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -37,6 +38,13 @@ export default function CaptchaPhraseInput({
     onSampleComplete?.(null);
     inputRef.current?.focus();
   }, [onSampleComplete]);
+
+  // Limpiar automáticamente cuando se dispara resetTrigger (ej. al hacer click en Iniciar Sesión)
+  useEffect(() => {
+    if (resetTrigger > 0) {
+      resetCapture();
+    }
+  }, [resetTrigger, resetCapture]);
 
   const handleKeyDown = (e) => {
     if (disabled) return;
@@ -314,37 +322,72 @@ export default function CaptchaPhraseInput({
         />
 
         <div style={{
-          fontSize: '0.88rem',
-          fontFamily: "'Inter', sans-serif",
-          color: 'var(--text-primary)',
-          letterSpacing: '0.01em',
+          fontSize: '0.90rem',
+          fontFamily: "'Inter', monospace",
+          letterSpacing: '0.02em',
           display: 'flex',
           alignItems: 'center',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          flex: 1
+          overflowX: 'auto',
+          whiteSpace: 'pre',
+          flex: 1,
+          padding: '0.15rem 0',
+          scrollbarWidth: 'none'
         }}>
-          {typedText ? (
-            <>
-              <span>{typedText}</span>
-              {!isComplete && isFocused && (
-                <span style={{
-                  display: 'inline-block',
-                  width: '2px',
-                  height: '1.1em',
-                  backgroundColor: 'var(--brand-500)',
-                  marginLeft: '2px',
-                  animation: 'pulse 1s infinite'
-                }} />
-              )}
-            </>
-          ) : (
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Keyboard size={14} />
-              Haga clic aquí y teclee la frase...
-            </span>
-          )}
+          {TARGET_PHRASE.split('').map((char, idx) => {
+            const isTyped = idx < typedText.length;
+            const isCurrent = idx === typedText.length;
+            const isPending = idx > typedText.length;
+
+            return (
+              <span
+                key={idx}
+                style={{
+                  position: 'relative',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: char === ' ' ? '0.55ch' : 'auto',
+                  color: isTyped
+                    ? 'var(--success)'
+                    : isCurrent
+                    ? (isFocused ? 'var(--brand-500)' : 'var(--text-primary)')
+                    : 'var(--text-muted)',
+                  fontWeight: isTyped || isCurrent ? 700 : 400,
+                  opacity: isPending ? 0.42 : 1,
+                  backgroundColor: isCurrent && isFocused ? 'rgba(99, 102, 241, 0.16)' : 'transparent',
+                  borderRadius: '2px',
+                  padding: '0 1px',
+                  borderBottom: isCurrent && isFocused ? '2px solid var(--brand-500)' : (isTyped ? '2px solid rgba(16, 185, 129, 0.5)' : 'none'),
+                  transition: 'background-color 0.1s ease'
+                }}
+              >
+                {/* Cursor indicador vertical con animación de parpadeo */}
+                {isCurrent && isFocused && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: '12%',
+                      bottom: '12%',
+                      width: '2.5px',
+                      backgroundColor: 'var(--brand-500)',
+                      borderRadius: '1px',
+                      boxShadow: '0 0 8px rgba(99, 102, 241, 0.8)',
+                      animation: 'cursorPulse 0.8s infinite alternate'
+                    }}
+                  />
+                )}
+                {char === ' ' ? '\u00A0' : char}
+              </span>
+            );
+          })}
+          <style>{`
+            @keyframes cursorPulse {
+              0% { opacity: 1; transform: scaleY(1); }
+              50% { opacity: 0.15; transform: scaleY(0.9); }
+              100% { opacity: 1; transform: scaleY(1); }
+            }
+          `}</style>
         </div>
 
         {isComplete && (

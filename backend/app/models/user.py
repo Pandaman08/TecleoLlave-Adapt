@@ -16,6 +16,9 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     role = Column(String(20), nullable=False, default="user")
     current_model_version_id = Column(Integer, ForeignKey("model_versions.id"), nullable=True)
+    failed_attempts = Column(Integer, nullable=False, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    last_failed_at = Column(DateTime, nullable=True)
 
     typing_samples = relationship("TypingSample", back_populates="user")
     auth_attempts = relationship("AuthAttempt", back_populates="user")

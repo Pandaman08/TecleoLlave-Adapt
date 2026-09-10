@@ -14,7 +14,8 @@ import {
   UserPlus,
   Zap,
   Sparkles,
-  LogOut
+  LogOut,
+  ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -61,7 +62,13 @@ export default function Sidebar({
       icon: Award,
       badge: 'CMU Dataset',
       isHighlight: true
-    }
+    },
+    ...(role === 'admin' ? [{
+      id: 'security',
+      label: 'Seguridad & Bloqueo',
+      icon: ShieldAlert,
+      badge: 'Admin'
+    }] : [])
   ];
 
   return (

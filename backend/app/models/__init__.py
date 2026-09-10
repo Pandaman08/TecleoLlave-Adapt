@@ -6,6 +6,7 @@ from app.models.model_version import ModelVersion
 from app.models.candidate_model import CandidateModel, CandidateStatus
 from app.models.adaptation_event import AdaptationEvent, AdaptationAction
 from app.models.adaptation_config import AdaptationConfig
+from app.models.security_policy import SecurityPolicy
 
 __all__ = [
     "User",
@@ -21,4 +22,5 @@ __all__ = [
     "AdaptationEvent",
     "AdaptationAction",
     "AdaptationConfig",
+    "SecurityPolicy",
 ]

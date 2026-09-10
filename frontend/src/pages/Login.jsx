@@ -21,6 +21,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [typingSample, setTypingSample] = useState(null);
+  const [phraseResetTrigger, setPhraseResetTrigger] = useState(0);
 
   // Estados de feedback y carga
   const [loading, setLoading] = useState(false);
@@ -55,13 +56,23 @@ export default function Login() {
 
     setLoading(true);
 
+    // Guardar muestra actual para el envío y limpiar inmediatamente el input de la frase
+    const currentTypingSample = typingSample;
+    setPhraseResetTrigger(prev => prev + 1);
+    setTypingSample(null);
+
     try {
       // PASO 1: Validación de credenciales de usuario (Paso 1 del login)
       let tokenRes;
       try {
         tokenRes = await api.post('/auth/login', { username: u, password: p });
       } catch (authErr) {
-        setError('Usuario o contraseña incorrectos.');
+        const detail = authErr.response?.data?.detail;
+        if (authErr.response?.status === 423 || (detail && detail.toLowerCase().includes('bloqueada'))) {
+          setError(detail || 'Cuenta bloqueada temporalmente por intentos fallidos de tecleo.');
+        } else {
+          setError('Usuario o contraseña incorrectos.');
+        }
         setLoading(false);
         return;
       }
@@ -87,16 +98,16 @@ export default function Login() {
 
       // REGLA DE NEGOCIO USER:
       // Requiere obligatoriamente captura de tecleo y verificación biométrica
-      if (!typingSample || !typingSample.events || typingSample.events.length < 35) {
-        setError('Por favor complete la frase de verificación de seguridad en la sección derecha.');
+      if (!currentTypingSample || !currentTypingSample.events || currentTypingSample.events.length < 35) {
+        setError('Por favor complete la frase de verificación de seguridad en la sección derecha antes de iniciar sesión.');
         setLoading(false);
         return;
       }
 
-      // PASO 2: Evaluación biométrica silenciosa del patrón de tecleo capturado
+      // PASO 2: Evaluación biométrica del patrón de tecleo capturado
       const authPayload = {
-        raw_timestamps: typingSample.events,
-        phrase_typed: typingSample.phrase_typed,
+        raw_timestamps: currentTypingSample.events,
+        phrase_typed: currentTypingSample.phrase_typed,
         username: u
       };
 
@@ -127,16 +138,17 @@ export default function Login() {
       }
 
       // CASO 3: REJECT -> La biometría detectó que quien teclea NO es el dueño de la cuenta
-      setError(`Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`);
-      setTypingSample(null);
+      const rejectMsg = bioRes.data.message || `Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`;
+      setError(rejectMsg);
     } catch (err) {
       const detail = err.response?.data?.detail;
-      if (detail && !detail.toLowerCase().includes('denegado') && !detail.toLowerCase().includes('credenciales')) {
+      if (err.response?.status === 423 || (detail && detail.toLowerCase().includes('bloqueada'))) {
+        setError(detail || 'Cuenta bloqueada temporalmente por intentos fallidos de tecleo.');
+      } else if (detail && !detail.toLowerCase().includes('denegado') && !detail.toLowerCase().includes('credenciales')) {
         setError(`Error en la verificación: ${detail}`);
       } else {
-        setError(`Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`);
+        setError(detail || `Acceso denegado: El patrón biométrico de tecleo no coincide. Tú no eres el usuario '${u}'.`);
       }
-      setTypingSample(null);
     } finally {
       setLoading(false);
     }
@@ -502,6 +514,7 @@ export default function Login() {
                   onSampleComplete={setTypingSample}
                   disabled={loading}
                   error={error}
+                  resetTrigger={phraseResetTrigger}
                 />
               </div>
             </div>

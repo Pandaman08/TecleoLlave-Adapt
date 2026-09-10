@@ -19,6 +19,8 @@ from app.api.dashboard import router as dashboard_router
 from app.api.experiment import router as experiment_router
 from app.api.reports import router as reports_router
 from app.api.cmu_benchmark import router as cmu_benchmark_router
+from app.api.admin_security import router as admin_security_router
+from migrate_security_policy import migrate_security_policy
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -44,11 +46,16 @@ app.include_router(dashboard_router, prefix="/api")
 app.include_router(experiment_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 app.include_router(cmu_benchmark_router, prefix="/api/experiments")
+app.include_router(admin_security_router, prefix="/api")
 
 
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    try:
+        migrate_security_policy()
+    except Exception as e:
+        print(f"Advertencia durante migración de políticas de seguridad: {e}")
 
 
 @app.get("/")

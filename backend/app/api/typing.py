@@ -54,21 +54,60 @@ def authenticate_typing(
 ):
     """
     Autentica una muestra de dinámica de tecleo contra el modelo del usuario.
+    Aplica la política de límite de intentos y bloqueo temporal de la frase.
     """
+    from app.services.security_service import security_service
+    from app.models import User
+
     try:
-        user_id = 1
+        user = None
         if request.username:
-            from app.models import User
             user = db.query(User).filter(User.username == request.username).first()
             if not user:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
             if getattr(user, "role", "user") == "admin":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="El usuario administrador no utiliza biometría conductual."
                 )
-            user_id = user.id
-        result = typing_service.authenticate_sample(db, request, user_id=user_id)
+        else:
+            user = db.query(User).filter(User.id == 1).first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+
+        # 1. Verificar si la cuenta se encuentra bloqueada por intentos previos
+        is_locked, lock_msg, remaining_minutes = security_service.check_user_lockout(db, user)
+        if is_locked:
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                detail=lock_msg
+            )
+
+        # 2. Procesar evaluación biométrica del tecleo
+        result = typing_service.authenticate_sample(db, request, user_id=user.id)
+        decision = str(result.get('decision', '')).lower()
+
+        # 3. Aplicar reglas según decisión biométrica
+        if decision == 'reject':
+            failure_info = security_service.register_phrase_failure(db, user)
+            if failure_info.get("is_locked"):
+                raise HTTPException(
+                    status_code=status.HTTP_423_LOCKED,
+                    detail=failure_info["message"]
+                )
+            result['remaining_attempts'] = failure_info.get('remaining_attempts')
+            result['is_locked'] = False
+            result['message'] = failure_info.get('message')
+        elif decision in ['allow', 'accept']:
+            security_service.reset_phrase_failures(db, user)
+            result['remaining_attempts'] = None
+            result['is_locked'] = False
+        else:
+            # decision == 'challenge'
+            result['remaining_attempts'] = None
+            result['is_locked'] = False
+
         return result
     except HTTPException:
         raise

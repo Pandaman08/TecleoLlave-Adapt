@@ -97,6 +97,8 @@ class AuthenticateResponse(BaseModel):
     adaptive_message: Optional[str] = None
     candidate_model_id: Optional[int] = None
     metrics_comparison: Optional[Dict[str, Any]] = None
+    remaining_attempts: Optional[int] = None
+    is_locked: Optional[bool] = False
 
 
 class EnrolledUserItem(BaseModel):
