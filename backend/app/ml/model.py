@@ -116,11 +116,21 @@ class BiometricModel:
         if X.ndim == 1:
             X = X.reshape(1, -1)
         proba = self.predict_proba(X)
-        # Handle both single-class (shape [n, 1]) and binary (shape [n, 2]) cases
         if proba.shape[1] == 2:
-            return float(proba[0, 1])  # Probability of class 1 (legitimate)
+            s = float(proba[0, 1])
         else:
-            return float(proba[0, 0])  # Single class - return the only probability
+            s = float(proba[0, 0])
+
+        # Guard against isotonic step-function clipping to exact 0.0 when raw estimator proba is substantial:
+        if s < 0.15 and hasattr(self, 'model') and hasattr(self.model, 'predict_proba') and self.scaler is not None:
+            try:
+                X_scaled = self.scaler.transform(X)
+                raw_p = float(self.model.predict_proba(X_scaled)[0, 1])
+                if raw_p > 0.18:
+                    s = raw_p
+            except Exception:
+                pass
+        return s
     
     def save(self, base_path: str) -> Dict[str, str]:
         """

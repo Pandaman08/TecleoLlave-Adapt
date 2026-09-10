@@ -47,25 +47,44 @@ class BiometricPredictor:
     ) -> Tuple[str, float]:
         """
         Compute biometric score and make decision.
+        Adapts operating thresholds to the user model's calibrated EER operating point when available.
         
         Returns: (decision, score)
         decision: 'allow' | 'challenge' | 'reject'
         """
-        # Use config defaults if not provided
-        thresh_allow = threshold_allow or adaptation_config.threshold_allow
-        thresh_challenge = threshold_challenge or adaptation_config.threshold_challenge
-        thresh_reject = threshold_reject or adaptation_config.threshold_reject
+        raw_score = self.predict_score(feature_vector)
         
-        score = self.predict_score(feature_vector)
-        
-        if score >= thresh_allow:
+        # Check if model has a trained operating threshold at EER from cross-validation
+        threshold_at_eer = None
+        if self.model and self.model.metadata and self.model.metadata.metrics:
+            threshold_at_eer = self.model.metadata.metrics.get("threshold_at_eer")
+            if threshold_at_eer is None and "candidate_comparison" in self.model.metadata.metrics:
+                for c in self.model.metadata.metrics.get("candidate_comparison", []):
+                    if c.get("is_winner"):
+                        threshold_at_eer = c.get("threshold_at_eer")
+                        break
+
+        # If model has a valid trained operating threshold:
+        if threshold_at_eer is not None and isinstance(threshold_at_eer, (int, float)) and 0.01 <= threshold_at_eer <= 0.80:
+            eff_allow = threshold_allow if threshold_allow is not None else min(0.85, max(0.45, threshold_at_eer * 1.15))
+            eff_challenge = threshold_challenge if threshold_challenge is not None else min(eff_allow - 0.08, max(0.25, threshold_at_eer * 0.75))
+        else:
+            eff_allow = threshold_allow or adaptation_config.threshold_allow
+            eff_challenge = threshold_challenge or adaptation_config.threshold_challenge
+
+        # Tri-zone decision with smooth score normalization for presentation
+        if raw_score >= eff_allow:
             decision = 'allow'
-        elif score >= thresh_challenge:
+            norm_score = 0.85 + 0.15 * min(1.0, max(0.0, (raw_score - eff_allow) / max(1e-5, (1.0 - eff_allow))))
+        elif raw_score >= eff_challenge:
             decision = 'challenge'
+            norm_score = 0.70 + 0.14 * min(1.0, max(0.0, (raw_score - eff_challenge) / max(1e-5, (eff_allow - eff_challenge))))
         else:
             decision = 'reject'
-        
-        return decision, score
+            norm_score = 0.70 * min(1.0, max(0.0, raw_score / max(1e-5, eff_challenge)))
+
+        return decision, float(norm_score)
+
 
 
 def load_user_model(model_path: str) -> BiometricModel:
