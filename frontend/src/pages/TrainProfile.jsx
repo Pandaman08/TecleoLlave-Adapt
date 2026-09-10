@@ -27,7 +27,9 @@ import {
   ArrowRight,
   TrendingUp,
   Cpu,
-  Clock
+  Clock,
+  LogIn,
+  X
 } from 'lucide-react';
 
 export default function TrainProfile() {
@@ -54,6 +56,7 @@ export default function TrainProfile() {
   // Estados de carga y feedback de reentrenamiento
   const [isTraining, setIsTraining] = useState(false);
   const [trainSuccessResult, setTrainSuccessResult] = useState(null);
+  const [showPostTrainModal, setShowPostTrainModal] = useState(false);
   const [error, setError] = useState(null);
   const [infoMessage, setInfoMessage] = useState(null);
 
@@ -140,6 +143,7 @@ export default function TrainProfile() {
     try {
       const res = await api.post('/typing/train-user-profile', { username });
       setTrainSuccessResult(res.data);
+      setShowPostTrainModal(true);
       await fetchStatus();
     } catch (err) {
       const detail = err.response?.data?.detail || err.message;
@@ -147,6 +151,17 @@ export default function TrainProfile() {
     } finally {
       setIsTraining(false);
     }
+  };
+
+  const handleGoToLogin = () => {
+    setShowPostTrainModal(false);
+    logout();
+    navigate('/login', { state: { username, fromTraining: true } });
+  };
+
+  const handleContinueTraining = () => {
+    setShowPostTrainModal(false);
+    setInfoMessage('¡Excelente! Puedes continuar capturando más muestras en cualquiera de las sesiones para seguir enriqueciendo tu perfil conductual.');
   };
 
   const handleLogout = () => {
@@ -638,6 +653,186 @@ export default function TrainProfile() {
             </button>
           </div>
         </div>
+
+        {/* Modal Interactivo Post-Reentrenamiento */}
+        {showPostTrainModal && trainSuccessResult && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '1.25rem'
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) handleContinueTraining();
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-xl)',
+                maxWidth: '520px',
+                width: '100%',
+                padding: '2rem',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.25rem',
+                position: 'relative'
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleContinueTraining}
+                style={{
+                  position: 'absolute',
+                  top: '1.25rem',
+                  right: '1.25rem',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Cerrar ventana"
+              >
+                <X size={20} />
+              </button>
+
+              {/* Cabecera del Modal */}
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--success)',
+                  border: '2px solid rgba(16, 185, 129, 0.3)',
+                  boxShadow: '0 0 24px rgba(16, 185, 129, 0.2)'
+                }}>
+                  <CheckCircle2 size={34} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 0.3rem 0', color: 'var(--text-primary)' }}>
+                    ¡Reentrenamiento Completado!
+                  </h2>
+                  <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    {trainSuccessResult.message || 'Tu modelo biométrico se ha actualizado con tus muestras más recientes.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Resumen Métrico del Modelo Actualizado */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '0.75rem',
+                backgroundColor: 'var(--bg-canvas)',
+                padding: '0.9rem 1rem',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-subtle)'
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Versión del Modelo</span>
+                  <strong style={{ fontSize: '0.98rem', color: 'var(--brand-500)' }}>
+                    Modelo v{trainSuccessResult.version || statusData.current_model_version || 1}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Algoritmo Seleccionado</span>
+                  <strong style={{ fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                    {trainSuccessResult.selected_algorithm || trainSuccessResult.metrics?.algorithm || 'Random Forest'}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Tasa de Error (EER)</span>
+                  <strong style={{ fontSize: '0.95rem', color: 'var(--success)' }}>
+                    {((trainSuccessResult.metrics?.eer ?? 0) * 100).toFixed(2)}%
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Muestras Entrenadas</span>
+                  <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                    {statusData.total_samples || trainSuccessResult.metrics?.n_samples_train || 0} muestras
+                  </strong>
+                </div>
+              </div>
+
+              {/* Callout de Decisión */}
+              <div style={{
+                padding: '0.85rem 1rem',
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--brand-500)', marginBottom: '0.2rem' }}>
+                  ¿Qué deseas hacer ahora?
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  ¿Deseas iniciar sesión para probar tu nuevo modelo o prefieres seguir reentrenando con más muestras?
+                </div>
+              </div>
+
+              {/* Botones de Acción */}
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={handleContinueTraining}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.88rem'
+                  }}
+                >
+                  <RefreshCw size={15} />
+                  <span>Seguir Reentrenando</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleGoToLogin}
+                  style={{
+                    flex: 1.25,
+                    height: 44,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.88rem',
+                    backgroundColor: 'var(--success)',
+                    borderColor: 'var(--success)'
+                  }}
+                >
+                  <LogIn size={16} />
+                  <span>Iniciar Sesión</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

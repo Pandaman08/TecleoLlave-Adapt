@@ -1,22 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+import { useNavigate, useLocation, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import CaptchaPhraseInput from '../components/login/CaptchaPhraseInput';
 import TwoFactorModal from '../components/login/TwoFactorModal';
 import LanguageSelector from '../components/LanguageSelector';
-import { ShieldCheck, KeyRound, Sun, Moon, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { ShieldCheck, KeyRound, Sun, Moon, Lock, User, Eye, EyeOff, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const { login: authLogin } = useAuth();
 
-  // Estados de los 3 campos
-  const [username, setUsername] = useState('');
+  // Estados de los 3 campos (soporta pre-llenado si viene de reentrenamiento)
+  const [username, setUsername] = useState(() => location.state?.username || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [typingSample, setTypingSample] = useState(null);
@@ -24,7 +25,7 @@ export default function Login() {
   // Estados de feedback y carga
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [success, setSuccess] = useState(() => location.state?.fromTraining ? '¡Modelo reentrenado con éxito! Ya puedes autenticarte con tu patrón actualizado.' : null);
 
   // 2FA modal
   const [show2FaModal, setShow2FaModal] = useState(false);

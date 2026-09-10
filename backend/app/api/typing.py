@@ -346,6 +346,9 @@ def train_user_profile(
         status_data = typing_service.get_user_multi_session_status(db, user.id)
         return {
             "success": True,
+            "version": train_result.get("version", 1),
+            "model_version_id": train_result.get("model_version_id"),
+            "selected_algorithm": train_result.get("selected_algorithm"),
             "message": f"Modelo v{train_result.get('version', 1)} entrenado con {status_data['total_samples']} muestras en {status_data['sessions_count']} sesiones.",
             "metrics": train_result.get("metrics", {}),
             "multi_session_status": status_data
