@@ -3,6 +3,14 @@ RandomForest model wrapper for TECLEOLLAVE-ADAPT.
 Handles model persistence, loading, and metadata.
 """
 
+import ast
+
+if not hasattr(ast, 'Num'):
+    ast.Num = ast.Constant
+    ast.Str = ast.Constant
+    ast.NameConstant = ast.Constant
+    ast.Bytes = ast.Constant
+
 import joblib
 import numpy as np
 from pathlib import Path
