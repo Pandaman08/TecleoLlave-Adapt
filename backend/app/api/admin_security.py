@@ -13,7 +13,8 @@ router = APIRouter(prefix="/admin/security", tags=["admin-security"])
 
 class SecurityPolicyUpdate(BaseModel):
     max_failed_attempts: int = Field(..., ge=1, le=20, description="Máximo número de intentos fallidos permitidos")
-    lockout_duration_minutes: int = Field(..., ge=1, le=1440, description="Duración del bloqueo temporal en minutos")
+    lockout_duration_seconds: Optional[int] = Field(None, ge=5, le=86400, description="Duración del bloqueo temporal en segundos")
+    lockout_duration_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Duración del bloqueo temporal en minutos")
     is_enabled: bool = Field(True, description="Indica si la política de bloqueo está activa")
 
 
@@ -52,11 +53,14 @@ def get_security_policy(
     db: Session = Depends(get_db)
 ):
     """Consulta la política de seguridad global de bloqueo de frase (Solo Administrador)."""
+    import math
     policy = security_service.get_security_policy(db)
+    sec = getattr(policy, "lockout_duration_seconds", None) or (policy.lockout_duration_minutes * 60 if policy.lockout_duration_minutes else 15)
     return {
         "id": policy.id,
         "max_failed_attempts": policy.max_failed_attempts,
-        "lockout_duration_minutes": policy.lockout_duration_minutes,
+        "lockout_duration_seconds": sec,
+        "lockout_duration_minutes": max(1, math.ceil(sec / 60)),
         "is_enabled": policy.is_enabled,
         "updated_at": policy.updated_at.isoformat() if policy.updated_at else None,
         "updated_by": policy.updated_by
@@ -70,20 +74,28 @@ def update_security_policy(
     db: Session = Depends(get_db)
 ):
     """Actualiza la política de seguridad global (Solo Administrador)."""
+    import math
+    sec = data.lockout_duration_seconds
+    if sec is None and data.lockout_duration_minutes is not None:
+        sec = data.lockout_duration_minutes * 60
+    sec = sec or 15
+
     policy = security_service.update_security_policy(
         db=db,
         max_failed_attempts=data.max_failed_attempts,
-        lockout_duration_minutes=data.lockout_duration_minutes,
+        lockout_duration_seconds=sec,
         is_enabled=data.is_enabled,
         updated_by=admin.username
     )
+    time_desc = f"{sec} seg" if sec < 60 else f"{round(sec / 60, 1)} min"
     return {
         "success": True,
-        "message": f"Política de seguridad actualizada: Máx. {policy.max_failed_attempts} intentos, bloqueo de {policy.lockout_duration_minutes} min.",
+        "message": f"Política de seguridad actualizada: Máx. {policy.max_failed_attempts} intentos, bloqueo de {time_desc}.",
         "policy": {
             "id": policy.id,
             "max_failed_attempts": policy.max_failed_attempts,
-            "lockout_duration_minutes": policy.lockout_duration_minutes,
+            "lockout_duration_seconds": sec,
+            "lockout_duration_minutes": max(1, math.ceil(sec / 60)),
             "is_enabled": policy.is_enabled,
             "updated_at": policy.updated_at.isoformat() if policy.updated_at else None,
             "updated_by": policy.updated_by

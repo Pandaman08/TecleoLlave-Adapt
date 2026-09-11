@@ -77,11 +77,12 @@ def authenticate_typing(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
         # 1. Verificar si la cuenta se encuentra bloqueada por intentos previos
-        is_locked, lock_msg, remaining_minutes = security_service.check_user_lockout(db, user)
+        is_locked, lock_msg, remaining_seconds = security_service.check_user_lockout(db, user)
         if is_locked:
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
-                detail=lock_msg
+                detail=lock_msg,
+                headers={"Retry-After": str(remaining_seconds or 15)}
             )
 
         # 2. Procesar evaluación biométrica del tecleo
@@ -94,7 +95,8 @@ def authenticate_typing(
             if failure_info.get("is_locked"):
                 raise HTTPException(
                     status_code=status.HTTP_423_LOCKED,
-                    detail=failure_info["message"]
+                    detail=failure_info["message"],
+                    headers={"Retry-After": str(failure_info.get("lockout_duration_seconds", 15))}
                 )
             result['remaining_attempts'] = failure_info.get('remaining_attempts')
             result['is_locked'] = False

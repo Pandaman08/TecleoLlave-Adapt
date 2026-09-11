@@ -60,11 +60,12 @@ async def login_user(
     from app.models import User
     existing_user = db.query(User).filter(User.username == username).first()
     if existing_user:
-        is_locked, lock_msg, _ = security_service.check_user_lockout(db, existing_user)
+        is_locked, lock_msg, remaining_seconds = security_service.check_user_lockout(db, existing_user)
         if is_locked:
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
-                detail=lock_msg
+                detail=lock_msg,
+                headers={"Retry-After": str(remaining_seconds or 15)}
             )
 
     user = auth_service.authenticate_user(db, username, password)

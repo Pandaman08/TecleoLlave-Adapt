@@ -41,15 +41,27 @@ def migrate_security_policy():
             conn.commit()
             logger.info("Columna 'last_failed_at' agregada exitosamente.")
 
-    # 3. Asegurar política por defecto en security_policies
+        # 3. Verificar columnas en tabla security_policies
+        cursor_sp = conn.execute(text("PRAGMA table_info(security_policies)"))
+        sp_columns = [row[1] for row in cursor_sp.fetchall()]
+        logger.info(f"Columnas actuales en security_policies: {sp_columns}")
+
+        if "lockout_duration_seconds" not in sp_columns:
+            logger.info("Agregando columna 'lockout_duration_seconds' a security_policies...")
+            conn.execute(text("ALTER TABLE security_policies ADD COLUMN lockout_duration_seconds INTEGER NOT NULL DEFAULT 15"))
+            conn.commit()
+            logger.info("Columna 'lockout_duration_seconds' agregada exitosamente.")
+
+    # 4. Asegurar política por defecto en security_policies (5 intentos, 15 segundos)
     db = SessionLocal()
     try:
         policy = db.query(SecurityPolicy).first()
         if not policy:
-            logger.info("Inicializando SecurityPolicy por defecto (3 intentos, 15 min)...")
+            logger.info("Inicializando SecurityPolicy por defecto (5 intentos, 15 seg)...")
             policy = SecurityPolicy(
-                max_failed_attempts=3,
-                lockout_duration_minutes=15,
+                max_failed_attempts=5,
+                lockout_duration_seconds=15,
+                lockout_duration_minutes=1,
                 is_enabled=True,
                 updated_by="admin"
             )
@@ -58,7 +70,12 @@ def migrate_security_policy():
             db.refresh(policy)
             logger.info(f"SecurityPolicy inicializada con id={policy.id}.")
         else:
-            logger.info(f"SecurityPolicy existente: max_attempts={policy.max_failed_attempts}, duration={policy.lockout_duration_minutes}m")
+            # Actualizar a la nueva política de 5 intentos y 15 segundos
+            policy.max_failed_attempts = 5
+            policy.lockout_duration_seconds = 15
+            db.commit()
+            db.refresh(policy)
+            logger.info(f"SecurityPolicy actualizada: max_attempts={policy.max_failed_attempts}, duration_sec={policy.lockout_duration_seconds}s")
     finally:
         db.close()
 

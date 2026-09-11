@@ -16,8 +16,8 @@ import api from '../../services/api';
 
 export default function SecuritySettingsPanel() {
   const [policy, setPolicy] = useState({
-    max_failed_attempts: 3,
-    lockout_duration_minutes: 15,
+    max_failed_attempts: 5,
+    lockout_duration_seconds: 15,
     is_enabled: true
   });
   const [usersStatus, setUsersStatus] = useState([]);
@@ -34,8 +34,8 @@ export default function SecuritySettingsPanel() {
       setLoadingPolicy(true);
       const res = await api.get('/admin/security/policy');
       setPolicy({
-        max_failed_attempts: res.data.max_failed_attempts,
-        lockout_duration_minutes: res.data.lockout_duration_minutes,
+        max_failed_attempts: res.data.max_failed_attempts ?? 5,
+        lockout_duration_seconds: res.data.lockout_duration_seconds ?? 15,
         is_enabled: Boolean(res.data.is_enabled)
       });
     } catch (err) {
@@ -74,7 +74,7 @@ export default function SecuritySettingsPanel() {
     try {
       const payload = {
         max_failed_attempts: Number(policy.max_failed_attempts),
-        lockout_duration_minutes: Number(policy.lockout_duration_minutes),
+        lockout_duration_seconds: Number(policy.lockout_duration_seconds),
         is_enabled: Boolean(policy.is_enabled)
       };
       const res = await api.put('/admin/security/policy', payload);
@@ -216,7 +216,7 @@ export default function SecuritySettingsPanel() {
                 <input
                   type="number"
                   min="1"
-                  max="10"
+                  max="20"
                   value={policy.max_failed_attempts}
                   onChange={(e) => setPolicy(prev => ({ ...prev, max_failed_attempts: e.target.value }))}
                   required
@@ -232,7 +232,7 @@ export default function SecuritySettingsPanel() {
                   }}
                 />
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  intentos consecutivos (recomendado: 3 a 5)
+                  intentos consecutivos (configurado: 5)
                 </span>
               </div>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
@@ -243,15 +243,15 @@ export default function SecuritySettingsPanel() {
             {/* Duración del Bloqueo */}
             <div>
               <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                Duración del Bloqueo Temporal (Minutos)
+                Duración del Bloqueo Temporal (Segundos)
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <input
                   type="number"
-                  min="1"
-                  max="1440"
-                  value={policy.lockout_duration_minutes}
-                  onChange={(e) => setPolicy(prev => ({ ...prev, lockout_duration_minutes: e.target.value }))}
+                  min="5"
+                  max="3600"
+                  value={policy.lockout_duration_seconds}
+                  onChange={(e) => setPolicy(prev => ({ ...prev, lockout_duration_seconds: e.target.value }))}
                   required
                   style={{
                     width: '100px',
@@ -265,7 +265,7 @@ export default function SecuritySettingsPanel() {
                   }}
                 />
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  minutos de inhabilitación (ej. 15, 30, 60 min)
+                  segundos de inhabilitación (ej. 15s para pruebas rápidas, 60s, 300s)
                 </span>
               </div>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
@@ -391,7 +391,7 @@ export default function SecuritySettingsPanel() {
                             fontSize: '0.72rem'
                           }}>
                             <Lock size={12} />
-                            Bloqueado ({u.remaining_minutes}m)
+                            Bloqueado ({u.remaining_seconds ? `${u.remaining_seconds}s` : `${u.remaining_minutes || 1}m`})
                           </span>
                         ) : (
                           <span style={{

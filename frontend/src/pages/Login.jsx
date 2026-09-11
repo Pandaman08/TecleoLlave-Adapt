@@ -26,6 +26,7 @@ export default function Login() {
   // Estados de feedback y carga
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
   const [success, setSuccess] = useState(() => location.state?.fromTraining ? '¡Modelo reentrenado con éxito! Ya puedes autenticarte con tu patrón actualizado.' : null);
 
   // 2FA modal
@@ -36,13 +37,46 @@ export default function Login() {
 
   const isDev = Boolean(import.meta.env.DEV);
 
-  // Limpiar errores al cambiar credenciales
+  // Helper para determinar los segundos de bloqueo a partir de los headers o mensaje
+  const parseLockoutSeconds = (response, detailText) => {
+    const retryHeader = response?.headers?.['retry-after'];
+    if (retryHeader && !isNaN(Number(retryHeader))) {
+      return Math.max(1, Number(retryHeader));
+    }
+    const secMatch = detailText?.match(/(\d+)\s+segundo/i);
+    if (secMatch) {
+      return Math.max(1, parseInt(secMatch[1], 10));
+    }
+    const minMatch = detailText?.match(/(\d+)\s+minuto/i);
+    if (minMatch) {
+      return Math.max(1, parseInt(minMatch[1], 10) * 60);
+    }
+    return 15;
+  };
+
+  // Contador regresivo en tiempo real para el bloqueo temporal
   useEffect(() => {
-    if (error) setError(null);
-  }, [username, password]);
+    if (lockoutSecondsLeft <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSecondsLeft(prev => {
+        if (prev <= 1) {
+          setError(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutSecondsLeft]);
+
+  // Limpiar errores al cambiar credenciales (solo si no está en período de bloqueo)
+  useEffect(() => {
+    if (error && lockoutSecondsLeft <= 0) setError(null);
+  }, [username, password, lockoutSecondsLeft]);
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
+    if (lockoutSecondsLeft > 0) return;
     setError(null);
     setSuccess(null);
 
@@ -69,7 +103,9 @@ export default function Login() {
       } catch (authErr) {
         const detail = authErr.response?.data?.detail;
         if (authErr.response?.status === 423 || (detail && detail.toLowerCase().includes('bloqueada'))) {
-          setError(detail || 'Cuenta bloqueada temporalmente por intentos fallidos de tecleo.');
+          const sec = parseLockoutSeconds(authErr.response, detail);
+          setLockoutSecondsLeft(sec);
+          setError(detail || `Cuenta bloqueada temporalmente por intentos fallidos. Podrás intentar en ${sec} segundos.`);
         } else {
           setError('Usuario o contraseña incorrectos.');
         }
@@ -143,7 +179,9 @@ export default function Login() {
     } catch (err) {
       const detail = err.response?.data?.detail;
       if (err.response?.status === 423 || (detail && detail.toLowerCase().includes('bloqueada'))) {
-        setError(detail || 'Cuenta bloqueada temporalmente por intentos fallidos de tecleo.');
+        const sec = parseLockoutSeconds(err.response, detail);
+        setLockoutSecondsLeft(sec);
+        setError(detail || `Cuenta bloqueada temporalmente por intentos fallidos. Podrás intentar en ${sec} segundos.`);
       } else if (detail && !detail.toLowerCase().includes('denegado') && !detail.toLowerCase().includes('credenciales')) {
         setError(`Error en la verificación: ${detail}`);
       } else {
@@ -306,8 +344,42 @@ export default function Login() {
             </span>
           </div>
 
-          {/* Alertas de error o éxito */}
-          {error && (
+          {/* Alertas de error, bloqueo o éxito */}
+          {lockoutSecondsLeft > 0 ? (
+            <div style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              border: '1.5px solid var(--danger)',
+              color: 'var(--danger)',
+              padding: '0.85rem 1.15rem',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.86rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              animation: 'fadeIn 0.2s ease'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <Lock size={18} />
+                <span>
+                  Cuenta bloqueada temporalmente por 5 intentos fallidos en la frase.
+                </span>
+              </div>
+              <div style={{
+                backgroundColor: 'var(--danger)',
+                color: '#fff',
+                padding: '0.25rem 0.65rem',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                letterSpacing: '0.03em',
+                whiteSpace: 'nowrap'
+              }}>
+                ⏱️ {lockoutSecondsLeft}s
+              </div>
+            </div>
+          ) : error ? (
             <div style={{
               backgroundColor: 'var(--danger-bg)',
               border: '1px solid var(--danger-border)',
@@ -321,7 +393,7 @@ export default function Login() {
             }}>
               {error}
             </div>
-          )}
+          ) : null}
 
           {success && (
             <div style={{
@@ -389,7 +461,7 @@ export default function Login() {
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="ej. mi_usuario"
                         autoComplete="username"
-                        disabled={loading}
+                        disabled={loading || lockoutSecondsLeft > 0}
                         style={{
                           width: '100%',
                           height: 44,
@@ -431,7 +503,7 @@ export default function Login() {
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
                         autoComplete="current-password"
-                        disabled={loading}
+                        disabled={loading || lockoutSecondsLeft > 0}
                         style={{
                           width: '100%',
                           height: 44,
@@ -512,7 +584,7 @@ export default function Login() {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <CaptchaPhraseInput
                   onSampleComplete={setTypingSample}
-                  disabled={loading}
+                  disabled={loading || lockoutSecondsLeft > 0}
                   error={error}
                   resetTrigger={phraseResetTrigger}
                 />
@@ -522,7 +594,7 @@ export default function Login() {
             {/* Botón Principal (Abarca todo el ancho) */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || lockoutSecondsLeft > 0}
               className="btn-primary"
               style={{
                 width: '100%',
@@ -533,7 +605,10 @@ export default function Login() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                borderRadius: 'var(--radius-md)'
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: lockoutSecondsLeft > 0 ? 'var(--danger)' : undefined,
+                opacity: lockoutSecondsLeft > 0 ? 0.85 : undefined,
+                cursor: lockoutSecondsLeft > 0 ? 'not-allowed' : undefined
               }}
             >
               {loading ? (
@@ -544,6 +619,11 @@ export default function Login() {
                     animation: 'spin 0.8s linear infinite'
                   }} />
                   <span>Verificando acceso...</span>
+                </>
+              ) : lockoutSecondsLeft > 0 ? (
+                <>
+                  <Lock size={16} />
+                  <span>Bloqueado temporalmente ({lockoutSecondsLeft}s)</span>
                 </>
               ) : (
                 <>

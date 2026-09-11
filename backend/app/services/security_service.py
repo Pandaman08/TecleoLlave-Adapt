@@ -9,12 +9,13 @@ from app.models.security_policy import SecurityPolicy
 
 class SecurityService:
     def get_security_policy(self, db: Session) -> SecurityPolicy:
-        """Obtiene la política de seguridad global o inicializa una por defecto."""
+        """Obtiene la política de seguridad global o inicializa una por defecto (5 intentos, 15 seg)."""
         policy = db.query(SecurityPolicy).first()
         if not policy:
             policy = SecurityPolicy(
-                max_failed_attempts=3,
-                lockout_duration_minutes=15,
+                max_failed_attempts=5,
+                lockout_duration_seconds=15,
+                lockout_duration_minutes=1,
                 is_enabled=True,
                 updated_by="admin"
             )
@@ -27,14 +28,22 @@ class SecurityService:
         self,
         db: Session,
         max_failed_attempts: int,
-        lockout_duration_minutes: int,
-        is_enabled: bool,
+        lockout_duration_seconds: Optional[int] = None,
+        lockout_duration_minutes: Optional[int] = None,
+        is_enabled: bool = True,
         updated_by: str = "admin"
     ) -> SecurityPolicy:
         """Actualiza la política de seguridad (exclusivo para administradores)."""
         policy = self.get_security_policy(db)
         policy.max_failed_attempts = max(1, min(20, int(max_failed_attempts)))
-        policy.lockout_duration_minutes = max(1, min(1440, int(lockout_duration_minutes)))
+        if lockout_duration_seconds is not None:
+            sec = max(5, min(86400, int(lockout_duration_seconds)))
+        elif lockout_duration_minutes is not None:
+            sec = max(5, min(86400, int(lockout_duration_minutes) * 60))
+        else:
+            sec = 15
+        policy.lockout_duration_seconds = sec
+        policy.lockout_duration_minutes = max(1, math.ceil(sec / 60))
         policy.is_enabled = bool(is_enabled)
         policy.updated_by = updated_by
         policy.updated_at = datetime.utcnow()
@@ -45,7 +54,7 @@ class SecurityService:
     def check_user_lockout(self, db: Session, user: User) -> Tuple[bool, Optional[str], Optional[int]]:
         """
         Verifica si el usuario está actualmente en período de bloqueo.
-        Retorna (is_locked, mensaje_alerta, minutos_restantes).
+        Retorna (is_locked, mensaje_alerta, segundos_restantes).
         Si el tiempo de bloqueo ya expiró, desbloquea automáticamente al usuario.
         """
         policy = self.get_security_policy(db)
@@ -57,13 +66,16 @@ class SecurityService:
 
         now = datetime.utcnow()
         if user.locked_until > now:
-            remaining_seconds = (user.locked_until - now).total_seconds()
-            remaining_minutes = max(1, math.ceil(remaining_seconds / 60))
+            remaining_seconds = max(1, math.ceil((user.locked_until - now).total_seconds()))
+            if remaining_seconds >= 60:
+                time_str = f"{math.ceil(remaining_seconds / 60)} minuto(s)"
+            else:
+                time_str = f"{remaining_seconds} segundo(s)"
             msg = (
                 f"Cuenta bloqueada temporalmente por intentos fallidos de tecleo en la frase de seguridad. "
-                f"Podrás volver a intentar en {remaining_minutes} minuto(s) o solicita el desbloqueo al administrador."
+                f"Podrás volver a intentar en {time_str} o solicita el desbloqueo al administrador."
             )
-            return True, msg, remaining_minutes
+            return True, msg, remaining_seconds
         else:
             # El período de bloqueo ha expirado -> desbloquear automáticamente
             user.failed_attempts = 0
@@ -74,7 +86,7 @@ class SecurityService:
     def register_phrase_failure(self, db: Session, user: User) -> Dict[str, Any]:
         """
         Registra un fallo en la frase/biometría de tecleo.
-        Si alcanza max_failed_attempts, bloquea la cuenta por lockout_duration_minutes.
+        Si alcanza max_failed_attempts, bloquea la cuenta por lockout_duration_seconds.
         """
         policy = self.get_security_policy(db)
         if not policy.is_enabled or user.role == "admin":
@@ -89,18 +101,27 @@ class SecurityService:
         user.last_failed_at = datetime.utcnow()
 
         if user.failed_attempts >= policy.max_failed_attempts:
-            user.locked_until = datetime.utcnow() + timedelta(minutes=policy.lockout_duration_minutes)
+            duration_sec = getattr(policy, "lockout_duration_seconds", None)
+            if duration_sec is None:
+                duration_sec = (policy.lockout_duration_minutes * 60) if policy.lockout_duration_minutes else 15
+            user.locked_until = datetime.utcnow() + timedelta(seconds=duration_sec)
             db.commit()
             db.refresh(user)
+
+            if duration_sec < 60:
+                duration_text = f"{duration_sec} segundos"
+            else:
+                duration_text = f"{math.ceil(duration_sec / 60)} minutos"
+
             return {
                 "is_locked": True,
                 "failed_attempts": user.failed_attempts,
                 "remaining_attempts": 0,
                 "locked_until": user.locked_until.isoformat(),
-                "lockout_duration_minutes": policy.lockout_duration_minutes,
+                "lockout_duration_seconds": duration_sec,
                 "message": (
                     f"Cuenta bloqueada temporalmente por exceder el límite de {policy.max_failed_attempts} intentos fallidos en la frase. "
-                    f"Bloqueo activo por {policy.lockout_duration_minutes} minutos."
+                    f"Bloqueo activo por {duration_text}."
                 )
             }
         else:
@@ -144,10 +165,10 @@ class SecurityService:
 
         for u in users:
             is_locked = False
-            remaining_minutes = 0
+            remaining_seconds = 0
             if u.locked_until and u.locked_until > now:
                 is_locked = True
-                remaining_minutes = max(1, math.ceil((u.locked_until - now).total_seconds() / 60))
+                remaining_seconds = max(1, math.ceil((u.locked_until - now).total_seconds()))
 
             results.append({
                 "id": u.id,
@@ -157,7 +178,8 @@ class SecurityService:
                 "failed_attempts": u.failed_attempts or 0,
                 "is_locked": is_locked,
                 "locked_until": u.locked_until.isoformat() if u.locked_until else None,
-                "remaining_minutes": remaining_minutes,
+                "remaining_seconds": remaining_seconds,
+                "remaining_minutes": max(1, math.ceil(remaining_seconds / 60)) if remaining_seconds else 0,
                 "last_failed_at": u.last_failed_at.isoformat() if u.last_failed_at else None
             })
 
