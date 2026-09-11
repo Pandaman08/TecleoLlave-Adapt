@@ -1,5 +1,10 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { RotateCcw, CheckCircle2, Shield, Keyboard } from 'lucide-react';
+import { RotateCcw, CheckCircle2, Shield, Keyboard, AlertTriangle } from 'lucide-react';
+import {
+  playKeyErrorFeedback,
+  playKeyClickFeedback,
+  unlockAudioContext
+} from '../../utils/captureFeedback';
 
 const TARGET_PHRASE = "La seguridad protege la información";
 const PHRASE_LENGTH = TARGET_PHRASE.length; // 35
@@ -19,17 +24,46 @@ export default function CaptchaPhraseInput({
   const [typedText, setTypedText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [hasKeyError, setHasKeyError] = useState(false);
+  const [wrongChar, setWrongChar] = useState(null);
 
   const inputRef = useRef(null);
+  const textScrollRef = useRef(null);
+  const currentCharRef = useRef(null);
+  const errorTimeoutRef = useRef(null);
   const keydownStacks = useRef({});
   const capturedEventsRef = useRef([]);
   const prevEventRef = useRef(null);
   const deadKeyTime = useRef(null);
   const firstKeydown = useRef(null);
 
+  // Asegurar que el cursor y los caracteres finales ("ión") siempre permanezcan en la zona visible
+  useEffect(() => {
+    if (currentCharRef.current) {
+      currentCharRef.current.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'nearest',
+        block: 'nearest'
+      });
+    }
+    if (textScrollRef.current && (typedText.length >= 24 || isComplete)) {
+      textScrollRef.current.scrollLeft = textScrollRef.current.scrollWidth;
+    }
+  }, [typedText, wrongChar, isComplete]);
+
+  // Limpiar timeout al desmontar
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
+
   const resetCapture = useCallback(() => {
     setTypedText('');
     setIsComplete(false);
+    setHasKeyError(false);
+    setWrongChar(null);
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     keydownStacks.current = {};
     capturedEventsRef.current = [];
     prevEventRef.current = null;
@@ -51,6 +85,9 @@ export default function CaptchaPhraseInput({
 
     // Permitir tecla Backspace para corregir
     if (e.key === 'Backspace') {
+      setHasKeyError(false);
+      setWrongChar(null);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
       if (capturedEventsRef.current.length > 0) {
         capturedEventsRef.current.pop();
         prevEventRef.current = capturedEventsRef.current[capturedEventsRef.current.length - 1] || null;
@@ -66,6 +103,8 @@ export default function CaptchaPhraseInput({
     }
 
     if (isComplete) return;
+
+    unlockAudioContext();
 
     // Evitar que la barra espaciadora desplace la página hacia abajo
     if (e.key === ' ' || e.code === 'Space' || e.keyCode === 32) {
@@ -107,7 +146,13 @@ export default function CaptchaPhraseInput({
     const now = performance.now();
     const key = e.key === ' ' ? 'Space' : e.key;
 
-    if (key === 'Dead' || key === '´' || key === '`' || key === '^' || key === '~' || key === 'AltGraph' || key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta') {
+    // Ignorar teclas modificadoras o de navegación sin generar error
+    if (
+      key === 'Dead' || key === '´' || key === '`' || key === '^' || key === '~' ||
+      key === 'AltGraph' || key === 'Shift' || key === 'Control' || key === 'Alt' ||
+      key === 'Meta' || key === 'CapsLock' || key === 'Tab' || key === 'Escape' ||
+      key.startsWith('Arrow')
+    ) {
       return;
     }
 
@@ -120,13 +165,30 @@ export default function CaptchaPhraseInput({
     const matchesExact = isSpace ? isKeySpace : (key === expectedChar);
     const matchesNormalized = !isSpace && (normalizeChar(key) === normalizeChar(expectedChar));
 
-    // Si la tecla no coincide con el siguiente carácter esperado, descartar de la pila para evitar timestamps viejos
+    // Si la tecla no coincide con el siguiente carácter esperado: activar efecto de equivocación
     if (!matchesExact && !matchesNormalized) {
       keydownStacks.current[key]?.shift();
       const norm = normalizeChar(key);
       if (norm) keydownStacks.current[norm]?.shift();
+
+      // Efecto interactivo de error: tono sonoro, sacudida física y resplandor rojo
+      playKeyErrorFeedback();
+      setHasKeyError(true);
+      const displayKey = key === 'Space' ? 'Espacio' : (key.length === 1 ? key : '✗');
+      setWrongChar(displayKey);
+
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = setTimeout(() => {
+        setHasKeyError(false);
+        setWrongChar(null);
+      }, 360);
       return;
     }
+
+    // Carácter acertado: sonido sutil de pulsación y limpiar cualquier estado de error
+    playKeyClickFeedback(expectedChar);
+    setHasKeyError(false);
+    setWrongChar(null);
 
     // Resolver tiempo de bajada (keydown) reciente (descartando si tiene más de 900ms para evitar distorsiones por pausa)
     const rawCandidates = [
@@ -270,7 +332,7 @@ export default function CaptchaPhraseInput({
           padding: '0.65rem 0.85rem',
           borderRadius: 'var(--radius-md)',
           border: '1px solid var(--border-subtle)',
-          fontSize: '0.88rem',
+          fontSize: '0.86rem',
           fontWeight: 600,
           color: 'var(--text-primary)',
           userSelect: 'none',
@@ -286,16 +348,33 @@ export default function CaptchaPhraseInput({
         onClick={() => inputRef.current?.focus()}
         style={{
           position: 'relative',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-subtle)',
+          backgroundColor: hasKeyError ? 'rgba(239, 68, 68, 0.05)' : 'var(--bg-surface)',
+          border: `1.5px solid ${
+            hasKeyError
+              ? 'var(--danger)'
+              : error
+              ? 'var(--danger)'
+              : isComplete
+              ? 'var(--success)'
+              : isFocused
+              ? 'var(--brand-500)'
+              : 'var(--border-subtle)'
+          }`,
           borderRadius: 'var(--radius-md)',
-          padding: '0.75rem 0.85rem',
+          padding: '0.65rem 0.75rem',
           minHeight: '48px',
           cursor: disabled ? 'not-allowed' : 'text',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '0.5rem'
+          gap: '0.4rem',
+          boxShadow: hasKeyError
+            ? '0 0 0 3px rgba(239, 68, 68, 0.25)'
+            : isFocused
+            ? '0 0 0 3px rgba(99, 102, 241, 0.15)'
+            : 'none',
+          animation: hasKeyError ? 'tecleo-shake 0.32s ease' : undefined,
+          transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease'
         }}
       >
         <input
@@ -321,55 +400,77 @@ export default function CaptchaPhraseInput({
           aria-label="Escriba la frase de verificación"
         />
 
-        <div style={{
-          fontSize: '0.90rem',
-          fontFamily: "'Inter', monospace",
-          letterSpacing: '0.02em',
-          display: 'flex',
-          alignItems: 'center',
-          overflowX: 'auto',
-          whiteSpace: 'pre',
-          flex: 1,
-          padding: '0.15rem 0',
-          scrollbarWidth: 'none'
-        }}>
+        <div
+          ref={textScrollRef}
+          style={{
+            fontSize: 'clamp(0.81rem, 1.02vw, 0.85rem)',
+            fontFamily: "'Inter', monospace",
+            letterSpacing: '-0.005em',
+            display: 'flex',
+            alignItems: 'center',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            whiteSpace: 'pre',
+            flex: 1,
+            minWidth: 0,
+            padding: '0.15rem 0',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
           {TARGET_PHRASE.split('').map((char, idx) => {
             const isTyped = idx < typedText.length;
             const isCurrent = idx === typedText.length;
             const isPending = idx > typedText.length;
+            const isErrorHere = isCurrent && hasKeyError;
+
+            let color = 'var(--text-muted)';
+            let bgColor = 'transparent';
+            let borderBottom = 'none';
+
+            if (isTyped) {
+              color = 'var(--success)';
+              borderBottom = '2px solid rgba(16, 185, 129, 0.5)';
+            } else if (isErrorHere) {
+              color = '#ffffff';
+              bgColor = 'var(--danger)';
+              borderBottom = '2px solid #ffffff';
+            } else if (isCurrent) {
+              color = isFocused ? 'var(--brand-500)' : 'var(--text-primary)';
+              bgColor = isFocused ? 'rgba(99, 102, 241, 0.16)' : 'transparent';
+              borderBottom = isFocused ? '2px solid var(--brand-500)' : 'none';
+            }
 
             return (
               <span
                 key={idx}
+                ref={isCurrent ? currentCharRef : null}
                 style={{
                   position: 'relative',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: char === ' ' ? '0.55ch' : 'auto',
-                  color: isTyped
-                    ? 'var(--success)'
-                    : isCurrent
-                    ? (isFocused ? 'var(--brand-500)' : 'var(--text-primary)')
-                    : 'var(--text-muted)',
+                  minWidth: char === ' ' ? '0.52ch' : 'auto',
+                  color,
                   fontWeight: isTyped || isCurrent ? 700 : 400,
                   opacity: isPending ? 0.42 : 1,
-                  backgroundColor: isCurrent && isFocused ? 'rgba(99, 102, 241, 0.16)' : 'transparent',
+                  backgroundColor: bgColor,
                   borderRadius: '2px',
-                  padding: '0 1px',
-                  borderBottom: isCurrent && isFocused ? '2px solid var(--brand-500)' : (isTyped ? '2px solid rgba(16, 185, 129, 0.5)' : 'none'),
-                  transition: 'background-color 0.1s ease'
+                  padding: '0 0.5px',
+                  borderBottom,
+                  animation: isErrorHere ? 'tecleo-shake 0.28s ease' : undefined,
+                  transition: 'background-color 0.1s ease, color 0.1s ease'
                 }}
               >
                 {/* Cursor indicador vertical con animación de parpadeo */}
-                {isCurrent && isFocused && (
+                {isCurrent && isFocused && !isErrorHere && (
                   <span
                     style={{
                       position: 'absolute',
                       left: 0,
                       top: '12%',
                       bottom: '12%',
-                      width: '2.5px',
+                      width: '2px',
                       backgroundColor: 'var(--brand-500)',
                       borderRadius: '1px',
                       boxShadow: '0 0 8px rgba(99, 102, 241, 0.8)',
@@ -398,7 +499,8 @@ export default function CaptchaPhraseInput({
             color: 'var(--success)',
             fontSize: '0.78rem',
             fontWeight: 700,
-            flexShrink: 0
+            flexShrink: 0,
+            marginLeft: '0.35rem'
           }}>
             <CheckCircle2 size={16} />
             <span>Lista</span>
@@ -414,8 +516,27 @@ export default function CaptchaPhraseInput({
         fontSize: '0.72rem',
         color: 'var(--text-muted)'
       }}>
-        <span>Caracteres: <strong style={{ color: 'var(--text-primary)' }}>{typedText.length}/{PHRASE_LENGTH}</strong></span>
-        <span>Backspace para corregir</span>
+        <span>
+          Caracteres:{' '}
+          <strong style={{ color: isComplete ? 'var(--success)' : 'var(--text-primary)' }}>
+            {typedText.length}/{PHRASE_LENGTH}
+          </strong>
+        </span>
+        {hasKeyError ? (
+          <span style={{
+            color: 'var(--danger)',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            animation: 'fadeIn 0.15s ease'
+          }}>
+            <AlertTriangle size={12} />
+            Carácter incorrecto {wrongChar ? `("${wrongChar}")` : ''}
+          </span>
+        ) : (
+          <span>Backspace para corregir</span>
+        )}
       </div>
     </div>
   );

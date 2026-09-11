@@ -253,7 +253,7 @@ export default function Login() {
         padding: '1.5rem 1.5rem'
       }}>
         <div style={{
-          maxWidth: '860px',
+          maxWidth: '920px',
           width: '100%',
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-subtle)',
