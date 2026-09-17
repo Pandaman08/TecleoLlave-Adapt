@@ -24,12 +24,17 @@ def db_session():
 
     from app.database import Base, engine, SessionLocal
     import app.models  # noqa: F401 - registers all tables on Base.metadata
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     session = SessionLocal()
     yield session
     session.close()
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
+    engine.dispose()
+    try:
+        if os.path.exists(TEST_DB):
+            os.remove(TEST_DB)
+    except Exception:
+        pass
 
 
 PHRASE = "La seguridad protege la información"

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum as SQLEnum, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum as SQLEnum, JSON, Float
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime
@@ -14,6 +14,8 @@ class AdaptationAction(str, enum.Enum):
     challenge_passed = "challenge_passed"
     challenge_failed = "challenge_failed"
     sample_enqueued = "sample_enqueued"
+    sample_quarantined = "sample_quarantined"
+    model_rolled_back = "model_rolled_back"
 
 
 class AdaptationEvent(Base):
@@ -26,6 +28,12 @@ class AdaptationEvent(Base):
     candidate_model_id = Column(Integer, ForeignKey("candidate_models.id"), nullable=True)
     old_model_version_id = Column(Integer, ForeignKey("model_versions.id"), nullable=True)
     new_model_version_id = Column(Integer, ForeignKey("model_versions.id"), nullable=True)
+    current_far = Column(Float, nullable=True)
+    candidate_far = Column(Float, nullable=True)
+    current_frr = Column(Float, nullable=True)
+    candidate_frr = Column(Float, nullable=True)
+    epsilon = Column(Float, nullable=True)
+    decision = Column(String(50), nullable=True)
     reason = Column(Text, nullable=True)
     metrics_comparison = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

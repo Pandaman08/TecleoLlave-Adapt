@@ -6,6 +6,7 @@ from typing import Optional, Any
 from app.database import get_db
 from app.schemas import UserCreate, UserResponse, Token
 from app.services.auth_service import auth_service
+from app.utils.rate_limiter import rate_limit_check
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -35,7 +36,9 @@ async def login_user(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Authenticate user accepting either JSON body or Form Data."""
+    """Authenticate user accepting either JSON body or Form Data with rate limiting."""
+    rate_limit_check(request, max_requests=25, window_seconds=60)
+
     username = None
     password = None
 
@@ -158,7 +161,8 @@ def seed_demo(db: Session = Depends(get_db)):
 
 @router.post("/verify-2fa")
 async def verify_2fa(request: Request, db: Session = Depends(get_db)):
-    """Verify 2FA TOTP code for biometric CHALLENGE decision state."""
+    """Verify 2FA TOTP code for biometric CHALLENGE decision state with rate limiting."""
+    rate_limit_check(request, max_requests=10, window_seconds=60)
     body = await request.json()
     username = body.get("username")
     otp_code = body.get("otp_code")

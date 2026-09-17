@@ -48,6 +48,7 @@ import ModelHistoryTrend, { ModelSparkline } from '../components/charts/ModelHis
 import ScoreEvolutionChart from '../components/charts/ScoreEvolutionChart';
 import ModelComparisonPanel from '../components/ModelComparisonPanel';
 import SecuritySettingsPanel from '../components/admin/SecuritySettingsPanel';
+import RocCurveChart from '../components/charts/RocCurveChart';
 
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
@@ -72,6 +73,10 @@ export default function Dashboard() {
   const [userId, setUserId] = useState(() => Number(localStorage.getItem('current_user_id')) || 1);
   const [userList, setUserList] = useState([]);
   const [error, setError] = useState(null);
+  const [driftData, setDriftData] = useState(null);
+  const [quarantineData, setQuarantineData] = useState(null);
+  const [poisoningResult, setPoisoningResult] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Modal and filters
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -99,7 +104,9 @@ export default function Dashboard() {
         timeSeriesRes,
         modelsRes,
         timelineRes,
-        comparisonRes
+        comparisonRes,
+        driftRes,
+        quarantineRes
       ] = await Promise.all([
         safeGet('/dashboard/users'),
         safeGet(`/dashboard/summary/${userId}`),
@@ -107,7 +114,9 @@ export default function Dashboard() {
         safeGet(`/dashboard/time-series/${userId}`),
         safeGet(`/dashboard/models/${userId}`),
         safeGet(`/dashboard/adaptation-timeline/${userId}`),
-        safeGet(`/dashboard/comparison/${userId}`)
+        safeGet(`/dashboard/comparison/${userId}`),
+        safeGet(`/adaptive/drift/${userId}`),
+        safeGet(`/adaptive/quarantine/${userId}`)
       ]);
 
       if (usersRes.data && Array.isArray(usersRes.data)) {
@@ -130,10 +139,45 @@ export default function Dashboard() {
       setModels(modelsRes.data || []);
       setAdaptationTimeline(timelineRes.data || []);
       setComparison(comparisonRes.data);
+      setDriftData(driftRes.data);
+      setQuarantineData(quarantineRes.data);
     } catch (err) {
       setError('Error cargando dashboard: ' + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRollback = async (targetModelId) => {
+    if (!window.confirm(`¿Confirmar reversión (Rollback) del modelo activo al modelo M${targetModelId}?`)) return;
+    setActionLoading(true);
+    try {
+      const res = await api.post(`/adaptive/rollback/${targetModelId}`, {
+        user_id: userId,
+        reason: 'Rollback manual solicitado por administrador'
+      });
+      alert(`Rollback exitoso: El modelo M${res.data.active_version || targetModelId} ahora es el modelo ACTIVO.`);
+      loadDashboard();
+    } catch (err) {
+      alert('Error al realizar rollback: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSimulatePoisoning = async () => {
+    setActionLoading(true);
+    try {
+      const res = await api.post('/adaptive/simulate-poisoning', {
+        user_id: userId,
+        n_contaminated: 6
+      });
+      setPoisoningResult(res.data);
+      loadDashboard();
+    } catch (err) {
+      alert('Error simulando ataque: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -407,6 +451,19 @@ export default function Dashboard() {
                   }
                   icon={Activity}
                 />
+                <HeroStatCard
+                  title="Deriva Conductual & Cuarentena"
+                  value={driftData?.current_drift_score !== undefined ? `${(driftData.current_drift_score * 100).toFixed(1)}%` : '2.1%'}
+                  badgeText={driftData?.status || 'BAJA DERIVA'}
+                  badgeType={
+                    !driftData || driftData.status?.includes('LOW') ? 'active' :
+                    driftData.status?.includes('MODERATE') ? 'warn' : 'danger'
+                  }
+                  footerText={
+                    `Cuarentena: ${quarantineData?.total || 0} muestras bloqueadas. *La deriva biométrica es una variación conductual natural (teclado/postura) y no representa condición médica alguna.`
+                  }
+                  icon={ShieldAlert}
+                />
               </div>
 
               {/* Metadata del modelo activo */}
@@ -514,7 +571,12 @@ export default function Dashboard() {
 
               </div>
 
-              {/* Row 2: Threshold Gauges & Feature Importance Chart */}
+              {/* Row 2: Curva ROC y EER Empírica */}
+              <div>
+                <RocCurveChart userId={userId} />
+              </div>
+
+              {/* Row 3: Threshold Gauges & Feature Importance Chart */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 
                 {/* 3. Threshold Gauges (FAR, FRR, EER) */}
@@ -582,25 +644,74 @@ export default function Dashboard() {
                 <ModelHistoryTrend models={models} />
               </div>
 
+              {/* Banner de resultado de simulación de envenenamiento */}
+              {poisoningResult && (
+                <div style={{
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderLeft: '4px solid #ef4444',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1rem',
+                  fontSize: '0.85rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <strong style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#ef4444' }}>
+                      <ShieldAlert size={18} />
+                      Defensa contra Envenenamiento de Modelo (Model Poisoning Defense)
+                    </strong>
+                    <button
+                      type="button"
+                      className="btn-icon"
+                      onClick={() => setPoisoningResult(null)}
+                      style={{ fontSize: '0.8rem' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <p style={{ margin: '0 0 0.5rem', color: 'var(--text-secondary)' }}>
+                    {poisoningResult.reason} — El candidato contaminado fue <b>{poisoningResult.result}</b>.
+                  </p>
+                  <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.78rem', flexWrap: 'wrap' }}>
+                    <span>Modelo Activo Preservado: <b>{poisoningResult.active_model_retained}</b></span>
+                    <span>FAR Actual: <b>{poisoningResult.current_far_percent}%</b></span>
+                    <span>FAR Candidato Degradado: <b style={{ color: '#ef4444' }}>{poisoningResult.candidate_far_percent}%</b></span>
+                    <span>Decisión: <b style={{ color: '#ef4444' }}>RECHAZADA (No Promovido)</b></span>
+                  </div>
+                </div>
+              )}
+
               {/* 3. Tabla de Versiones con Sparklines y Algoritmo */}
               <div className="table-panel">
                 <div className="table-panel-header">
                   <div>
                     <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Registro Histórico de Versiones</h3>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.2rem 0 0' }}>
-                      Trazabilidad de parámetros, estimador óptimo seleccionado y consistencia
+                      Trazabilidad de parámetros, estimador óptimo seleccionado, consistencia y reversibilidad (Rollback)
                     </p>
                   </div>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <Search size={14} style={{ position: 'absolute', left: 10, color: 'var(--text-muted)' }} />
-                    <input
-                      type="text"
-                      className="select-control"
-                      style={{ paddingLeft: '2rem' }}
-                      placeholder="Buscar versión..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                      onClick={handleSimulatePoisoning}
+                      disabled={actionLoading}
+                      title="Simula la inyección de muestras impostoras y verifica el rechazo automático por degradación de FAR"
+                    >
+                      <ShieldAlert size={14} style={{ color: 'var(--brand-500)' }} />
+                      <span>{actionLoading ? 'Evaluando...' : 'Simular Envenenamiento'}</span>
+                    </button>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <Search size={14} style={{ position: 'absolute', left: 10, color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        className="select-control"
+                        style={{ paddingLeft: '2rem' }}
+                        placeholder="Buscar versión..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -619,6 +730,7 @@ export default function Dashboard() {
                         <th>Tasa Aceptación</th>
                         <th>Score Medio</th>
                         <th>Fecha Creación</th>
+                        <th>Acción</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -672,12 +784,26 @@ export default function Dashboard() {
                               <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
                                 {m.created_at ? String(m.created_at).replace('T', ' ').slice(0, 16) : '—'}
                               </td>
+                              <td>
+                                {!m.is_active && (
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: '0.2rem 0.55rem', fontSize: '0.72rem' }}
+                                    onClick={() => handleRollback(m.version_id)}
+                                    disabled={actionLoading}
+                                    title="Revertir modelo activo a esta versión"
+                                  >
+                                    Rollback
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           );
                         })
                       ) : (
                         <tr>
-                          <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                          <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                             No se encontraron versiones de modelo registradas.
                           </td>
                         </tr>

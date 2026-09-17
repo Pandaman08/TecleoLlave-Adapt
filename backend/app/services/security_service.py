@@ -185,5 +185,49 @@ class SecurityService:
 
         return results
 
+    def purge_expired_raw_biometrics(self, db: Session, retention_days: int = 90) -> Dict[str, Any]:
+        """
+        GDPR & Privacy Compliance:
+        Purges sensitive raw keystroke event timestamps older than retention_days,
+        replacing them with an anonymized empty list [] while preserving
+        extracted mathematical feature vectors for biometric verification.
+        """
+        from app.models.typing_sample import TypingSample
+        cutoff = datetime.utcnow() - timedelta(days=retention_days)
+        samples = db.query(TypingSample).filter(
+            TypingSample.created_at < cutoff
+        ).all()
+
+        purged_count = 0
+        for s in samples:
+            if s.raw_timestamps and len(s.raw_timestamps) > 0:
+                s.raw_timestamps = []
+                purged_count += 1
+
+        db.commit()
+        return {
+            "purged_count": purged_count,
+            "retention_days": retention_days,
+            "cutoff_date": cutoff.isoformat(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+    def get_retention_status(self, db: Session, retention_days: int = 90) -> Dict[str, Any]:
+        """Returns statistics on stored raw biometric samples vs expired samples."""
+        from app.models.typing_sample import TypingSample
+        total_samples = db.query(TypingSample).count()
+        cutoff = datetime.utcnow() - timedelta(days=retention_days)
+        samples = db.query(TypingSample).filter(
+            TypingSample.created_at < cutoff
+        ).all()
+        expired_count = sum(1 for s in samples if s.raw_timestamps and len(s.raw_timestamps) > 0)
+
+        return {
+            "total_samples": total_samples,
+            "expired_samples_pending_purge": expired_count,
+            "retention_days": retention_days,
+            "cutoff_date": cutoff.isoformat()
+        }
+
 
 security_service = SecurityService()

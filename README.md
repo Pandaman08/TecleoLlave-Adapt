@@ -4,257 +4,192 @@
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-61DAFB.svg?style=flat-square&logo=react&logoColor=black)](https://reactjs.org/)
 [![Scikit-Learn](https://img.shields.io/badge/ML-Scikit--Learn-F7931E.svg?style=flat-square&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
-[![Status](https://img.shields.io/badge/Status-Production--Ready%20%2F%20Functional-success.svg?style=flat-square)]()
+[![Tests](https://img.shields.io/badge/Tests-33%20Passed%20%2F%200%20Failed-brightgreen.svg?style=flat-square)]()
+[![Status](https://img.shields.io/badge/Status-Production--Hardened-success.svg?style=flat-square)]()
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)]()
 
 ---
 
-## 📌 Descripción General
+## 📌 1. Descripción General
 
-**TecleoLlave-Adapt** es una solución avanzada de ciberseguridad y autenticación continua que implementa **biometría conductual basada en dinámica de tecleo (Keystroke Dynamics)** con un **motor adaptativo en caliente**. 
+**TECLEOLLAVE-ADAPT** es una plataforma integral de ciberseguridad y autenticación continua que implementa **biometría conductual basada en dinámica de tecleo (Keystroke Dynamics)** acoplada a un **motor adaptativo en caliente (Online Continuous Adaptation Engine)** con defensas anti-envenenamiento y gobernanza de modelos.
 
-A diferencia de los sistemas biométricos estáticos tradicionales —que sufren de una rápida degradación del rendimiento por fatiga, cambio de teclado o variaciones naturales del usuario (drift biométrico)—, **TecleoLlave-Adapt** aprende y se re-calibra de forma continua y segura, mitigando la tasa de falsos rechazos (**FRR**) sin comprometer la tasa de falsos aceptos (**FAR**).
-
----
-
-## ✨ Características Principales
-
-### 🧠 1. Pipeline de Machine Learning Adaptativo
-* **Extracción Robusta de Características**: 100+ características deterministas que capturan tiempos de pulsación (*Hold Times*), latencias de transición (*Flight/Inter-key Times*), dígrafos, varianza y consistencia rítmica.
-* **Modelo Dinámico ($M_t$) vs. Baseline ($M_0$)**: Algoritmo de clasificación con calibración de probabilidades (`CalibratedClassifierCV` + `RandomForest` / `IsolationForest`).
-* **Re-entrenamiento Seguro**: Buffer dinámico de muestras legítimas verificadas con re-entrenamiento controlado y validación estricta en conjunto hold-out antes de promover nuevas versiones de perfil.
-
-### 🛡️ 2. Motor de Decisión Basado en Riesgo (3 Zonas)
-* **ACCEPT (Score $\ge \theta_{high}$)**: Acceso biométrico directo transparente.
-* **CHALLENGE ($\theta_{low} \le \text{Score} < \theta_{high}$)**: Desafío secundario interactivo mediante autenticación multifactor (**2FA / TOTP**).
-* **REJECT (Score $< \theta_{low}$)**: Bloqueo de sesión ante detección de patrón anómalo o intento de suplantación.
-
-### 📊 3. Benchmark Científico CMU Integrado
-* Módulo de experimentación formal sobre el estándar de la industria (*CMU Keystroke Dynamics Benchmark Dataset*).
-* Evaluación comparativa automática de curvas **FAR, FRR y EER (Equal Error Rate)** demostrando la superioridad del modelo adaptativo.
-
-### 💻 4. Frontend SPA Moderno y Profesional
-* Construido con **React 18** y empaquetado ultra-rápido con **Vite**.
-* **Visualización de Dinámicas**: Heatmaps interactivos de tiempo de pulsación y latencia por tecla.
-* **Dashboard Ejecutivo**: Monitor de métricas en tiempo real, histórico de versiones de modelos y eventos de adaptación.
-* **Exportación de Reportes**: Generación instantánea de reportes ejecutivos en **PDF** y datos en **CSV / JSON**.
-* **Internacionalización y Accesibilidad**: Soporte multi-idioma (**Español / Inglés**) y temas visuales (**Dark Mode / Light Mode**).
+A diferencia de los esquemas biométricos estáticos tradicionales —cuyo rendimiento decae con el paso del tiempo por fatiga, familiaridad con la frase o cambios de hardware/postura (*biometric drift*)—, **TECLEOLLAVE-ADAPT** evoluciona controladamente junto al usuario, mitigando la tasa de falsos rechazos (**FRR**) sin incrementar en ningún caso la tasa de falsos accesos (**FAR**).
 
 ---
 
-## 🏛️ Arquitectura del Sistema
+## 🧠 2. Fundamentación Matemática y Arquitectura de Decisión
 
-```
-                      ┌──────────────────────────────────────────────┐
-                      │            Frontend (React 18 + Vite)        │
-                      │  • Captura precisa de eventos (KeyDown/Up)   │
-                      │  • Heatmaps de Tecleo & Dashboards Analíticos│
-                      │  • Modal 2FA / TOTP Interactivo              │
-                      └──────────────────────┬───────────────────────┘
-                                             │ REST API / JWT
-                                             ▼
-                      ┌──────────────────────────────────────────────┐
-                      │            Backend (FastAPI Engine)          │
-                      ├──────────────────────────────────────────────┤
-                      │  • Auth Service (Bcrypt + JWT + 2FA TOTP)    │
-                      │  • Typing & Feature Extraction Service       │
-                      │  • Adaptive ML Controller (M0 vs Mt)         │
-                      │  • CMU Benchmark Service                     │
-                      │  • Reports & Export Engine                   │
-                      └──────────────────────┬───────────────────────┘
-                                             │ ORM
-                                             ▼
-                      ┌──────────────────────────────────────────────┐
-                      │             Capa de Persistencia             │
-                      │  • SQLAlchemy ORM (SQLite / PostgreSQL)      │
-                      │  • Perfiles biométricos, Modelos y Logs      │
-                      └──────────────────────────────────────────────┘
-```
+### 2.1 Motor de Decisión Tri-Zona Basado en Riesgo
+
+El sistema evalúa cada intento de autenticación mediante un score probabilístico calibrado $S \in [0.0, 1.0]$, contrastado contra umbrales operacionales reconfigurables $(\theta_{low}, \theta_{high})$:
+
+$$\text{Decisión}(S) = \begin{cases} 
+\text{ACCEPT (Acceso Directo)} & \text{si } S \ge \theta_{high} \\
+\text{CHALLENGE (Requiere 2FA / TOTP)} & \text{si } \theta_{low} \le S < \theta_{high} \\
+\text{REJECT (Bloqueo / Denegación)} & \text{si } S < \theta_{low}
+\end{cases}$$
+
+* **Valores Operacionales por Defecto**: $\theta_{low} = 0.45$, $\theta_{high} = 0.75$.
 
 ---
 
-## 📁 Estructura del Repositorio
+### 2.2 Criterio Matemático de Promoción Segura de Modelos
+
+Para evitar degradación de seguridad en cada ciclo adaptativo ($M_t \rightarrow M_{t+1}$), el motor de evaluación (`should_promote_model`) somete al candidato a un conjunto estricto de validación *Hold-Out*:
+
+$$FAR_{candidato} \le FAR_{actual} \quad \land \quad FRR_{candidato} \le FRR_{actual} + \epsilon$$
+
+* **Preservación Estricta de Seguridad**: No se admite incremento en la tasa de impostores aceptados ($FAR_{candidato} \le FAR_{actual}$).
+* **Tolerancia Controlada de Usabilidad**: Se permite una cota de holgura $\epsilon = 0.02$ (2.0%) en rechazos legítimos mientras se consolida la nueva firma rítmica.
+* Si el candidato incumple cualquiera de las restricciones, es **RECHAZADO** y el modelo activo previo se conserva intacto.
+
+---
+
+### 2.3 Medición Cuantitativa de Deriva Biométrica (*Biometric Drift*)
+
+La divergencia estadística respecto al perfil base de enrolamiento ($M_0$) se cuantifica mediante la distancia normalizada multidimensional (tipo Mahalanobis estandarizada) entre el vector de características $\vec{x}$ y el centroide base $\vec{\mu}_0$:
+
+$$D(\vec{x}) = \tanh\left(\frac{1}{3} \cdot \left[ 0.5 \cdot \text{mediana}\left(\frac{|\vec{x} - \vec{\mu}_0|}{\vec{\sigma}_0}\right) + 0.5 \cdot \text{media}\left(\frac{|\vec{x} - \vec{\mu}_0|}{\vec{\sigma}_0}\right) \right]\right)$$
+
+* **Clasificación**:
+  * **LOW DRIFT**: $D < 0.35$ (Estabilidad rítmica nominal).
+  * **MODERATE DRIFT**: $0.35 \le D < 0.70$ (Deriva conductual natural).
+  * **HIGH DRIFT**: $D \ge 0.70$ (Variación marcada o cambio significativo de entorno).
+
+> [!NOTE]
+> **Aviso Académico / Disclaimer de Deriva**:
+> La deriva biométrica conductual es un fenómeno puramente estadístico atribuible a variaciones normales de velocidad, familiaridad con la interfaz, cambio de teclado físico, postura o fatiga transitoria. **No constituye ni debe interpretarse en ningún caso como diagnóstico, síntoma o indicador de salud o condición médica alguna.**
+
+---
+
+### 2.4 Defensas Multi-Capa contra Envenenamiento (*Anti-Poisoning*)
+
+Para impedir que un atacante inyecte muestras maliciosas de forma paulatina para sesgar el modelo:
+1. **Confianza Mínima de Score**: Únicamente muestras con $S \ge 0.60$ son elegibles para el *candidate pool*.
+2. **Verificación Estricta en Zona Desafío**: Muestras originadas en `CHALLENGE` son descartadas si el 2FA TOTP no fue completado exitosamente.
+3. **Filtro de Consistencia y Calidad**: Muestras clasificadas con calidad baja o cadencia errática ($<0.40$) se rechazan.
+4. **Alberca de Cuarentena (`quarantined_samples`)**: Toda muestra sospechosa o con distancia $D > 0.85$ es aislada en cuarentena con auditoría de causa y nunca ingresa al entrenamiento.
+
+---
+
+### 2.5 Reversibilidad y Rollback Administrativo
+
+Cualquier modelo promovido puede ser revertido en caliente por el administrador a una versión previa ($M_{t-1}$ o $M_0$):
+* Transición atómica de estados: modelo actual pasa a `ROLLED_BACK` y el objetivo pasa a `ACTIVE`.
+* Registro inmutable en `adaptation_events` con fecha, usuario administrador y justificación técnica.
+
+---
+
+## 🔒 3. Privacidad, GDPR y Protección de Datos Biométricos
+
+* **Protección de Eventos Brutos**: Las marcas de tiempo crudas (`raw_timestamps`) de pulsación y liberación contienen información sensible de la interacción del usuario.
+* **Política de Retención y Purga**: Mediante `POST /api/admin/security/retention/cleanup`, el sistema purga periódicamente las secuencias crudas que superen la política de retención (ej. 90 días), preservando únicamente los vectores de características agregadas y métricas no invertibles.
+* **Rate Limiting por Ventana Deslizante**: Implementación thread-safe en memoria (`SlidingWindowRateLimiter`) que protege los endpoints de autenticación y verificación 2FA contra ataques de fuerza bruta y denegación de servicio.
+
+---
+
+## 📊 4. Evaluación Empírica y Benchmark CMU
+
+El sistema incorpora evaluadores de rendimiento biométrico basados en barridos exhaustivos de umbrales:
+* **Curva ROC y AUC Empírico**: Cálculo de puntos $(FPR, TPR)$ variando $\theta \in [0.35, 0.85]$.
+* **EER (Equal Error Rate)**: Cálculo exacto del punto de cruce $FAR = FRR$ y umbral óptimo $\theta_{EER}$.
+* **Validación Cruzada en CMU Benchmark**: Evaluación con 51 sujetos y más de 400 secuencias estandarizadas.
+
+---
+
+## 🏛️ 5. Arquitectura del Repositorio
 
 ```text
 TecleoLlave-Adapt/
 ├── backend/
 │   ├── app/
-│   │   ├── api/             # Controladores REST (auth, typing, ml, adaptive, dashboard, cmu_benchmark, reports)
-│   │   ├── models/          # Entidades SQLAlchemy (User, TypingSample, KeystrokeModel, AdaptationLog, etc.)
-│   │   ├── schemas/         # Validación de datos y contratos Pydantic
-│   │   ├── services/        # Lógica de negocio, autenticación, 2FA y reportes
-│   │   ├── ml/              # Extracción de características, evaluador y pipelines de entrenamiento
-│   │   └── utils/           # Criptografía, generación de tokens y utilidades
-│   ├── requirements.txt     # Dependencias Python
-│   └── .env.example         # Variables de entorno base
+│   │   ├── api/             # Endpoints REST (auth, adaptive, admin_security, ml, dashboard, reports)
+│   │   ├── ml/              # Evaluator (FAR/FRR/EER/ROC), Drift (M0 centroid), Trainer, RiskEngine
+│   │   ├── models/          # Entidades SQLAlchemy (User, ModelVersion, QuarantinedSample, etc.)
+│   │   ├── schemas/         # Esquemas Pydantic para validación y contratos API
+│   │   ├── services/        # AdaptiveService, SecurityService, ReportService, MLService
+│   │   └── utils/           # RateLimiter, JWT Crypto, Bcrypt
+│   ├── tests/               # 33 Tests Automatizados (FAR/FRR, Drift, Poisoning, Rollback, Privacy)
+│   ├── migrate_master_schema.py # Migración DDL para esquemas avanzados
+│   └── requirements.txt     # Dependencias Python
 ├── frontend/
 │   ├── src/
-│   │   ├── components/      # Heatmap de tecleo, captura de pulsaciones, modales
-│   │   ├── context/         # AuthContext, ThemeContext, i18n
-│   │   ├── pages/           # Dashboard, Login, Register, Enrolamiento
-│   │   ├── hooks/           # Hook de captura fina useTypingCapture
-│   │   └── services/        # Cliente HTTP Axios configurado
-│   ├── package.json         # Dependencias Node.js
-│   └── vite.config.js       # Configuración de compilación Vite
-├── experiments/             # Benchmarks, datasets y resultados (JSON/CSV)
-├── run_demo.py              # Script interactivo de ejecución y demostración
-├── PRESENTACION.md          # Guía ejecutiva y soporte de presentación
-└── README.md                # Documentación principal
+│   │   ├── components/      # RocCurveChart, ThresholdGauge, Heatmap, ReportPreviewModal
+│   │   ├── pages/           # Dashboard (con Drift KPI y Rollback), LiveDemo, Login, Admin
+│   │   └── services/        # Cliente Axios con interceptores y manejo de errores
+│   ├── package.json
+│   └── vite.config.js
+└── README.md
 ```
 
 ---
 
-## 🚀 Guía de Inicio Rápido
+## 🚀 6. Guía de Puesta en Marcha
 
-### Requisitos Previos
-* **Python 3.10+** (recomendado 3.11)
+### Prerrequisitos
+* **Python 3.10+**
 * **Node.js 18+** y **npm**
+* **Git**
 
----
-
-### 1. Configuración del Backend
+### Backend
 
 ```bash
-# 1. Navegar a la carpeta backend
+# 1. Acceder al directorio backend
 cd backend
 
-# 2. Crear y activar entorno virtual
-# En Linux/macOS:
-python -m venv venv && source venv/bin/activate
-# En Windows (PowerShell):
-python -m venv venv; .\venv\Scripts\Activate.ps1
+# 2. Crear entorno virtual
+python -m venv venv
+venv\Scripts\activate      # En Windows PowerShell/CMD
+# source venv/bin/activate # En Linux / macOS
 
 # 3. Instalar dependencias
 pip install -r requirements.txt
 
-# 4. Iniciar el servidor FastAPI
-uvicorn app.main:app --reload --port 8000
+# 4. Iniciar servidor FastAPI
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-* **API Base:** `http://localhost:8000`
-* **Swagger Docs interactivo:** `http://localhost:8000/docs`
+* **Documentación Interactiva Swagger**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
----
-
-### 2. Configuración del Frontend
+### Frontend
 
 ```bash
-# 1. En una nueva terminal, navegar a la carpeta frontend
+# 1. Acceder al directorio frontend
 cd frontend
 
 # 2. Instalar dependencias
 npm install
 
-# 3. Iniciar el servidor de desarrollo
+# 3. Iniciar servidor de desarrollo Vite
 npm run dev
 ```
-* **Aplicación Web:** `http://localhost:5173`
+* **Aplicación Web**: [http://localhost:5173](http://localhost:5173)
 
 ---
 
-### 3. Carga Rápida de Datos Demo
+## 🧪 7. Ejecución de Tests Automatizados
 
-Para explorar la aplicación sin realizar un enrolamiento manual:
-1. Abre `http://localhost:5173` en tu navegador.
-2. En la pantalla de Login, presiona **"Sembrar Datos Demo"** o ejecuta:
-   ```bash
-   python run_demo.py setup
-   ```
-3. Inicia sesión con:
-   * **Usuario:** `demo`
-   * **Contraseña:** `demo123`
-   * **Código 2FA (si aplica):** `123456`
+La suite completa incluye 33 pruebas unitarias y de integración que validan:
+* Barrido de umbrales, métricas FAR, FRR, EER y curvas ROC.
+* Reglas de decisión tri-zona y validación de rangos.
+* Invarianza y aislamiento biométrico entre usuarios distintos.
+* Detección de degradación y regla estricta de promoción $FAR \le FAR_{cur}$.
+* Bloqueo en cuarentena y simulación de ataques de envenenamiento.
+* Reversión de modelos (Rollback) y generación de pistas de auditoría.
+* Limitador de tasa (*Rate Limiting*) y retención/purga de privacidad.
 
----
-
-## 🧪 Pruebas y Validación del Benchmark CMU
-
-Para ejecutar la validación científica que compara el **Modelo Estático ($M_0$)** frente al **Modelo Adaptativo ($M_t$)**:
-
-1. Ingresa al **Dashboard**.
-2. Dirígete a la sección **"Benchmark Científico CMU Keystroke Dynamics"**.
-3. Haz clic en **"Ejecutar Benchmark CMU"**.
-4. El sistema calculará y desplegará en tiempo real:
-   * Reducción porcentual de **FRR** (Falsos Rechazos).
-   * Mejora del **EER** global.
-   * Total de re-entrenamientos y adaptaciones exitosas.
-
----
-
-## 👥 Sistema de Roles (`admin` vs `user`)
-
-TecleoLlave-Adapt cuenta con un modelo estricto de **2 roles diferenciados**:
-
-| Rol | Biometría Conductual | Flujo de Login | Destino tras Login | Creación |
-| :--- | :--- | :--- | :--- | :--- |
-| **`admin`** | **Deshabilitada** (no captura tecleo ni tiene modelo) | Solo credenciales (usuario/contraseña); omite `/typing/authenticate` | **`/`** (Dashboard Ejecutivo) | Exclusivo por CLI (`create_admin.py`) |
-| **`user`** | **Obligatoria** (evaluación tri-zona: allow/challenge/reject) | Credenciales + análisis del patrón dinámico de tecleo | **`/entrenamiento`** (Entrenamiento Continuo de Perfil) | Registro público (`/register`) |
-
-### Creación de Administradores
-Por seguridad, el registro público (`/api/auth/register`) **siempre asigna `role="user"`** e ignora cualquier intento de auto-asignación de permisos de administración.
-
-Para crear un administrador:
 ```bash
-# En entorno local:
-python backend/create_admin.py --username admin --password <contraseña_segura>
+# Ejecutar todas las pruebas con salida detallada
+pytest backend/tests/ -v
+```
 
-# En entorno Docker:
-docker compose exec backend python create_admin.py --username admin --password <contraseña_segura>
+**Resultado de Validación**:
+```text
+============================== 33 passed in 43.16s ==============================
 ```
 
 ---
 
-## 🐳 Despliegue con Docker Compose (Recomendado)
+## 📜 8. Licencia
 
-El proyecto incluye orquestación completa con **Docker Compose** y un volumen nombrado persistente (`db_data`) que asegura que la base de datos SQLite (`tecleollave.db`) y los modelos entrenados (`.joblib`) no se pierdan al reconstruir o reiniciar los contenedores.
-
-### 1. Modo Desarrollo (Hot-Reload)
-En desarrollo, se activa automáticamente `docker-compose.override.yml`, montando el código fuente en caliente:
-```bash
-# Levantar backend (con --reload) y frontend (Vite dev server en puerto 5173):
-docker compose up
-
-# O en segundo plano:
-docker compose up -d
-```
-* **Frontend:** `http://localhost:5173`
-* **Backend API:** `http://localhost:8000`
-* **Swagger Docs:** `http://localhost:8000/docs`
-
-### 2. Modo Producción (Multi-Stage Nginx + FastAPI)
-Para producción, se construye la imagen estática optimizada con Nginx:
-```bash
-# Construir y levantar servicios de producción:
-docker compose -f docker-compose.yml up -d --build
-```
-* **Aplicación Web (Nginx):** `http://localhost` (puerto 80 con proxy `/api/` hacia el backend)
-* **Backend Interno:** `http://backend:8000`
-
-### 3. Crear el Administrador en Docker
-Una vez que los contenedores estén corriendo:
-```bash
-docker compose exec backend python create_admin.py --username admin --password <tu_contraseña>
-```
-
-### 4. Reiniciar o Resetear Base de Datos en Docker
-```bash
-# Detener contenedores preservando datos:
-docker compose down
-
-# Detener contenedores y BORRAR la base de datos y modelos (reset total):
-docker compose down -v
-```
-
----
-
-## 🔐 Seguridad y Privacidad
-
-* **Zero Plaintext Storage**: Ninguna contraseña se almacena en texto plano; se utiliza derivación y hashing robusto con sal criptográfica (Bcrypt).
-* **Control de Acceso por Roles (RBAC)**: Rutas protegidas mediante `AuthContext` y `ProtectedRoute` en el Frontend, y validación estricta de roles en endpoints biométricos del Backend.
-* **Privacidad Biométrica**: Las muestras de tecleo no guardan texto sensible fuera del contexto de autenticación; se transforman inmediatamente en vectores estadísticos de diferencias temporales ($HT$, $FT$).
-* **Protección contra Inyección y Suplantación**: Validación estricta en esquemas Pydantic y aislamiento total de perfiles de usuario.
-
----
-
-## 📄 Licencia
-
-Este proyecto está distribuido bajo la licencia **MIT**. Para más detalles, consulta el archivo `LICENSE`.
+Este proyecto está distribuido bajo la licencia **MIT**. Consulte el archivo `LICENSE` para más detalles.

@@ -297,6 +297,11 @@ def live_biometric_test(
     except Exception:
         db.rollback()
 
+    # Obtener umbrales activos
+    from app.config import adaptation_config
+    th_low = getattr(adaptation_config, 'threshold_challenge', 0.45)
+    th_high = getattr(adaptation_config, 'threshold_allow', 0.75)
+
     return LiveTestResponse(
         username=user.username,
         user_id=user.id,
@@ -306,6 +311,8 @@ def live_biometric_test(
         decision=decision.upper(),
         is_recognized=is_recognized,
         model_version=active_model.id,
+        threshold_low=th_low,
+        threshold_high=th_high,
         metrics={
             "wpm": round(wpm, 1),
             "total_duration_ms": round(total_dur, 0),

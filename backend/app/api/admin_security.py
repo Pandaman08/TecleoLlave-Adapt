@@ -132,3 +132,81 @@ def unlock_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/retention/status")
+def get_biometric_retention_status(
+    retention_days: int = 90,
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Consulta el estado del almacén biométrico y muestras sujetas a política de retención."""
+    return security_service.get_retention_status(db, retention_days=retention_days)
+
+
+@router.post("/retention/cleanup")
+def cleanup_expired_biometric_data(
+    retention_days: int = 90,
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Purga de forma segura marcas de tiempo y eventos brutos de tecleo anteriores a retention_days."""
+    return security_service.purge_expired_raw_biometrics(db, retention_days=retention_days)
+
+
+class BiometricPolicyUpdate(BaseModel):
+    threshold_low: Optional[float] = Field(None, ge=0.0, le=1.0)
+    threshold_high: Optional[float] = Field(None, ge=0.0, le=1.0)
+    epsilon: Optional[float] = Field(None, ge=0.0, le=0.2)
+    min_candidate_samples: Optional[int] = Field(None, ge=5, le=100)
+
+
+@router.get("/biometric-policy")
+def get_biometric_policy(
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Consulta los parámetros biométricos globales del sistema de autenticación adaptativo."""
+    policy = security_service.get_security_policy(db)
+    return {
+        "threshold_low": getattr(policy, "threshold_low", 0.45) or 0.45,
+        "threshold_high": getattr(policy, "threshold_high", 0.75) or 0.75,
+        "epsilon": getattr(policy, "epsilon", 0.02) or 0.02,
+        "min_candidate_samples": getattr(policy, "min_candidate_samples", 10) or 10,
+        "updated_at": policy.updated_at.isoformat() if policy.updated_at else None,
+        "updated_by": policy.updated_by
+    }
+
+
+@router.put("/biometric-policy")
+def update_biometric_policy(
+    data: BiometricPolicyUpdate,
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Actualiza los umbrales biométricos globales (θ_low, θ_high, ε) para el motor de decisión."""
+    policy = security_service.get_security_policy(db)
+    if data.threshold_low is not None:
+        policy.threshold_low = data.threshold_low
+    if data.threshold_high is not None:
+        policy.threshold_high = data.threshold_high
+    if data.epsilon is not None:
+        policy.epsilon = data.epsilon
+    if data.min_candidate_samples is not None:
+        policy.min_candidate_samples = data.min_candidate_samples
+
+    policy.updated_by = admin.username
+    policy.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(policy)
+
+    return {
+        "success": True,
+        "message": "Parámetros biométricos actualizados exitosamente.",
+        "policy": {
+            "threshold_low": policy.threshold_low,
+            "threshold_high": policy.threshold_high,
+            "epsilon": policy.epsilon,
+            "min_candidate_samples": policy.min_candidate_samples
+        }
+    }

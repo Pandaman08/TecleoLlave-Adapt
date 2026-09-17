@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel
 
 from app.database import get_db
 from app.schemas import (
@@ -13,8 +14,19 @@ from app.schemas import (
     AdaptationEventResponse
 )
 from app.services.adaptive_service import adaptive_service
+from app.ml.drift import evaluate_user_biometric_drift
 
 router = APIRouter(prefix="/adaptive", tags=["adaptive"])
+
+
+class RollbackRequest(BaseModel):
+    user_id: int
+    reason: Optional[str] = "Rollback solicitado por administrador"
+
+
+class SimulatePoisoningRequest(BaseModel):
+    user_id: int
+    n_contaminated: Optional[int] = 6
 
 
 @router.post("/process-auth-result", response_model=ProcessAuthResultResponse)
@@ -143,3 +155,85 @@ def get_adaptation_events(
         }
         for e in events
     ]
+
+
+@router.post("/rollback/{model_id}")
+def rollback_model_endpoint(
+    model_id: int,
+    request: RollbackRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Rollback active model to target model version.
+    """
+    try:
+        res = adaptive_service.rollback_model(
+            db=db,
+            user_id=request.user_id,
+            target_model_id=model_id,
+            admin_username="admin",
+            reason=request.reason or "Rollback solicitado por administrador"
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get("/quarantine/{user_id}")
+def get_quarantined_samples_endpoint(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve all quarantined biometric samples that failed trust/anti-poisoning verification.
+    """
+    try:
+        samples = adaptive_service.get_quarantined_samples(db=db, user_id=user_id)
+        return {
+            "user_id": user_id,
+            "quarantined_samples": samples,
+            "total": len(samples)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post("/simulate-poisoning")
+def simulate_poisoning_endpoint(
+    request: SimulatePoisoningRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Simulate a model poisoning attack (adversarial injection) and verify automated rejection.
+    """
+    try:
+        res = adaptive_service.simulate_poisoning_attack(
+            db=db,
+            user_id=request.user_id,
+            n_contaminated=request.n_contaminated or 6
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get("/drift/{user_id}")
+def get_user_drift_endpoint(
+    user_id: int,
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+    """
+    Evaluate behavioral biometric drift for a user relative to baseline M0 centroid.
+    """
+    try:
+        res = evaluate_user_biometric_drift(db=db, user_id=user_id, limit=limit)
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -853,56 +853,112 @@ export default function LiveDemo() {
                     padding: '1rem 1.25rem',
                     marginBottom: '1.25rem'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                        Score P(Legítimo | X):
-                      </span>
-                      <span style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: '1.15rem',
-                        fontWeight: 800,
-                        color: lastResult.decision === 'ALLOW' ? 'var(--success)' : lastResult.decision === 'CHALLENGE' ? 'var(--warning)' : 'var(--danger)'
-                      }}>
-                        {lastResult.score_pct}% ({lastResult.decision})
-                      </span>
+                    {/* Panel de decisión formal y umbrales en tiempo real */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                      gap: '0.6rem',
+                      marginBottom: '1rem',
+                      padding: '0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--bg-surface)',
+                      border: '1px solid var(--border-subtle)'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Score Biométrico</div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--brand-500)' }}>
+                          {(lastResult.score !== undefined ? lastResult.score : 0).toFixed(2)}
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.25rem' }}>({lastResult.score_pct}%)</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Umbral Bajo (θ_low)</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--warning)' }}>
+                          {(lastResult.threshold_low || 0.45).toFixed(2)}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Umbral Alto (θ_high)</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--success)' }}>
+                          {(lastResult.threshold_high || 0.75).toFixed(2)}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Versión Modelo</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+                          v{lastResult.model_version || 1}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Decisión Final</div>
+                        <div style={{
+                          fontSize: '0.95rem',
+                          fontWeight: 800,
+                          color: (lastResult.decision === 'ALLOW' || lastResult.decision === 'ACCEPT')
+                            ? 'var(--success)'
+                            : lastResult.decision === 'CHALLENGE'
+                            ? 'var(--warning)'
+                            : 'var(--danger)'
+                        }}>
+                          {(lastResult.decision === 'ALLOW' || lastResult.decision === 'ACCEPT') && '✓ ACCEPT'}
+                          {lastResult.decision === 'CHALLENGE' && '⚠ CHALLENGE (2FA required)'}
+                          {lastResult.decision === 'REJECT' && '✕ REJECT'}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Barra de 3 zonas con aguja */}
-                    <div style={{
-                      height: 14,
-                      backgroundColor: 'var(--bg-surface)',
-                      borderRadius: 9999,
-                      position: 'relative',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      marginBottom: '0.5rem',
-                      border: '1px solid var(--border-subtle)'
-                    }}>
-                      <div style={{ width: '70%', backgroundColor: 'rgba(239, 68, 68, 0.65)' }} title="Zona REJECT (< 70%)" />
-                      <div style={{ width: '15%', backgroundColor: 'rgba(245, 158, 11, 0.65)' }} title="Zona CHALLENGE (70% - 85%)" />
-                      <div style={{ width: '15%', backgroundColor: 'rgba(16, 185, 129, 0.65)' }} title="Zona ACCEPT (≥ 85%)" />
+                    {(() => {
+                      const thLow = (lastResult.threshold_low || 0.45) * 100;
+                      const thHigh = (lastResult.threshold_high || 0.75) * 100;
+                      const wReject = Math.max(10, thLow);
+                      const wChallenge = Math.max(10, thHigh - thLow);
+                      const wAccept = Math.max(10, 100 - thHigh);
 
-                      {/* Aguja animada */}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: -2,
-                          bottom: -2,
-                          width: 4,
-                          backgroundColor: '#ffffff',
-                          borderRadius: 2,
-                          boxShadow: '0 0 8px rgba(0,0,0,0.8), 0 0 12px #ffffff',
-                          left: `${Math.max(0, Math.min(100, lastResult.score_pct))}%`,
-                          transition: 'left 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}
-                      />
-                    </div>
+                      return (
+                        <>
+                          <div style={{
+                            height: 14,
+                            backgroundColor: 'var(--bg-surface)',
+                            borderRadius: 9999,
+                            position: 'relative',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            marginBottom: '0.5rem',
+                            border: '1px solid var(--border-subtle)'
+                          }}>
+                            <div style={{ width: `${wReject}%`, backgroundColor: 'rgba(239, 68, 68, 0.65)' }} title={`Zona REJECT (< ${thLow.toFixed(0)}%)`} />
+                            <div style={{ width: `${wChallenge}%`, backgroundColor: 'rgba(245, 158, 11, 0.65)' }} title={`Zona CHALLENGE (${thLow.toFixed(0)}% - ${thHigh.toFixed(0)}%)`} />
+                            <div style={{ width: `${wAccept}%`, backgroundColor: 'rgba(16, 185, 129, 0.65)' }} title={`Zona ACCEPT (≥ ${thHigh.toFixed(0)}%)`} />
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-                      <span style={{ color: 'var(--danger)' }}>0% REJECT</span>
-                      <span style={{ color: 'var(--warning)' }}>70% CHALLENGE</span>
-                      <span style={{ color: 'var(--success)' }}>85% ACCEPT</span>
-                    </div>
+                            {/* Aguja animada */}
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: -2,
+                                bottom: -2,
+                                width: 4,
+                                backgroundColor: '#ffffff',
+                                borderRadius: 2,
+                                boxShadow: '0 0 8px rgba(0,0,0,0.8), 0 0 12px #ffffff',
+                                left: `${Math.max(0, Math.min(100, lastResult.score_pct))}%`,
+                                transition: 'left 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
+                              }}
+                            />
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                            <span style={{ color: 'var(--danger)' }}>&lt; {thLow.toFixed(0)}% REJECT</span>
+                            <span style={{ color: 'var(--warning)' }}>{thLow.toFixed(0)}% - {thHigh.toFixed(0)}% CHALLENGE</span>
+                            <span style={{ color: 'var(--success)' }}>≥ {thHigh.toFixed(0)}% ACCEPT</span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Grid de Métricas de la Muestra */}

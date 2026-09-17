@@ -20,7 +20,13 @@ class AuthAttempt(Base):
     model_version_id = Column(Integer, ForeignKey("model_versions.id"), nullable=False)
     score = Column(Float, nullable=False)
     decision = Column(SQLEnum(AuthDecision), nullable=False)
+    threshold_low = Column(Float, nullable=True, default=0.45)
+    threshold_high = Column(Float, nullable=True, default=0.75)
+    requires_2fa = Column(Boolean, nullable=True, default=False)
     challenge_passed = Column(Boolean, nullable=True)
+    ip_address = Column(String(50), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    reason = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="auth_attempts")

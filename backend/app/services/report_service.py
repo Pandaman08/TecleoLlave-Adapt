@@ -85,6 +85,7 @@ class ReportService:
         
         far_val = get_val(auth_metrics, 'far', 0)
         frr_val = get_val(auth_metrics, 'frr', 0)
+        eer_val = get_val(auth_metrics, 'eer', 0)
         avg_score_val = get_val(auth_metrics, 'avg_score', 0)
         allow_c = get_val(auth_metrics, 'allow_count', 0)
         reject_c = get_val(auth_metrics, 'reject_count', 0)
@@ -94,8 +95,8 @@ class ReportService:
             ["Métrica", "Valor", "Métrica", "Valor"],
             ["Modelo Activo", f"v{get_val(summary, 'active_model_version', 'N/A')}", "FAR (30d)", f"{(far_val*100):.2f}%"],
             ["Total Muestras", str(get_val(summary, 'total_samples', 0)), "FRR (30d)", f"{(frr_val*100):.2f}%"],
-            ["Intentos Auth", str(total_att), "Score Promedio", f"{avg_score_val:.3f}"],
-            ["Adaptaciones", str(get_val(summary, 'total_adaptations', 0)), "Permitidos / Rechazados", f"{allow_c} / {reject_c}"]
+            ["Intentos Auth", str(total_att), "EER Empírico", f"{(eer_val*100):.2f}%"],
+            ["Score Promedio", f"{avg_score_val:.3f}", "Permitidos / Rechazados", f"{allow_c} / {reject_c}"]
         ]
         t_kpi = Table(kpi_data, colWidths=[130, 130, 130, 130])
         t_kpi.setStyle(TableStyle([
@@ -267,17 +268,15 @@ class ReportService:
         avg_score_val = get_val(auth_metrics, 'avg_score', 0)
 
         kpis = [
-            ("Usuario", username),
-            ("Modelo Activo", f"v{get_val(summary, 'active_model_version', 'N/A')}"),
-            ("Total Muestras", get_val(summary, 'total_samples', 0)),
-            ("Muestras Enrolamiento", get_val(summary, 'enrollment_samples', 0)),
-            ("Muestras Autenticación", get_val(summary, 'auth_samples', 0)),
-            ("Intentos Autenticación", get_val(auth_metrics, 'total_attempts', 0)),
-            ("Intentos Permitidos", get_val(auth_metrics, 'allow_count', 0)),
-            ("Intentos Challenge", get_val(auth_metrics, 'challenge_count', 0)),
-            ("Intentos Rechazados", get_val(auth_metrics, 'reject_count', 0)),
+            ("Modelo Activo", f"v{get_val(summary, 'active_model_version', 'N/A')} ({get_val(summary, 'active_model_algorithm', 'N/A')})"),
+            ("Total Muestras Registradas", get_val(summary, 'total_samples', 0)),
+            ("Total Intentos Autenticación", total_att),
+            ("Intentos Permitidos (ALLOW)", allow_c),
+            ("Intentos Desafiados (CHALLENGE)", get_val(auth_metrics, 'challenge_count', 0)),
+            ("Intentos Rechazados (REJECT)", reject_c),
             ("FAR (False Acceptance Rate)", f"{(far_val*100):.2f}%"),
             ("FRR (False Rejection Rate)", f"{(frr_val*100):.2f}%"),
+            ("EER Empírico (Equal Error Rate)", f"{(eer_val*100):.2f}%"),
             ("Score Promedio Biométrico", round(avg_score_val, 4)),
             ("Total Adaptaciones Exitosas", get_val(summary, 'total_adaptations', 0))
         ]

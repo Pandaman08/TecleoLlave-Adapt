@@ -56,6 +56,11 @@ async def startup_event():
         migrate_security_policy()
     except Exception as e:
         print(f"Advertencia durante migración de políticas de seguridad: {e}")
+    try:
+        from migrate_master_schema import migrate_master_schema
+        migrate_master_schema()
+    except Exception as e:
+        print(f"Advertencia durante migración de master schema: {e}")
 
 
 @app.get("/")

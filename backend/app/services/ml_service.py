@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 from app.models import User, ModelVersion, TypingSample
 from app.ml.trainer import train_user_model
 from app.ml.predictor import load_user_model, BiometricPredictor
-from app.ml.evaluator import evaluate_authentication
+from app.ml.evaluator import evaluate_authentication, evaluate_biometric_model
 from app.config import settings
+import numpy as np
 
 
 class MLService:
@@ -276,6 +277,93 @@ class MLService:
             'model_version_id': model_version.id
         }
 
+    def evaluate_user_biometrics(
+        self,
+        db: Session,
+        user_id: int,
+        thresholds: Optional[list] = None
+    ) -> Dict[str, Any]:
+        """
+        Evaluates biometric performance (FAR, FRR, EER, AUC, ROC) of the user's active model
+        against genuine user samples and real/benchmark impostor samples.
+        """
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError(f"Usuario {user_id} no encontrado")
+
+        active_model = self.get_active_model(db, user_id)
+        if not active_model:
+            raise ValueError(f"El usuario '{user.username}' no tiene un modelo biométrico activo.")
+
+        from app.ml.model_selector import model_selector
+        X, y, data_stats = model_selector.prepare_dataset(db, user_id)
+
+        X_legit = X[y == 1]
+        X_imp = X[y == 0]
+
+        try:
+            model = load_user_model(active_model.model_path)
+            predictor = BiometricPredictor(model)
+        except Exception as e:
+            raise ValueError(f"No se pudo cargar el modelo activo: {e}")
+
+        exemplars = None
+        if hasattr(model, "metadata") and model.metadata and getattr(model.metadata, "template_data", None):
+            exemplars = model.metadata.template_data.get("exemplars")
+
+        if not exemplars:
+            from app.models import TypingSample, TypingFeature
+            samples = db.query(TypingSample).filter(
+                TypingSample.user_id == user_id,
+                TypingSample.source == "enrollment",
+                TypingSample.is_validated == True
+            ).all()
+            if samples:
+                sample_ids = [s.id for s in samples]
+                feats = db.query(TypingFeature.feature_vector).filter(
+                    TypingFeature.sample_id.in_(sample_ids)
+                ).all()
+                exemplars = [f[0] for f in feats if f and f[0]]
+
+        legitimate_scores = []
+        for vec in X_legit:
+            _, sc = predictor.predict_decision(vec, exemplars=exemplars)
+            legitimate_scores.append(float(sc))
+
+        impostor_scores = []
+        for vec in X_imp:
+            _, sc = predictor.predict_decision(vec, exemplars=exemplars)
+            impostor_scores.append(float(sc))
+
+        eval_result = evaluate_biometric_model(
+            legitimate_scores=legitimate_scores,
+            impostor_scores=impostor_scores,
+            thresholds=thresholds
+        )
+
+        eval_result["user_id"] = user_id
+        eval_result["username"] = user.username
+        eval_result["model_version_id"] = active_model.id
+        eval_result["algorithm"] = active_model.metrics.get("algorithm", "RandomForestClassifier") if active_model.metrics else "RandomForestClassifier"
+        eval_result["data_stats"] = data_stats
+        eval_result["score_distributions"] = {
+            "legitimate": {
+                "count": len(legitimate_scores),
+                "mean": round(float(np.mean(legitimate_scores)), 4) if legitimate_scores else 0.0,
+                "std": round(float(np.std(legitimate_scores)), 4) if legitimate_scores else 0.0,
+                "min": round(float(np.min(legitimate_scores)), 4) if legitimate_scores else 0.0,
+                "max": round(float(np.max(legitimate_scores)), 4) if legitimate_scores else 0.0
+            },
+            "impostor": {
+                "count": len(impostor_scores),
+                "mean": round(float(np.mean(impostor_scores)), 4) if impostor_scores else 0.0,
+                "std": round(float(np.std(impostor_scores)), 4) if impostor_scores else 0.0,
+                "min": round(float(np.min(impostor_scores)), 4) if impostor_scores else 0.0,
+                "max": round(float(np.max(impostor_scores)), 4) if impostor_scores else 0.0
+            }
+        }
+
+        return eval_result
 
 
 ml_service = MLService()

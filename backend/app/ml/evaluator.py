@@ -185,6 +185,68 @@ def evaluate_model_comparison(
     return accepted, comparison
 
 
+def should_promote_model(
+    current_metrics: Dict[str, Any],
+    candidate_metrics: Dict[str, Any],
+    epsilon: float = 0.02
+) -> Tuple[bool, str, Dict[str, Any]]:
+    """
+    Decisión formal de promoción del modelo adaptativo (Hold-Out Validation).
+    
+    Criterio de Seguridad y Usabilidad:
+    1. FAR_new <= FAR_current (La seguridad biométrica NUNCA debe degradarse)
+    2. FRR_new <= FRR_current + epsilon (La usabilidad se mantiene dentro de tolerancia)
+    
+    Returns:
+        (promote, reason, details)
+        promote: True -> PROMOTE, False -> REJECT
+    """
+    cur_far = float(current_metrics.get('far', current_metrics.get('far_at_allow', 0.0)))
+    cand_far = float(candidate_metrics.get('far', candidate_metrics.get('far_at_allow', 0.0)))
+
+    cur_frr = float(current_metrics.get('frr', current_metrics.get('frr_at_allow', 0.0)))
+    cand_frr = float(candidate_metrics.get('frr', candidate_metrics.get('frr_at_allow', 0.0)))
+
+    cur_eer = float(current_metrics.get('eer', 0.0))
+    cand_eer = float(candidate_metrics.get('eer', 0.0))
+
+    far_ok = cand_far <= (cur_far + 1e-6)
+    frr_ok = cand_frr <= (cur_frr + epsilon + 1e-6)
+
+    details = {
+        "current_far": round(cur_far, 4),
+        "candidate_far": round(cand_far, 4),
+        "current_frr": round(cur_frr, 4),
+        "candidate_frr": round(cand_frr, 4),
+        "current_eer": round(cur_eer, 4),
+        "candidate_eer": round(cand_eer, 4),
+        "epsilon": round(float(epsilon), 4),
+        "far_passed": far_ok,
+        "frr_passed": frr_ok
+    }
+
+    if not far_ok:
+        reason = (
+            f"FAR degradation detected: Candidate FAR ({(cand_far*100):.2f}%) exceeds "
+            f"Current FAR ({(cur_far*100):.2f}%). Security policy violated."
+        )
+        return False, reason, details
+
+    if not frr_ok:
+        reason = (
+            f"FRR degradation exceeded tolerance: Candidate FRR ({(cand_frr*100):.2f}%) exceeds "
+            f"allowable limit (Current FRR {(cur_frr*100):.2f}% + ε {(epsilon*100):.2f}%)."
+        )
+        return False, reason, details
+
+    reason = (
+        f"Promoted: Candidate preserves security (FAR {(cand_far*100):.2f}% <= {(cur_far*100):.2f}%) "
+        f"and usability (FRR {(cand_frr*100):.2f}% <= {(cur_frr*100):.2f}% + {(epsilon*100):.2f}%)."
+    )
+    return True, reason, details
+
+
+
 def compute_metrics_from_predictions(
     y_true: np.ndarray,
     y_pred: np.ndarray,
@@ -244,3 +306,110 @@ def compute_metrics_from_predictions(
         metrics['eer'] = 0.5
 
     return metrics
+
+
+def evaluate_biometric_model(
+    legitimate_scores: Any,
+    impostor_scores: Any,
+    thresholds: Optional[List[float]] = None
+) -> Dict[str, Any]:
+    """
+    Función integral y reutilizable de evaluación biométrica.
+    Calcula métricas globales y por umbral a partir de puntuaciones reales:
+    - FAR, FRR, EER, ROC-AUC
+    - Accuracy, Precision, Recall, F1, TPR, FPR en cada threshold
+    - Puntos de la curva ROC (FPR vs TPR / FAR vs FRR)
+    """
+    legit = np.asarray(legitimate_scores, dtype=np.float64).ravel()
+    imp = np.asarray(impostor_scores, dtype=np.float64).ravel()
+
+    n_legit = len(legit)
+    n_imp = len(imp)
+
+    if n_legit == 0 or n_imp == 0:
+        return {
+            "eer": 0.0,
+            "threshold_at_eer": 0.5,
+            "auc": 0.5,
+            "n_legitimate": n_legit,
+            "n_impostor": n_imp,
+            "threshold_evaluations": [],
+            "roc_curve": [],
+            "eer_point": {"threshold": 0.5, "far": 0.0, "frr": 0.0}
+        }
+
+    # EER y ROC-AUC global
+    eer, threshold_at_eer = compute_eer(legit, imp)
+
+    y_true = np.concatenate([np.ones(n_legit), np.zeros(n_imp)])
+    y_scores = np.concatenate([legit, imp])
+
+    try:
+        fpr_arr, tpr_arr, roc_thresholds = roc_curve(y_true, y_scores)
+        roc_auc = float(auc(fpr_arr, tpr_arr))
+    except Exception:
+        fpr_arr, tpr_arr, roc_thresholds = np.array([0.0, 1.0]), np.array([0.0, 1.0]), np.array([1.0, 0.0])
+        roc_auc = 0.5
+
+    # Puntos ordenados para la curva ROC
+    roc_points = []
+    for f, t, th in zip(fpr_arr, tpr_arr, roc_thresholds):
+        roc_points.append({
+            "fpr": round(float(f), 4),
+            "tpr": round(float(t), 4),
+            "far": round(float(f), 4),
+            "frr": round(float(1.0 - t), 4),
+            "threshold": round(float(th), 4)
+        })
+
+    # Umbrales a evaluar
+    if thresholds is None:
+        thresholds = [0.35, 0.45, 0.50, 0.55, 0.65, 0.70, 0.75, 0.85]
+
+    evaluations_by_threshold = []
+    for th in sorted(thresholds):
+        far_val = float(np.mean(imp >= th)) if n_imp > 0 else 0.0
+        frr_val = float(np.mean(legit < th)) if n_legit > 0 else 0.0
+        tpr_val = float(1.0 - frr_val)
+        fpr_val = float(far_val)
+
+        y_pred = (y_scores >= th).astype(int)
+        acc = float(accuracy_score(y_true, y_pred))
+        prec = float(precision_score(y_true, y_pred, zero_division=0))
+        rec = float(recall_score(y_true, y_pred, zero_division=0))
+        f1_val = float(f1_score(y_true, y_pred, zero_division=0))
+
+        evaluations_by_threshold.append({
+            "threshold": round(float(th), 3),
+            "far": round(far_val, 4),
+            "frr": round(frr_val, 4),
+            "far_percent": round(far_val * 100, 2),
+            "frr_percent": round(frr_val * 100, 2),
+            "tpr": round(tpr_val, 4),
+            "fpr": round(fpr_val, 4),
+            "accuracy": round(acc, 4),
+            "precision": round(prec, 4),
+            "recall": round(rec, 4),
+            "f1": round(f1_val, 4)
+        })
+
+    # Punto exacto de EER
+    far_at_eer, frr_at_eer = compute_far_frr(legit, imp, threshold_at_eer)
+
+    return {
+        "eer": round(float(eer), 4),
+        "eer_percent": round(float(eer) * 100, 2),
+        "threshold_at_eer": round(float(threshold_at_eer), 4),
+        "auc": round(float(roc_auc), 4),
+        "n_legitimate": n_legit,
+        "n_impostor": n_imp,
+        "eer_point": {
+            "threshold": round(float(threshold_at_eer), 4),
+            "far": round(float(far_at_eer), 4),
+            "frr": round(float(frr_at_eer), 4),
+            "far_percent": round(float(far_at_eer) * 100, 2),
+            "frr_percent": round(float(frr_at_eer) * 100, 2)
+        },
+        "threshold_evaluations": evaluations_by_threshold,
+        "roc_curve": roc_points
+    }

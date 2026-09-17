@@ -165,3 +165,99 @@ def trigger_best_model_selection(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en selección de modelo: {e}")
+
+
+@router.get("/evaluation/{user_id_or_name}")
+def get_user_biometric_evaluation(
+    user_id_or_name: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Evaluación biométrica completa del usuario (FAR, FRR, EER, AUC, Accuracy, Precision, Recall, F1)
+    calculada sobre muestras reales (genuinas e impostoras) a lo largo de diversos umbrales.
+    """
+    from app.models import User
+    if user_id_or_name.isdigit():
+        user = db.query(User).filter(User.id == int(user_id_or_name)).first()
+    else:
+        user = db.query(User).filter(User.username == user_id_or_name).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Usuario '{user_id_or_name}' no encontrado")
+
+    try:
+        evaluation = ml_service.evaluate_user_biometrics(db, user.id)
+        return evaluation
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al evaluar biometría: {e}")
+
+
+@router.get("/roc-curve/{user_id_or_name}")
+def get_user_roc_curve(
+    user_id_or_name: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Genera y retorna los puntos de la Curva ROC (FPR vs TPR / FAR vs FRR) y el punto EER
+    a partir de la evaluación real del modelo del usuario frente a impostores.
+    """
+    from app.models import User
+    if user_id_or_name.isdigit():
+        user = db.query(User).filter(User.id == int(user_id_or_name)).first()
+    else:
+        user = db.query(User).filter(User.username == user_id_or_name).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Usuario '{user_id_or_name}' no encontrado")
+
+    try:
+        evaluation = ml_service.evaluate_user_biometrics(db, user.id)
+        return {
+            "user_id": user.id,
+            "username": user.username,
+            "model_version_id": evaluation.get("model_version_id"),
+            "auc": evaluation.get("auc"),
+            "eer": evaluation.get("eer"),
+            "eer_percent": evaluation.get("eer_percent"),
+            "threshold_at_eer": evaluation.get("threshold_at_eer"),
+            "eer_point": evaluation.get("eer_point"),
+            "roc_curve": evaluation.get("roc_curve"),
+            "n_legitimate": evaluation.get("n_legitimate"),
+            "n_impostor": evaluation.get("n_impostor")
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al calcular curva ROC: {e}")
+
+
+@router.post("/evaluate-scenario")
+def evaluate_custom_scenario(
+    payload: dict
+):
+    """
+    Permite evaluar de forma independiente un escenario biométrico recibiendo
+    scores genuinos e impostores, calculando FAR, FRR, EER, AUC y puntos ROC reales.
+    """
+    from app.ml.evaluator import evaluate_biometric_model
+    legitimate_scores = payload.get("legitimate_scores", [])
+    impostor_scores = payload.get("impostor_scores", [])
+    thresholds = payload.get("thresholds", None)
+
+    if not legitimate_scores or not impostor_scores:
+        raise HTTPException(
+            status_code=400,
+            detail="Se requieren 'legitimate_scores' e 'impostor_scores' con al menos 1 elemento cada uno."
+        )
+
+    try:
+        result = evaluate_biometric_model(
+            legitimate_scores=legitimate_scores,
+            impostor_scores=impostor_scores,
+            thresholds=thresholds
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al evaluar escenario: {e}")

@@ -129,6 +129,8 @@ class LiveTestResponse(BaseModel):
     decision: str
     is_recognized: bool
     model_version: int
+    threshold_low: float = 0.45
+    threshold_high: float = 0.75
     metrics: Dict[str, Any]
     verdict_title: str
     verdict_detail: str

@@ -7,6 +7,7 @@ from app.models.candidate_model import CandidateModel, CandidateStatus
 from app.models.adaptation_event import AdaptationEvent, AdaptationAction
 from app.models.adaptation_config import AdaptationConfig
 from app.models.security_policy import SecurityPolicy
+from app.models.quarantined_sample import QuarantinedSample
 
 __all__ = [
     "User",
@@ -23,4 +24,5 @@ __all__ = [
     "AdaptationAction",
     "AdaptationConfig",
     "SecurityPolicy",
+    "QuarantinedSample",
 ]
