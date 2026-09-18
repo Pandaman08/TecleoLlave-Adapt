@@ -10,6 +10,11 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
+    email = Column(String(120), unique=True, index=True, nullable=True)
+    full_name = Column(String(100), nullable=True)
+    age = Column(Integer, nullable=True)
+    career = Column(String(100), nullable=True)
+    student_code = Column(String(50), nullable=True)
     password_hash = Column(String(255), nullable=False)
     phrase = Column(String(200), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

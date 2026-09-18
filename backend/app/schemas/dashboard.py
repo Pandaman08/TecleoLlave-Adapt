@@ -14,6 +14,11 @@ class UserSummaryResponse:
     auth_samples: int
     total_auth_attempts: int
     total_adaptations: int
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    age: Optional[int] = None
+    career: Optional[str] = None
+    student_code: Optional[str] = None
     active_model_algorithm: Optional[str] = None
     candidate_comparison: Optional[List[Dict[str, Any]]] = None
     selection_reason: Optional[str] = None

@@ -18,7 +18,8 @@ import LanguageSelector from '../components/LanguageSelector';
 import {
   UserPlus, User, Lock, Eye, EyeOff, AlertTriangle, ShieldCheck,
   ArrowRight, ArrowLeft, Sun, Moon, CheckCircle2, Clock, Sparkles,
-  Layers, Coffee, Zap, MoonStar, Target, BarChart2, Check
+  Layers, Coffee, Zap, MoonStar, Target, BarChart2, Check,
+  Mail, Calendar, GraduationCap, Hash, UserCheck
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -29,6 +30,11 @@ export default function Register() {
 
   const [step, setStep] = useState(1);
   const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [age, setAge] = useState('');
+  const [career, setCareer] = useState('Ingeniería de Sistemas');
+  const [studentCode, setStudentCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -155,6 +161,15 @@ export default function Register() {
       setError('Por favor ingresa un nombre de usuario.');
       return;
     }
+    if (!email.trim() || !email.includes('@') || !email.includes('.')) {
+      setError('Por favor ingresa un correo electrónico válido (ej. usuario@unt.edu.pe). Se usará para validación 2FA si el tecleo es ambiguo.');
+      return;
+    }
+    const ageNum = parseInt(age, 10);
+    if (isNaN(ageNum) || ageNum < 14 || ageNum > 100) {
+      setError('Por favor ingresa una edad válida (entre 14 y 100 años) para la segmentación del estudio.');
+      return;
+    }
     if (password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres.');
       return;
@@ -177,13 +192,19 @@ export default function Register() {
     setError(null);
     try {
       const res = await api.post('/auth/register', {
-        username,
+        username: username.trim(),
         password,
+        email: email.trim().toLowerCase(),
+        full_name: fullName.trim() || username.trim(),
+        age: parseInt(age, 10),
+        career: career.trim() || 'Ingeniería de Sistemas',
+        student_code: studentCode.trim() || null,
         samples
       });
       if (res.data?.id) {
         localStorage.setItem('current_user_id', res.data.id);
         localStorage.setItem('current_username', res.data.username);
+        localStorage.setItem('current_user_email', res.data.email || '');
       }
       setStep(3);
     } catch (err) {
@@ -202,11 +223,16 @@ export default function Register() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Registrar primero el usuario si no existe
+      // 1. Registrar primero el usuario si no existe con datos de perfil completos
       try {
         await api.post('/auth/register', {
-          username,
+          username: username.trim(),
           password: password || 'demo123456',
+          email: email.trim().toLowerCase() || `${username.trim()}@unt.edu.pe`,
+          full_name: fullName.trim() || `Estudiante ${username.trim()}`,
+          age: age ? parseInt(age, 10) : 22,
+          career: career.trim() || 'Ingeniería de Sistemas',
+          student_code: studentCode.trim() || '2024001001',
           samples: []
         });
       } catch (err) {
@@ -215,11 +241,11 @@ export default function Register() {
 
       // 2. Sembrar las 35 muestras multi-sesión y entrenar
       const seedRes = await api.post('/typing/seed-multisession-demo', {
-        username,
+        username: username.trim(),
         reset_existing: true
       });
 
-      localStorage.setItem('current_username', username);
+      localStorage.setItem('current_username', username.trim());
       setSuccess(`¡Éxito! ${seedRes.data.message}`);
       setStep(3);
     } catch (err) {
@@ -317,46 +343,160 @@ export default function Register() {
           {error && <Alert type="danger" icon={AlertTriangle}>{error}</Alert>}
           {success && step !== 3 && <Alert type="success" icon={CheckCircle2}>{success}</Alert>}
 
-          {/* STEP 1: Credenciales */}
+          {/* STEP 1: Datos del Estudiante y Credenciales */}
           {step === 1 && (
-            <form onSubmit={handleStep1Next} style={{ maxWidth: '520px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <Field
-                label="Nombre de Usuario"
-                icon={User}
-                value={username}
-                onChange={setUsername}
-                placeholder="ej. estudiante_seguridad"
-                autoFocus
-              />
-              <Field
-                label="Contraseña"
-                icon={Lock}
-                value={password}
-                onChange={setPassword}
-                placeholder="Mínimo 6 caracteres"
-                type={showPassword ? 'text' : 'password'}
-                trailing={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                }
-              />
-              <Field
-                label="Confirmar Contraseña"
-                icon={Lock}
-                value={confirmPassword}
-                onChange={setConfirmPassword}
-                placeholder="Repite tu contraseña"
-                type={showPassword ? 'text' : 'password'}
-              />
+            <form onSubmit={handleStep1Next} style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Sección 1: Ficha del Estudiante */}
+              <div style={{
+                backgroundColor: 'var(--bg-canvas)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
+                  <UserCheck size={16} style={{ color: 'var(--brand-500)' }} />
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
+                    1. Datos Académicos y de Validación
+                  </span>
+                </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn-primary" style={{ flex: 1, height: 44, fontSize: '0.92rem' }}>
-                  <span>Continuar al Enrolamiento</span>
+                <Field
+                  label="Nombre y Apellidos"
+                  icon={UserCheck}
+                  value={fullName}
+                  onChange={setFullName}
+                  placeholder="ej. Alexis Daniel Sanchez"
+                  autoFocus
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <Field
+                      label="Correo Electrónico Institucional *"
+                      icon={Mail}
+                      value={email}
+                      onChange={setEmail}
+                      placeholder="ej. estudiante@unt.edu.pe"
+                      type="email"
+                    />
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
+                      Canal de verificación 2FA si el tecleo presenta variación.
+                    </span>
+                  </div>
+
+                  <div>
+                    <Field
+                      label="Edad (Años) *"
+                      icon={Calendar}
+                      value={age}
+                      onChange={setAge}
+                      placeholder="ej. 22"
+                      type="number"
+                    />
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
+                      Variable descriptiva para segmentación de hallazgos.
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.75rem' }}>
+                  <Field
+                    label="Carrera Profesional"
+                    icon={GraduationCap}
+                    value={career}
+                    onChange={setCareer}
+                    placeholder="ej. Ingeniería de Sistemas"
+                  />
+                  <Field
+                    label="Código de Estudiante"
+                    icon={Hash}
+                    value={studentCode}
+                    onChange={setStudentCode}
+                    placeholder="ej. 1023400120"
+                  />
+                </div>
+              </div>
+
+              {/* Sección 2: Credenciales de Acceso */}
+              <div style={{
+                backgroundColor: 'var(--bg-canvas)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
+                  <Lock size={16} style={{ color: 'var(--brand-500)' }} />
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
+                    2. Credenciales del Aula Virtual
+                  </span>
+                </div>
+
+                <Field
+                  label="Nombre de Usuario *"
+                  icon={User}
+                  value={username}
+                  onChange={setUsername}
+                  placeholder="ej. alexis_sanchez"
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <Field
+                    label="Contraseña *"
+                    icon={Lock}
+                    value={password}
+                    onChange={setPassword}
+                    placeholder="Mínimo 6 caracteres"
+                    type={showPassword ? 'text' : 'password'}
+                    trailing={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    }
+                  />
+                  <Field
+                    label="Confirmar Contraseña *"
+                    icon={Lock}
+                    value={confirmPassword}
+                    onChange={setConfirmPassword}
+                    placeholder="Repite tu contraseña"
+                    type={showPassword ? 'text' : 'password'}
+                  />
+                </div>
+              </div>
+
+              {/* Nota sobre adaptación continua y validación por email */}
+              <div style={{
+                padding: '0.75rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                fontSize: '0.74rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.45,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.5rem'
+              }}>
+                <ShieldCheck size={16} style={{ color: 'var(--brand-500)', flexShrink: 0, marginTop: '0.1rem' }} />
+                <span>
+                  <strong>Autenticación Continua &amp; Adaptación por Correo:</strong> Si al iniciar sesión el tecleo detecta que podrías ser tú pero tu ritmo varía por cansancio o prisa (zona <em>CHALLENGE</em>), enviaremos un código a tu correo. Al validarlo, tu identidad quedará confirmada y el modelo adaptará tu perfil biométrico con el tiempo.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                <button type="submit" className="btn-primary" style={{ flex: 1, height: 46, fontSize: '0.92rem' }}>
+                  <span>Continuar al Enrolamiento Biométrico</span>
                   <ArrowRight size={16} />
                 </button>
 

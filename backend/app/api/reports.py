@@ -3,6 +3,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.user import User
+from app.api.dependencies import get_current_admin
 from app.services.report_service import report_service
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -11,9 +13,10 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 @router.get("/{user_id}/pdf")
 def download_pdf_report(
     user_id: int,
+    admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Genera y descarga un reporte en formato PDF para el usuario."""
+    """Genera y descarga un reporte en formato PDF para el usuario (Solo Administrador)."""
     try:
         pdf_buffer = report_service.generate_pdf_report(db, user_id)
         filename = f"tecleollave_report_user_{user_id}.pdf"
@@ -29,9 +32,10 @@ def download_pdf_report(
 @router.get("/{user_id}/excel")
 def download_excel_report(
     user_id: int,
+    admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Genera y descarga un reporte en formato Excel (.xlsx) para el usuario."""
+    """Genera y descarga un reporte en formato Excel (.xlsx) para el usuario (Solo Administrador)."""
     try:
         excel_buffer = report_service.generate_excel_report(db, user_id)
         filename = f"tecleollave_report_user_{user_id}.xlsx"

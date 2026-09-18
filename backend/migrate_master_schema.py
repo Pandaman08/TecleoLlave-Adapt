@@ -18,6 +18,23 @@ def migrate_master_schema():
     logger.info("Verificación de Base.metadata.create_all() completada.")
 
     with engine.connect() as conn:
+        # --- USERS ---
+        cursor_u = conn.execute(text("PRAGMA table_info(users)"))
+        u_cols = [row[1] for row in cursor_u.fetchall()]
+
+        new_u_cols = [
+            ("email", "VARCHAR(120)"),
+            ("full_name", "VARCHAR(100)"),
+            ("age", "INTEGER"),
+            ("career", "VARCHAR(100)"),
+            ("student_code", "VARCHAR(50)")
+        ]
+        for col_name, col_type in new_u_cols:
+            if col_name not in u_cols:
+                logger.info(f"Agregando columna '{col_name}' a users...")
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                conn.commit()
+
         # --- MODEL_VERSIONS ---
         cursor_mv = conn.execute(text("PRAGMA table_info(model_versions)"))
         mv_cols = [row[1] for row in cursor_mv.fetchall()]

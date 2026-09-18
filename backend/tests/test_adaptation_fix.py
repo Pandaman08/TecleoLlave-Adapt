@@ -13,28 +13,26 @@ import shutil
 import numpy as np
 import pytest
 
-TEST_DB = "/tmp/tecleollave_test_adapt.db"
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture(scope="module")
 def db_session():
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
-    os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB}"
-
-    from app.database import Base, engine, SessionLocal
+    test_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
+    )
+    from app.database import Base
     import app.models  # noqa: F401 - registers all tables on Base.metadata
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    session = SessionLocal()
+    Base.metadata.create_all(bind=test_engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    session = TestingSessionLocal()
     yield session
     session.close()
-    engine.dispose()
-    try:
-        if os.path.exists(TEST_DB):
-            os.remove(TEST_DB)
-    except Exception:
-        pass
+    test_engine.dispose()
 
 
 PHRASE = "La seguridad protege la información"

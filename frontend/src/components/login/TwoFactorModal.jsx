@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, X, ShieldCheck, Clock, Clipboard, Smartphone } from 'lucide-react';
+import { AlertTriangle, X, ShieldCheck, Clock, Clipboard, Smartphone, Mail, Sparkles } from 'lucide-react';
+import api from '../../services/api';
 
 /**
  * TwoFactorModal
  * --------------
  * Modal de desafío 2FA/TOTP cuando el score biométrico cae en zona CHALLENGE.
- * Mejora la versión actual con:
- *  - Countdown del código TOTP (30s con barra de progreso)
- *  - Botón de paste desde portapapeles
- *  - Diferenciación visual entre challenge "amigable" vs "sospechoso"
- *  - Auto-focus y auto-submit cuando se completan 6 dígitos
- *  - Accesibilidad: ESC para cerrar, focus trap
+ * Usa el correo electrónico como canal de validación cuando el tecleo
+ * presenta variación o ambigüedad, y alimenta la adaptación continua.
  */
 export default function TwoFactorModal({
   isOpen,
@@ -25,7 +22,22 @@ export default function TwoFactorModal({
   const [code, setCode] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(30);
   const [pasted, setPasted] = useState(false);
+  const [challengeHint, setChallengeHint] = useState(null);
   const inputRef = useRef(null);
+
+  // Fetch correo y mensaje de desafío al abrir el modal
+  useEffect(() => {
+    if (!isOpen || !username) return;
+    let isMounted = true;
+    api.get(`/auth/challenge-hint/${encodeURIComponent(username)}`)
+      .then(res => {
+        if (isMounted) setChallengeHint(res.data);
+      })
+      .catch(() => {
+        if (isMounted) setChallengeHint(null);
+      });
+    return () => { isMounted = false; };
+  }, [isOpen, username]);
 
   // Countdown TOTP (30s cycle)
   useEffect(() => {
@@ -169,21 +181,45 @@ export default function TwoFactorModal({
             color: 'var(--warning)'
           }}
         >
-          Verificación adicional requerida
+          Verificación de Identidad por Correo (2FA)
         </h3>
 
-        {/* Description */}
-        <p
-          style={{
-            fontSize: '0.82rem',
-            color: 'var(--text-muted)',
-            lineHeight: 1.5,
-            margin: '0 0 1.25rem',
-            textAlign: 'center'
-          }}
-        >
-          Por motivos de seguridad, ingrese su código de verificación temporal de 6 dígitos para completar el acceso.
-        </p>
+        {/* Email & Biometric Ambiguity Banner */}
+        <div style={{
+          backgroundColor: 'rgba(99, 102, 241, 0.08)',
+          border: '1px solid rgba(99, 102, 241, 0.22)',
+          borderRadius: 'var(--radius-md)',
+          padding: '0.85rem 1rem',
+          marginBottom: '1.25rem',
+          fontSize: '0.78rem',
+          lineHeight: 1.45,
+          color: 'var(--text-secondary)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.35rem', color: 'var(--brand-500)', fontWeight: 700, fontSize: '0.82rem' }}>
+            <Mail size={15} />
+            <span>
+              {challengeHint?.masked_email
+                ? `Código enviado a: ${challengeHint.masked_email}`
+                : 'Código enviado a tu correo institucional registrado'}
+            </span>
+          </div>
+          <p style={{ margin: '0 0 0.45rem 0', fontSize: '0.75rem' }}>
+            Tu tecleo coincide parcialmente con tu perfil pero presentó variación respecto a tu línea base (zona <em>CHALLENGE</em>). Validamos vía correo para protegerte sin interrumpir tu estudio.
+          </p>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            fontSize: '0.71rem',
+            color: 'var(--success)',
+            fontWeight: 600,
+            borderTop: '1px dashed rgba(99, 102, 241, 0.2)',
+            paddingTop: '0.35rem'
+          }}>
+            <Sparkles size={13} style={{ flexShrink: 0 }} />
+            <span>Adaptación Continua: Al validar este código, este patrón de tecleo actualizará tu perfil para que el modelo se adapte a tu ritmo con el tiempo.</span>
+          </div>
+        </div>
 
         {error && (
           <div

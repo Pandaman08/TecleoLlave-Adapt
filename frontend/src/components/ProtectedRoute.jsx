@@ -11,11 +11,11 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(role)) {
-    // Redirigir según el rol evitando bucles
+    // Redirección estricta según rol para evitar bucles y separar Aula de Admin
     if (role === 'admin') {
-      return <Navigate to="/" replace />;
+      return <Navigate to="/admin" replace />;
     }
-    return <Navigate to="/entrenamiento" replace />;
+    return <Navigate to="/aula" replace />;
   }
 
   return children;

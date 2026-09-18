@@ -103,7 +103,22 @@ def get_comparison(
         raise HTTPException(status_code=404, detail=message)
     return result
 
+from app.api.dependencies import get_current_admin
+from app.models.user import User
+
 @router.get("/users")
-def get_all_users(db: Session = Depends(get_db)):
-    """Get all registered users for dashboard selection."""
+def get_all_users(
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all registered users for dashboard selection (Solo Administrador)."""
     return dashboard_service.get_all_users(db)
+
+
+@router.get("/age-segmentation")
+def get_age_segmentation(
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Obtiene los hallazgos y métricas biométricas segmentadas por edad (Solo Administrador)."""
+    return dashboard_service.get_age_segmentation_findings(db)

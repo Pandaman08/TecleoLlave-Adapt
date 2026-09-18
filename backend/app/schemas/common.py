@@ -5,10 +5,16 @@ from typing import Optional, List, Any
 
 class UserBase(BaseModel):
     username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    age: Optional[int] = None
+    career: Optional[str] = None
+    student_code: Optional[str] = None
 
 
 class UserCreate(UserBase):
     password: str
+    confirm_password: Optional[str] = None
     samples: Optional[List[Any]] = None
 
 
@@ -27,4 +33,6 @@ class Token(BaseModel):
     token_type: str
     user_id: Optional[int] = None
     username: Optional[str] = None
+    email: Optional[str] = None
+    full_name: Optional[str] = None
     role: Optional[str] = "user"

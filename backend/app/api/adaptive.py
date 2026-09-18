@@ -15,6 +15,8 @@ from app.schemas import (
 )
 from app.services.adaptive_service import adaptive_service
 from app.ml.drift import evaluate_user_biometric_drift
+from app.api.dependencies import get_current_admin
+from app.models.user import User
 
 router = APIRouter(prefix="/adaptive", tags=["adaptive"])
 
@@ -110,6 +112,7 @@ def get_adaptation_config(
 def update_adaptation_config(
     user_id: int,
     updates: AdaptationConfigUpdate,
+    admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -161,6 +164,7 @@ def get_adaptation_events(
 def rollback_model_endpoint(
     model_id: int,
     request: RollbackRequest,
+    admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -184,6 +188,7 @@ def rollback_model_endpoint(
 @router.get("/quarantine/{user_id}")
 def get_quarantined_samples_endpoint(
     user_id: int,
+    admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -203,6 +208,7 @@ def get_quarantined_samples_endpoint(
 @router.post("/simulate-poisoning")
 def simulate_poisoning_endpoint(
     request: SimulatePoisoningRequest,
+    admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     """

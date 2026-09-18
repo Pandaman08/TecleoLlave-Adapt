@@ -102,12 +102,17 @@ export default function Login() {
         tokenRes = await api.post('/auth/login', { username: u, password: p });
       } catch (authErr) {
         const detail = authErr.response?.data?.detail;
-        if (authErr.response?.status === 423 || (detail && detail.toLowerCase().includes('bloqueada'))) {
+        const status = authErr.response?.status;
+        if (status === 423 || (detail && detail.toLowerCase().includes('bloqueada'))) {
           const sec = parseLockoutSeconds(authErr.response, detail);
           setLockoutSecondsLeft(sec);
           setError(detail || `Cuenta bloqueada temporalmente por intentos fallidos. Podrás intentar en ${sec} segundos.`);
+        } else if (status === 401) {
+          setError('Usuario o contraseña incorrectos. Verifique que el usuario coincida exactamente en mayúsculas y minúsculas.');
+        } else if (status === 503 || !authErr.response) {
+          setError('El servidor backend no está respondiendo (puerto 8000). Asegúrese de que uvicorn esté en ejecución.');
         } else {
-          setError('Usuario o contraseña incorrectos.');
+          setError(detail || 'Error al autenticar credenciales.');
         }
         setLoading(false);
         return;
@@ -128,7 +133,7 @@ export default function Login() {
           role: 'admin'
         });
         setSuccess(`¡Acceso de Administrador confirmado! Bienvenido, ${currentUname}.`);
-        setTimeout(() => navigate('/'), 600);
+        setTimeout(() => navigate('/admin'), 600);
         return;
       }
 
@@ -152,7 +157,7 @@ export default function Login() {
 
       // RESPUESTA DEL SISTEMA SEGÚN DECISIÓN TRI-ZONA:
 
-      // CASO 1: ACCEPT / ALLOW -> Acceso concedido, redirigir a /entrenamiento
+      // CASO 1: ACCEPT / ALLOW -> Acceso concedido, redirigir a /aula
       if (decision === 'allow' || decision === 'accept') {
         authLogin({
           token,
@@ -160,8 +165,8 @@ export default function Login() {
           username: currentUname,
           role: 'user'
         });
-        setSuccess(`¡Identidad biométrica confirmada! Bienvenido, ${currentUname}. Redirigiendo a tu perfil de entrenamiento...`);
-        setTimeout(() => navigate('/entrenamiento'), 700);
+        setSuccess(`¡Identidad biométrica confirmada! Bienvenido, ${currentUname}. Redirigiendo a tu Aula Virtual...`);
+        setTimeout(() => navigate('/aula'), 700);
         return;
       }
 
@@ -209,7 +214,8 @@ export default function Login() {
       });
       setSuccess('Verificación completada exitosamente.');
       setShow2FaModal(false);
-      setTimeout(() => navigate('/entrenamiento'), 600);
+      const targetRoute = (pendingToken?.role || 'user') === 'admin' ? '/admin' : '/aula';
+      setTimeout(() => navigate(targetRoute), 600);
     } catch (err) {
       setOtpError('Código de verificación incorrecto o expirado.');
     } finally {
@@ -219,8 +225,8 @@ export default function Login() {
 
   const handleFillDemo = (u) => {
     setUsername(u);
-    if (u === 'admin') {
-      setPassword('AdminSecret123');
+    if (u === 'admin' || u === 'administrador') {
+      setPassword('admin123');
     } else if (u === 'demo_user') {
       setPassword('demo123456');
     } else {
@@ -563,6 +569,22 @@ export default function Login() {
                     <button
                       type="button"
                       className="btn-secondary"
+                      onClick={() => handleFillDemo('administrador')}
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '0.15rem 0.55rem',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderColor: 'rgba(239, 68, 68, 0.3)',
+                        color: 'var(--danger)',
+                        fontWeight: 700
+                      }}
+                      title="Administrador (administrador / admin123)"
+                    >
+                      👑 administrador
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
                       onClick={() => handleFillDemo('admin')}
                       style={{
                         fontSize: '0.72rem',
@@ -572,7 +594,7 @@ export default function Login() {
                         color: 'var(--danger)',
                         fontWeight: 700
                       }}
-                      title="Administrador del sistema (Sin biometría)"
+                      title="Admin (admin / admin123)"
                     >
                       👑 admin
                     </button>

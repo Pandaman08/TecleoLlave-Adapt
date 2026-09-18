@@ -31,7 +31,8 @@ def enroll_typing_sample(
     try:
         if request.username:
             from app.models import User
-            user = db.query(User).filter(User.username == request.username).first()
+            uname = request.username.strip() if request.username else ""
+            user = db.query(User).filter(User.username == uname).first()
             if user and getattr(user, "role", "user") == "admin":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -62,7 +63,8 @@ def authenticate_typing(
     try:
         user = None
         if request.username:
-            user = db.query(User).filter(User.username == request.username).first()
+            uname = request.username.strip() if request.username else ""
+            user = db.query(User).filter(User.username == uname).first()
             if not user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
             if getattr(user, "role", "user") == "admin":

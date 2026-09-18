@@ -48,6 +48,7 @@ import ModelHistoryTrend, { ModelSparkline } from '../components/charts/ModelHis
 import ScoreEvolutionChart from '../components/charts/ScoreEvolutionChart';
 import ModelComparisonPanel from '../components/ModelComparisonPanel';
 import SecuritySettingsPanel from '../components/admin/SecuritySettingsPanel';
+import AgeSegmentationFindings from '../components/admin/AgeSegmentationFindings';
 import RocCurveChart from '../components/charts/RocCurveChart';
 
 import api from '../services/api';
@@ -275,6 +276,8 @@ export default function Dashboard() {
               {activeSection === 'models' && 'Historial de Calibración de Modelos'}
               {activeSection === 'audit' && 'Auditoría & Trazabilidad de Eventos'}
               {activeSection === 'cmu' && 'Benchmark Científico CMU'}
+              {activeSection === 'age_findings' && 'Hallazgos por Edad & Segmentación Demográfica'}
+              {activeSection === 'security' && 'Políticas de Seguridad & Bloqueo'}
             </h1>
             
             <div style={{
@@ -843,6 +846,15 @@ export default function Dashboard() {
           {activeSection === 'security' && (
             <div className="animate-fade">
               <SecuritySettingsPanel />
+            </div>
+          )}
+
+          {/* =========================================================================
+              SECCIÓN 7: HALLAZGOS POR EDAD & SEGMENTACIÓN DEMOGRÁFICA
+              ========================================================================= */}
+          {activeSection === 'age_findings' && (
+            <div className="animate-fade">
+              <AgeSegmentationFindings />
             </div>
           )}
 
