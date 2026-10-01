@@ -403,14 +403,14 @@ export default function CaptchaPhraseInput({
         <div
           ref={textScrollRef}
           style={{
-            fontSize: 'clamp(0.85rem, 1.1vw, 0.95rem)',
+            fontSize: 'clamp(0.78rem, 1.05vw, 0.90rem)',
             fontFamily: "'JetBrains Mono', monospace",
-            letterSpacing: '0.02em',
+            letterSpacing: '0px',
             display: 'flex',
             alignItems: 'center',
             overflowX: 'auto',
             overflowY: 'hidden',
-            whiteSpace: 'pre',
+            whiteSpace: 'nowrap',
             flex: 1,
             minWidth: 0,
             padding: '0.2rem 0',
@@ -432,13 +432,13 @@ export default function CaptchaPhraseInput({
               color = 'var(--success)';
               borderBottom = '2px solid rgba(16, 185, 129, 0.8)';
             } else if (isErrorHere) {
-              color = '#ffffff';
-              bgColor = 'var(--danger)';
-              borderBottom = '2px solid #ffffff';
+              color = 'var(--danger)';
+              bgColor = 'var(--danger-bg)';
+              borderBottom = '2px solid var(--danger)';
             } else if (isCurrent) {
-              color = '#ffffff';
-              bgColor = 'var(--brand)';
-              borderBottom = '2px solid var(--brand-glow)';
+              color = 'var(--brand)';
+              bgColor = 'var(--brand-soft)';
+              borderBottom = '2px solid var(--brand)';
             }
 
             return (
@@ -450,7 +450,7 @@ export default function CaptchaPhraseInput({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: char === ' ' ? '0.75ch' : '1.15ch',
+                  minWidth: char === ' ' ? '0.65ch' : '1.05ch',
                   padding: '0 1px',
                   borderRadius: isCurrent ? '3px' : '0',
                   color,
@@ -471,9 +471,9 @@ export default function CaptchaPhraseInput({
                       top: '12%',
                       bottom: '12%',
                       width: '2px',
-                      backgroundColor: 'var(--brand-500)',
+                      backgroundColor: 'var(--brand)',
                       borderRadius: '1px',
-                      boxShadow: '0 0 8px rgba(99, 102, 241, 0.8)',
+                      boxShadow: '0 0 6px rgba(99, 102, 241, 0.6)',
                       animation: 'cursorPulse 0.8s infinite alternate'
                     }}
                   />

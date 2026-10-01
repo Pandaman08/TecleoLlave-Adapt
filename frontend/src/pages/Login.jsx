@@ -242,63 +242,78 @@ export default function Login() {
       flexDirection: 'column'
     }}>
       {/* Topbar limpia */}
-      <header className="topbar-header" style={{
-        backgroundColor: 'rgba(11, 15, 25, 0.85)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 'var(--radius-md)',
-            background: 'var(--brand-gradient)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
-          }}>
-            <KeyRound size={18} />
+      <header className="app-header">
+        <div style={{
+          maxWidth: '1360px',
+          margin: '0 auto',
+          padding: '0.65rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 'var(--radius-md)',
+              background: 'var(--brand-gradient)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
+              flexShrink: 0
+            }}>
+              <KeyRound size={18} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.15, color: 'var(--nav-brand-text)', letterSpacing: '-0.01em' }}>
+                {t('app.title')}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--nav-brand-sub)', marginTop: '0.1rem' }}>
+                Portal de Autenticación Continua
+              </div>
+            </div>
           </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '0.98rem', lineHeight: 1.1, color: 'var(--text-primary)' }}>{t('app.title')}</div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Portal de Autenticación Continua</div>
-          </div>
-        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <NavLink
-            to="/live-demo"
-            className="btn-secondary"
-            style={{
-              fontSize: '0.8rem',
-              padding: '0.4rem 0.8rem',
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              color: 'var(--brand-glow)',
-              borderColor: 'rgba(99, 102, 241, 0.35)',
-              fontWeight: 600,
-              textDecoration: 'none'
-            }}
-          >
-            Demo en Vivo ⚡
-          </NavLink>
-          <NavLink
-            to="/register"
-            className="btn-secondary"
-            style={{
-              fontSize: '0.8rem',
-              padding: '0.4rem 0.8rem',
-              textDecoration: 'none'
-            }}
-          >
-            Crear Cuenta (Enrolamiento)
-          </NavLink>
-          <LanguageSelector variant="compact" />
-          <button
-            type="button"
-            className="btn-icon"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? t('app.theme_toggle_light') : t('app.theme_toggle_dark')}
-            title={theme === 'dark' ? t('app.theme_toggle_light') : t('app.theme_toggle_dark')}
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'nowrap' }}>
+            <NavLink
+              to="/live-demo"
+              className="aula-action-btn"
+              style={{
+                fontSize: '0.8rem',
+                backgroundColor: 'var(--brand-soft)',
+                color: 'var(--brand)',
+                borderColor: 'var(--border-subtle)',
+                fontWeight: 600,
+                textDecoration: 'none'
+              }}
+            >
+              Demo en Vivo ⚡
+            </NavLink>
+            <NavLink
+              to="/register"
+              className="aula-action-btn"
+              style={{
+                fontSize: '0.8rem',
+                backgroundColor: 'var(--nav-btn-bg)',
+                borderColor: 'var(--nav-btn-border)',
+                color: 'var(--nav-link)',
+                textDecoration: 'none'
+              }}
+            >
+              Crear Cuenta (Enrolamiento)
+            </NavLink>
+            <LanguageSelector variant="compact" />
+            <button
+              type="button"
+              className="aula-action-btn"
+              style={{ width: '40px', padding: 0 }}
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? t('app.theme_toggle_light') : t('app.theme_toggle_dark')}
+              title={theme === 'dark' ? t('app.theme_toggle_light') : t('app.theme_toggle_dark')}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </div>
       </header>
 

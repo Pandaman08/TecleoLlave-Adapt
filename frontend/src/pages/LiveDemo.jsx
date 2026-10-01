@@ -252,60 +252,90 @@ export default function LiveDemo() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-canvas)', display: 'flex', flexDirection: 'column' }}>
       {/* Topbar */}
-      <header className="topbar-header" style={{
-        backgroundColor: 'rgba(11, 15, 25, 0.85)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 'var(--radius-md)',
-            background: 'var(--brand-gradient)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
-          }}>
-            <Zap size={20} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--text-primary)' }}>Demostración Biométrica en Vivo</span>
-              <span style={{
-                fontSize: '0.65rem',
-                padding: '0.15rem 0.5rem',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                color: 'var(--success)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                fontWeight: 800,
-                letterSpacing: '0.02em'
-              }}>
-                LIVE INTERACTIVE
-              </span>
+      <header className="app-header">
+        <div style={{
+          maxWidth: '1380px',
+          margin: '0 auto',
+          padding: '0.65rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 'var(--radius-md)',
+              background: 'var(--brand-gradient)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
+              flexShrink: 0
+            }}>
+              <Zap size={20} />
             </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-              Sustentación de tolerancia conductual vs. rechazo de suplantación en caliente
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.15, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: 'var(--nav-brand-text)' }}>Demostración Biométrica en Vivo</span>
+                <span style={{
+                  fontSize: '0.65rem',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  color: 'var(--success)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  fontWeight: 800,
+                  letterSpacing: '0.02em'
+                }}>
+                  LIVE INTERACTIVE
+                </span>
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--nav-brand-sub)', marginTop: '0.1rem' }}>
+                Sustentación de tolerancia conductual vs. rechazo de suplantación en caliente
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <NavLink to="/" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', textDecoration: 'none' }}>
-            <LayoutDashboard size={14} />
-            <span>Dashboard</span>
-          </NavLink>
-          <NavLink to="/login" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', textDecoration: 'none' }}>
-            <KeyRound size={14} />
-            <span>Terminal Login</span>
-          </NavLink>
-          <button
-            type="button"
-            className="btn-icon"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-            title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'nowrap' }}>
+            <NavLink
+              to="/"
+              className="aula-action-btn"
+              style={{
+                fontSize: '0.8rem',
+                backgroundColor: 'var(--nav-btn-bg)',
+                borderColor: 'var(--nav-btn-border)',
+                color: 'var(--nav-link)',
+                textDecoration: 'none'
+              }}
+            >
+              <LayoutDashboard size={14} />
+              <span>Dashboard</span>
+            </NavLink>
+            <NavLink
+              to="/login"
+              className="aula-action-btn"
+              style={{
+                fontSize: '0.8rem',
+                backgroundColor: 'var(--nav-btn-bg)',
+                borderColor: 'var(--nav-btn-border)',
+                color: 'var(--nav-link)',
+                textDecoration: 'none'
+              }}
+            >
+              <KeyRound size={14} />
+              <span>Terminal Login</span>
+            </NavLink>
+            <button
+              type="button"
+              className="aula-action-btn"
+              style={{ width: '40px', padding: 0 }}
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </div>
       </header>
 

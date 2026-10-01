@@ -177,102 +177,105 @@ export default function TrainProfile() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-canvas)', display: 'flex', flexDirection: 'column' }}>
       {/* Barra superior de navegación */}
-      <header style={{
-        height: '60px',
-        borderBottom: '1px solid var(--border-subtle)',
-        backgroundColor: 'var(--bg-surface)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 1.5rem',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: 34,
-            height: 34,
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: 'rgba(99, 102, 241, 0.12)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--brand-500)'
-          }}>
-            <Sparkles size={18} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                TecleoLlave-Adapt
-              </span>
-              <span style={{
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                padding: '0.1rem 0.45rem',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                color: 'var(--success)'
-              }}>
-                Usuario: {username}
-              </span>
-            </div>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              Entrenamiento Continuo de Perfil Biométrico
-            </span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <NavLink
-            to="/"
-            className="btn-secondary"
-            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
-          >
-            Dashboard
-          </NavLink>
-          <NavLink
-            to="/live-demo"
-            className="btn-secondary"
-            style={{
-              fontSize: '0.8rem',
-              padding: '0.35rem 0.75rem',
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              color: 'var(--brand-500)',
-              borderColor: 'var(--brand-500)'
-            }}
-          >
-            Demo en Vivo ⚡
-          </NavLink>
-          <LanguageSelector variant="compact" />
-          <button
-            type="button"
-            className="btn-icon"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-            title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={handleLogout}
-            style={{
-              fontSize: '0.8rem',
-              padding: '0.35rem 0.75rem',
+      <header className="app-header">
+        <div style={{
+          maxWidth: '1360px',
+          margin: '0 auto',
+          padding: '0.65rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--brand-gradient)',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.35rem',
-              color: 'var(--danger)',
-              borderColor: 'rgba(239, 68, 68, 0.3)'
-            }}
-            title="Cerrar Sesión"
-          >
-            <LogOut size={14} />
-            <span>Salir</span>
-          </button>
+              justifyContent: 'center',
+              color: '#ffffff',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
+              flexShrink: 0
+            }}>
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.98rem', color: 'var(--nav-brand-text)', lineHeight: 1.15 }}>
+                  TecleoLlave-Adapt
+                </span>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '0.12rem 0.5rem',
+                  borderRadius: '999px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  color: 'var(--success)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)'
+                }}>
+                  Usuario: {username}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--nav-brand-sub)', marginTop: '0.1rem' }}>
+                Entrenamiento Continuo de Perfil Biométrico
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'nowrap' }}>
+            <NavLink
+              to="/"
+              className="aula-action-btn"
+              style={{
+                fontSize: '0.8rem',
+                backgroundColor: 'var(--nav-btn-bg)',
+                borderColor: 'var(--nav-btn-border)',
+                color: 'var(--nav-link)',
+                textDecoration: 'none'
+              }}
+            >
+              Dashboard
+            </NavLink>
+            <NavLink
+              to="/live-demo"
+              className="aula-action-btn"
+              style={{
+                fontSize: '0.8rem',
+                backgroundColor: 'var(--brand-soft)',
+                color: 'var(--brand)',
+                borderColor: 'var(--border-subtle)',
+                fontWeight: 600,
+                textDecoration: 'none'
+              }}
+            >
+              Demo en Vivo ⚡
+            </NavLink>
+            <LanguageSelector variant="compact" />
+            <button
+              type="button"
+              className="aula-action-btn"
+              style={{ width: '40px', padding: 0 }}
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <button
+              type="button"
+              className="aula-btn-logout"
+              onClick={handleLogout}
+              title="Cerrar Sesión"
+            >
+              <LogOut size={14} />
+              <span>Salir</span>
+            </button>
+          </div>
         </div>
       </header>
 

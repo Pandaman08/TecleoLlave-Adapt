@@ -21,7 +21,7 @@
   --brand-500: #6366f1;
   --brand-600: #4f46e5;
   --brand-700: #4338ca;
-  --brand-soft: #eef2ff;
+  --brand-soft: rgba(99, 102, 241, 0.18);
   --brand-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   --brand-gradient-hover: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
 
@@ -56,6 +56,8 @@
    ========================================================================== */
 [data-theme='dark'], .dark {
   color-scheme: dark;
+  --brand-soft: rgba(99, 102, 241, 0.18);
+
   --bg-canvas: #090d16;
   --bg-sidebar: #0b0f19;
   --bg-header: #0d121f;
@@ -88,14 +90,18 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
   --shadow-highlight: 0 0 0 1px rgba(99, 102, 241, 0.2);
 
-  /* Navbar Specific Tokens */
+  /* Header / Navbar Tokens */
   --nav-bg: rgba(11, 15, 25, 0.85);
   --nav-border: rgba(255, 255, 255, 0.08);
+  --nav-brand-text: #f8fafc;
+  --nav-brand-sub: #94a3b8;
   --nav-link: #94a3b8;
   --nav-link-hover: #f8fafc;
   --nav-link-hover-bg: rgba(255, 255, 255, 0.06);
   --nav-active-bg: rgba(99, 102, 241, 0.18);
   --nav-active-text: #a5b4fc;
+  --nav-btn-bg: rgba(255, 255, 255, 0.05);
+  --nav-btn-border: rgba(255, 255, 255, 0.10);
 }
 
 /* ==========================================================================
@@ -103,6 +109,8 @@
    ========================================================================== */
 [data-theme='light'], :root:not(.dark):not([data-theme='dark']) {
   color-scheme: light;
+  --brand-soft: #eef2ff;
+
   --bg-canvas: #f8fafc;
   --bg-sidebar: #ffffff;
   --bg-header: #ffffff;
@@ -118,7 +126,7 @@
 
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-muted: #64748b;
   --text-inverse: #ffffff;
 
   --btn-primary-bg: #4f46e5;
@@ -135,14 +143,18 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   --shadow-highlight: 0 0 0 1px rgba(79, 70, 229, 0.15);
 
-  /* Navbar Specific Tokens */
+  /* Header / Navbar Tokens */
   --nav-bg: rgba(255, 255, 255, 0.85);
   --nav-border: #e2e8f0;
+  --nav-brand-text: #0f172a;
+  --nav-brand-sub: #64748b;
   --nav-link: #475569;
   --nav-link-hover: #0f172a;
   --nav-link-hover-bg: #f1f5f9;
   --nav-active-bg: #eef2ff;
   --nav-active-text: #4f46e5;
+  --nav-btn-bg: #ffffff;
+  --nav-btn-border: #e2e8f0;
 }
 
 /* ==========================================================================
@@ -152,13 +164,16 @@
   box-sizing: border-box;
 }
 
-body {
+html, body, #root {
   margin: 0;
   padding: 0;
   background-color: var(--bg-canvas);
   color: var(--text-primary);
   min-height: 100vh;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body {
   overflow-x: hidden;
 }
 
@@ -224,18 +239,34 @@ input:-webkit-autofill:active {
   overflow-x: hidden;
 }
 
-/* Fixed Top Bar */
+/* Fixed Top Bar / Shared App Header */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--nav-bg);
+  backdrop-filter: saturate(160%) blur(12px);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--nav-border);
+  color: var(--nav-brand-text);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
 .topbar-header {
   height: 64px;
-  background-color: var(--bg-header);
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--nav-bg);
+  backdrop-filter: saturate(160%) blur(12px);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--nav-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 50;
+  color: var(--nav-brand-text);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .topbar-left {
@@ -1427,7 +1458,7 @@ input:-webkit-autofill:active {
   }
 }
 
-@media (max-width: 992px) {
+@media (max-width: 1024px) {
   .aula-nav-text {
     display: none !important;
   }
