@@ -142,22 +142,24 @@ export default function TypingCapture({
         className="typing-streamer-container"
         style={{
           fontFamily: "'JetBrains Mono', 'Consolas', monospace",
-          fontSize: 'clamp(0.92rem, 1.3vw, 1.08rem)',
-          letterSpacing: 'normal',
+          fontSize: 'clamp(0.95rem, 1.35vw, 1.12rem)',
+          letterSpacing: '0.02em',
           display: 'flex',
           flexWrap: 'nowrap',
           overflowX: 'auto',
           overflowY: 'hidden',
           whiteSpace: 'nowrap',
           alignItems: 'center',
-          padding: '1rem 1.25rem',
+          padding: '1.1rem 1.4rem',
           backgroundColor: 'var(--bg-canvas)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-md)',
+          border: '1.5px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)',
           margin: '0.85rem 0',
           lineHeight: '1.8',
-          minHeight: '62px',
-          boxSizing: 'border-box'
+          minHeight: '66px',
+          boxSizing: 'border-box',
+          boxShadow: isCapturing ? '0 0 0 3px rgba(99, 102, 241, 0.18)' : 'none',
+          transition: 'box-shadow 0.2s ease, border-color 0.2s ease'
         }}
       >
         {Array.from(targetPhrase).map((char, idx) => {
@@ -167,23 +169,24 @@ export default function TypingCapture({
           const isSpace = char === ' ';
           const isErrorHere = isCurrent && hasError;
 
-          let color = 'var(--text-muted)';
+          let color = 'rgba(148, 163, 184, 0.7)';
           let bgColor = 'transparent';
           let borderBottom = '2px solid transparent';
 
           if (isTyped) {
             color = 'var(--success)';
+            borderBottom = '2px solid rgba(16, 185, 129, 0.8)';
           } else if (isErrorHere) {
             color = '#ffffff';
             bgColor = 'var(--danger)';
             borderBottom = '2px solid #ffffff';
           } else if (isCurrent) {
             color = '#ffffff';
-            bgColor = 'var(--brand-600)';
-            borderBottom = '2px solid #ffffff';
+            bgColor = 'var(--brand)';
+            borderBottom = '2px solid var(--brand-glow)';
           } else if (isPendingFirst) {
             color = 'var(--text-primary)';
-            borderBottom = '2px solid var(--brand-500)';
+            borderBottom = '2px solid var(--brand-glow)';
           }
 
           return (
@@ -194,20 +197,21 @@ export default function TypingCapture({
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minWidth: isSpace ? '0.7ch' : '1.05ch',
+                minWidth: isSpace ? '0.75ch' : '1.15ch',
                 flexShrink: 0,
-                height: '1.6em',
+                height: '1.65em',
                 color,
                 backgroundColor: bgColor,
                 borderBottom,
-                borderRadius: isCurrent ? '2px' : '0px',
-                fontWeight: isTyped || isCurrent ? 700 : 400,
+                borderRadius: isCurrent ? '3px' : '0px',
+                fontWeight: isTyped || isCurrent ? 700 : 500,
                 whiteSpace: 'pre',
                 textAlign: 'center',
                 margin: 0,
                 padding: '0 1px',
                 transform: isErrorHere ? 'translateX(0)' : undefined,
-                animation: isErrorHere ? 'tecleo-shake 0.26s ease' : undefined
+                animation: isErrorHere ? 'tecleo-shake 0.26s ease' : undefined,
+                transition: 'all 0.12s ease'
               }}
             >
               {char}
@@ -217,7 +221,7 @@ export default function TypingCapture({
       </div>
 
       {/* Progress Bar & Status */}
-      <div style={{ margin: '0.75rem 0' }}>
+      <div style={{ margin: '0.85rem 0' }}>
         <div style={{
           height: '6px',
           backgroundColor: 'var(--bg-surface-elevated)',
@@ -228,9 +232,9 @@ export default function TypingCapture({
           <div
             style={{
               height: '100%',
-              backgroundColor: 'var(--brand-500)',
+              background: 'var(--brand-gradient)',
               width: `${progress * 100}%`,
-              transition: 'width 0.15s ease'
+              transition: 'width 0.18s ease'
             }}
           />
         </div>

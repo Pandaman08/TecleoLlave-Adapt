@@ -391,7 +391,7 @@ export default function TrainProfile() {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.85rem' }}>
               {sessionDefs.map((sess) => {
                 const isSelected = sessionId === sess.id;
                 return (
@@ -403,37 +403,39 @@ export default function TrainProfile() {
                       setContextTag(sess.recommendedContext);
                     }}
                     style={{
-                      padding: '0.85rem 1rem',
+                      padding: '0.95rem 1.1rem',
                       borderRadius: 'var(--radius-lg)',
-                      border: `2px solid ${isSelected ? 'var(--brand-500)' : 'var(--border-subtle)'}`,
+                      border: `1.5px solid ${isSelected ? 'var(--brand)' : 'var(--border-subtle)'}`,
                       backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-canvas)',
                       textAlign: 'left',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '0.3rem',
-                      transition: 'all 0.15s ease'
+                      gap: '0.35rem',
+                      transition: 'all 0.18s ease',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(79, 70, 229, 0.15)' : 'none'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '1.1rem' }}>{sess.icon}</span>
+                      <span style={{ fontSize: '1.2rem' }}>{sess.icon}</span>
                       {isSelected && (
                         <span style={{
                           fontSize: '0.68rem',
                           fontWeight: 700,
-                          padding: '0.15rem 0.5rem',
+                          padding: '0.15rem 0.55rem',
                           borderRadius: '9999px',
-                          backgroundColor: 'var(--brand-500)',
-                          color: '#fff'
+                          background: 'var(--brand-gradient)',
+                          color: '#fff',
+                          boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)'
                         }}>
                           Activa
                         </span>
                       )}
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isSelected ? 'var(--brand-500)' : 'var(--text-primary)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? 'var(--brand-glow)' : 'var(--text-primary)' }}>
                       {sess.title}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
                       {sess.subtitle}
                     </div>
                   </button>

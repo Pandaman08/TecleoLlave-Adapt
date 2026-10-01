@@ -252,25 +252,32 @@ export default function LiveDemo() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-canvas)', display: 'flex', flexDirection: 'column' }}>
       {/* Topbar */}
-      <header className="topbar-header">
+      <header className="topbar-header" style={{
+        backgroundColor: 'rgba(11, 15, 25, 0.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)'
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
-            width: 34, height: 34, borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--brand-600)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            width: 36, height: 36, borderRadius: 'var(--radius-md)',
+            background: 'var(--brand-gradient)', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
           }}>
             <Zap size={20} />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span>Demostración Biométrica en Vivo</span>
+            <div style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--text-primary)' }}>Demostración Biométrica en Vivo</span>
               <span style={{
                 fontSize: '0.65rem',
                 padding: '0.15rem 0.5rem',
                 borderRadius: '9999px',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
                 color: 'var(--success)',
-                fontWeight: 700
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                fontWeight: 800,
+                letterSpacing: '0.02em'
               }}>
                 LIVE INTERACTIVE
               </span>
@@ -281,12 +288,12 @@ export default function LiveDemo() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <NavLink to="/" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <NavLink to="/" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', textDecoration: 'none' }}>
             <LayoutDashboard size={14} />
             <span>Dashboard</span>
           </NavLink>
-          <NavLink to="/login" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
+          <NavLink to="/login" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', textDecoration: 'none' }}>
             <KeyRound size={14} />
             <span>Terminal Login</span>
           </NavLink>

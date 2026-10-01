@@ -428,27 +428,38 @@ export default function JuegoMario30() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0.75rem 1.25rem',
-          backgroundColor: '#0f172a',
+          padding: '0.85rem 1.4rem',
+          backgroundColor: '#0b0f19',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderBottom: 'none',
           color: '#fff',
-          borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
-          fontFamily: 'monospace',
-          fontSize: '0.9rem',
-          fontWeight: 700
+          borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '0.88rem',
+          fontWeight: 700,
+          boxShadow: 'var(--shadow-md)'
         }}>
           <div>NIVEL: <span style={{ color: '#38bdf8' }}>{String(currentLevel).padStart(2, '0')}/30</span></div>
           <div>PUNTOS: <span style={{ color: '#facc15' }}>{score}</span></div>
-          <div>MONEDAS: <span style={{ color: '#facc15' }}>${coins}</span></div>
+          <div>MONEDAS: <span style={{ color: '#facc15' }}>🪙 {coins}</span></div>
           <div>VIDAS: <span style={{ color: '#ef4444' }}>{'❤️'.repeat(lives)}</span></div>
         </div>
 
-        {/* Canvas Game Area */}
-        <div style={{ position: 'relative', width: '100%', backgroundColor: '#000', lineHeight: 0, overflow: 'hidden' }}>
+        {/* Canvas Game Area Centrado */}
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          backgroundColor: '#000',
+          lineHeight: 0,
+          overflow: 'hidden',
+          borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
           <canvas
             ref={canvasRef}
             width={880}
             height={380}
-            style={{ width: '100%', height: 'auto', display: 'block' }}
+            style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
           />
 
           {/* Overlay states */}

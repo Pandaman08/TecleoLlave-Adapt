@@ -225,7 +225,7 @@ export default function Login() {
 
   const handleFillDemo = (u) => {
     setUsername(u);
-    if (u === 'admin' || u === 'administrador') {
+    if (u === 'admin') {
       setPassword('admin123');
     } else if (u === 'demo_user') {
       setPassword('demo123456');
@@ -242,37 +242,51 @@ export default function Login() {
       flexDirection: 'column'
     }}>
       {/* Topbar limpia */}
-      <header className="topbar-header">
+      <header className="topbar-header" style={{
+        backgroundColor: 'rgba(11, 15, 25, 0.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)'
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
-            width: 32, height: 32, borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'var(--brand-600)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            width: 34, height: 34, borderRadius: 'var(--radius-md)',
+            background: 'var(--brand-gradient)', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
           }}>
             <KeyRound size={18} />
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.1 }}>{t('app.title')}</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Portal de Autenticación Segura</div>
+            <div style={{ fontWeight: 800, fontSize: '0.98rem', lineHeight: 1.1, color: 'var(--text-primary)' }}>{t('app.title')}</div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Portal de Autenticación Continua</div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <NavLink
             to="/live-demo"
             className="btn-secondary"
             style={{
               fontSize: '0.8rem',
-              padding: '0.35rem 0.75rem',
+              padding: '0.4rem 0.8rem',
               backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              color: 'var(--brand-500)',
-              borderColor: 'var(--brand-500)',
-              fontWeight: 600
+              color: 'var(--brand-glow)',
+              borderColor: 'rgba(99, 102, 241, 0.35)',
+              fontWeight: 600,
+              textDecoration: 'none'
             }}
           >
-            Demo en Vivo (Sustentación) ⚡
+            Demo en Vivo ⚡
           </NavLink>
-          <NavLink to="/register" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
+          <NavLink
+            to="/register"
+            className="btn-secondary"
+            style={{
+              fontSize: '0.8rem',
+              padding: '0.4rem 0.8rem',
+              textDecoration: 'none'
+            }}
+          >
             Crear Cuenta (Enrolamiento)
           </NavLink>
           <LanguageSelector variant="compact" />
@@ -288,22 +302,23 @@ export default function Login() {
         </div>
       </header>
 
-      {/* Contenedor central: Tarjeta en 2 Columnas Horizontales */}
+      {/* Contenedor central: Tarjeta en 2 Columnas Horizontales con radial-gradient */}
       <main style={{
         flex: 1,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '1.5rem 1.5rem'
+        padding: '2rem 1.5rem',
+        background: 'radial-gradient(ellipse at 50% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 70%)'
       }}>
         <div style={{
           maxWidth: '920px',
           width: '100%',
           backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-subtle)',
+          border: '1px solid rgba(99, 102, 241, 0.22)',
           borderRadius: 'var(--radius-xl)',
-          padding: '2rem 2.25rem',
-          boxShadow: 'var(--shadow-lg)'
+          padding: '2.25rem 2.5rem',
+          boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 25px rgba(99, 102, 241, 0.08)'
         }}>
           {/* Encabezado compacto */}
           <div style={{
@@ -314,37 +329,39 @@ export default function Login() {
             paddingBottom: '1rem',
             borderBottom: '1px solid var(--border-subtle)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
               <div style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                color: 'var(--brand-500)',
+                width: 42,
+                height: 42,
+                borderRadius: '12px',
+                background: 'rgba(99, 102, 241, 0.12)',
+                color: 'var(--brand-glow)',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <ShieldCheck size={22} />
+                <ShieldCheck size={24} />
               </div>
               <div>
-                <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                <h1 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                   Iniciar Sesión
                 </h1>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                  Credenciales de acceso con verificación de seguridad integrada
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0.15rem 0 0' }}>
+                  Credenciales de acceso con verificación de cadencia biométrica
                 </p>
               </div>
             </div>
 
             <span style={{
               fontSize: '0.72rem',
-              fontWeight: 600,
-              padding: '0.2rem 0.55rem',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'rgba(99, 102, 241, 0.08)',
-              color: 'var(--brand-500)',
-              border: '1px solid rgba(99, 102, 241, 0.2)'
+              fontWeight: 700,
+              padding: '0.25rem 0.65rem',
+              borderRadius: '999px',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              color: 'var(--brand-glow)',
+              border: '1px solid rgba(99, 102, 241, 0.28)',
+              letterSpacing: '0.02em'
             }}>
               Acceso Seguro
             </span>
@@ -468,17 +485,10 @@ export default function Login() {
                         placeholder="ej. mi_usuario"
                         autoComplete="username"
                         disabled={loading || lockoutSecondsLeft > 0}
+                        className="input-control"
                         style={{
-                          width: '100%',
                           height: 44,
-                          padding: '0 0.85rem 0 2.5rem',
-                          backgroundColor: 'var(--bg-canvas)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-md)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.9rem',
-                          outline: 'none',
-                          transition: 'border-color 0.15s ease'
+                          padding: '0 0.85rem 0 2.5rem'
                         }}
                       />
                       <User size={16} style={{
@@ -510,17 +520,10 @@ export default function Login() {
                         placeholder="••••••••"
                         autoComplete="current-password"
                         disabled={loading || lockoutSecondsLeft > 0}
+                        className="input-control"
                         style={{
-                          width: '100%',
                           height: 44,
-                          padding: '0 2.75rem 0 2.5rem',
-                          backgroundColor: 'var(--bg-canvas)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-md)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.9rem',
-                          outline: 'none',
-                          transition: 'border-color 0.15s ease'
+                          padding: '0 2.75rem 0 2.5rem'
                         }}
                       />
                       <Lock size={16} style={{
@@ -566,22 +569,6 @@ export default function Login() {
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                       Atajo:
                     </span>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => handleFillDemo('administrador')}
-                      style={{
-                        fontSize: '0.72rem',
-                        padding: '0.15rem 0.55rem',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        borderColor: 'rgba(239, 68, 68, 0.3)',
-                        color: 'var(--danger)',
-                        fontWeight: 700
-                      }}
-                      title="Administrador (administrador / admin123)"
-                    >
-                      👑 administrador
-                    </button>
                     <button
                       type="button"
                       className="btn-secondary"

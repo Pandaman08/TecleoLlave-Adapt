@@ -27,12 +27,12 @@ export default function AulaLayout({ children }) {
       <footer style={{
         borderTop: '1px solid var(--border-subtle)',
         backgroundColor: 'var(--bg-surface)',
-        padding: '1rem 1.5rem',
-        fontSize: '0.78rem',
+        padding: '0.85rem 1.5rem',
+        fontSize: '0.74rem',
         color: 'var(--text-muted)'
       }}>
         <div style={{
-          maxWidth: '1280px',
+          maxWidth: '1360px',
           margin: '0 auto',
           display: 'flex',
           alignItems: 'center',
@@ -40,15 +40,15 @@ export default function AulaLayout({ children }) {
           flexWrap: 'wrap',
           gap: '0.75rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={16} style={{ color: 'var(--success)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <ShieldCheck size={15} style={{ color: 'var(--success)' }} />
             <span>
-              <strong>TecleoLlave-Adapt</strong> &mdash; Sistema Biométrico Adaptativo de Autenticación Continua por Dinámica de Tecleo
+              <strong style={{ color: 'var(--text-primary)' }}>TecleoLlave-Adapt</strong> &mdash; Autenticación Continua por Dinámica de Tecleo
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span>Sesión protegida mediante Random Forest &amp; Isotonic Calibration</span>
-            <span>&bull;</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+            <span>Random Forest &amp; Isotonic Calibration</span>
+            <span style={{ opacity: 0.4 }}>&bull;</span>
             <span>Ambiente Académico Seguro</span>
           </div>
         </div>

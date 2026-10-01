@@ -108,25 +108,25 @@ export default function PerfilEstudiante() {
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '1.5rem' }}>
               <div style={{
-                width: '72px',
-                height: '72px',
+                width: '74px',
+                height: '74px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--brand-500)',
+                background: 'var(--brand-gradient)',
+                color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1.75rem',
+                fontSize: '1.85rem',
                 fontWeight: 800,
-                marginBottom: '0.75rem',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)'
+                marginBottom: '0.85rem',
+                boxShadow: '0 6px 16px rgba(79, 70, 229, 0.35)'
               }}>
                 {username ? username.charAt(0).toUpperCase() : 'A'}
               </div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 0.2rem 0', color: 'var(--text-primary)' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.2rem 0', color: 'var(--text-primary)' }}>
                 {fullName}
               </h2>
-              <span style={{ fontSize: '0.78rem', color: 'var(--brand-500)', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--brand-glow)', fontWeight: 600 }}>
                 @{username || 'alexis24'}
               </span>
             </div>
@@ -140,7 +140,7 @@ export default function PerfilEstudiante() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-subtle)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Edad del Usuario:</span>
-                <strong style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{userAge} años</strong>
+                <strong style={{ color: 'var(--text-primary)', fontSize: '0.88rem', fontFamily: "'JetBrains Mono', monospace" }}>{userAge} años</strong>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-subtle)' }}>

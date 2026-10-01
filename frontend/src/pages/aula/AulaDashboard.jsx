@@ -21,7 +21,8 @@ import {
   Zap,
   TrendingUp,
   User,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 
 export default function AulaDashboard() {
@@ -93,111 +94,181 @@ export default function AulaDashboard() {
 
   return (
     <AulaLayout>
-      {/* Welcome Hero Banner */}
+      {/* Welcome Hero Banner con gradiente elegante y micro-decoración */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(99, 102, 241, 0.04) 100%)',
-        border: '1px solid rgba(99, 102, 241, 0.25)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1.75rem 2rem',
+        background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.16) 0%, rgba(99, 102, 241, 0.06) 50%, rgba(16, 185, 129, 0.04) 100%)',
+        border: '1px solid rgba(99, 102, 241, 0.28)',
+        borderRadius: 'var(--radius-xl)',
+        padding: '2rem 2.25rem',
         marginBottom: '2rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '1.5rem',
-        boxShadow: 'var(--shadow-sm)'
+        gap: '1.75rem',
+        boxShadow: 'var(--shadow-md)',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        <div style={{ maxWidth: '640px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
+        {/* Glow decorativo de fondo */}
+        <div style={{
+          position: 'absolute',
+          top: -40,
+          right: -40,
+          width: '180px',
+          height: '180px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
+
+        <div style={{ maxWidth: '640px', position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.6rem' }}>
             <span style={{
               fontSize: '0.72rem',
-              fontWeight: 700,
+              fontWeight: 800,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              padding: '0.2rem 0.6rem',
+              padding: '0.22rem 0.65rem',
               borderRadius: '999px',
-              backgroundColor: 'rgba(99, 102, 241, 0.15)',
-              color: 'var(--brand-500)'
+              backgroundColor: 'rgba(99, 102, 241, 0.18)',
+              color: 'var(--brand-glow)',
+              border: '1px solid rgba(99, 102, 241, 0.3)'
             }}>
               Semestre Académico 2026-II
             </span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
               Campus Virtual de Ingeniería
             </span>
           </div>
 
           <h1 style={{
-            fontSize: '1.65rem',
+            fontSize: '1.75rem',
             fontWeight: 800,
             margin: '0 0 0.5rem 0',
             color: 'var(--text-primary)',
-            letterSpacing: '-0.02em'
+            letterSpacing: '-0.01em'
           }}>
             Bienvenido al Aula Virtual, {username || 'Estudiante'} 👋
           </h1>
-          <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
             Tus actividades académicas y ejercicios de aula cuentan con autenticación continua mediante <strong>dinámica de tecleo</strong>. El sistema protege tu sesión mientras estudias y realizas actividades.
           </p>
+
+          {/* Quick Actions in Hero */}
+          <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <NavLink
+              to="/aula/entrenamiento"
+              className="btn-primary"
+              style={{
+                fontSize: '0.85rem',
+                padding: '0.55rem 1.15rem'
+              }}
+            >
+              <RefreshCw size={15} />
+              <span>Reentrenar Perfil Biométrico</span>
+            </NavLink>
+
+            <NavLink
+              to="/aula/actividades"
+              className="btn-secondary"
+              style={{
+                fontSize: '0.85rem',
+                padding: '0.55rem 1.1rem'
+              }}
+            >
+              <PenTool size={15} />
+              <span>Ver Actividades</span>
+            </NavLink>
+          </div>
         </div>
 
         {/* Biometric Status Quick Widget */}
         <div style={{
           backgroundColor: 'var(--bg-surface)',
-          padding: '1.25rem 1.5rem',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-subtle)',
-          minWidth: '260px',
-          boxShadow: 'var(--shadow-md)'
+          padding: '1.35rem 1.6rem',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid rgba(99, 102, 241, 0.25)',
+          minWidth: '270px',
+          boxShadow: 'var(--shadow-md)',
+          position: 'relative',
+          zIndex: 1
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.95rem' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Estado Biométrico
             </span>
             <span style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '0.35rem',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              color: 'var(--success)'
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              padding: '0.15rem 0.5rem',
+              borderRadius: '999px',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              color: 'var(--success)',
+              border: '1px solid rgba(16, 185, 129, 0.3)'
             }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)', display: 'inline-block' }}></span>
+              <span style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--success)',
+                display: 'inline-block',
+                animation: 'pulse 1.8s infinite'
+              }}></span>
               ACTIVO
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1rem' }}>
             <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Modelo Perfil</div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--brand-500)' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Modelo Perfil</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: 'var(--brand-glow)' }}>
                 M{modelSummary?.active_model_version || 0}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Deriva (Drift)</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Deriva (Drift)</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-primary)' }}>
                 {driftInfo?.severity || 'ESTABLE'}
               </div>
             </div>
           </div>
 
-          <NavLink
-            to="/aula/perfil"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: 'var(--brand-500)',
-              textDecoration: 'none',
-              paddingTop: '0.5rem',
-              borderTop: '1px solid var(--border-subtle)'
-            }}
-          >
-            <span>Ver ficha biométrica</span>
-            <ChevronRight size={14} />
-          </NavLink>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
+            <NavLink
+              to="/aula/entrenamiento"
+              className="btn-primary"
+              style={{
+                fontSize: '0.78rem',
+                padding: '0.45rem 0.8rem',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}
+            >
+              <RefreshCw size={13} />
+              <span>Reentrenar Perfil</span>
+            </NavLink>
+
+            <NavLink
+              to="/aula/perfil"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: 'var(--brand-glow)',
+                textDecoration: 'none',
+                paddingTop: '0.15rem'
+              }}
+            >
+              <span>Ver ficha biométrica</span>
+              <ChevronRight size={14} />
+            </NavLink>
+          </div>
         </div>
       </div>
 
@@ -230,66 +301,77 @@ export default function AulaDashboard() {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                transition: 'all 0.2s',
+                transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
                 boxShadow: 'var(--shadow-sm)'
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                   <span style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '4px',
-                    backgroundColor: 'var(--bg-canvas)',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    padding: '0.22rem 0.55rem',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: `${course.color}18`,
                     color: course.color,
-                    border: `1px solid ${course.color}30`
+                    border: `1px solid ${course.color}40`,
+                    letterSpacing: '0.02em'
                   }}>
                     {course.code}
                   </span>
                   <span style={{
                     fontSize: '0.7rem',
-                    fontWeight: 600,
-                    color: 'var(--text-muted)'
+                    fontWeight: 700,
+                    padding: '0.15rem 0.45rem',
+                    borderRadius: '999px',
+                    backgroundColor: 'var(--bg-surface-elevated)',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-subtle)'
                   }}>
                     {course.badge}
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 0.35rem 0', color: 'var(--text-primary)' }}>
+                <h3 style={{ fontSize: '1.08rem', fontWeight: 800, margin: '0 0 0.35rem 0', color: 'var(--text-primary)' }}>
                   {course.title}
                 </h3>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 1rem 0' }}>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 1.15rem 0' }}>
                   {course.teacher}
                 </p>
 
-                {/* Progress bar */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '0.25rem' }}>
+                {/* Progress bar con gradiente y esquinas redondeadas */}
+                <div style={{ marginBottom: '1.15rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '0.35rem' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Progreso del curso</span>
-                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{course.progress}%</span>
+                    <span style={{ fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-primary)' }}>{course.progress}%</span>
                   </div>
-                  <div style={{ height: '6px', borderRadius: '3px', backgroundColor: 'var(--bg-canvas)', overflow: 'hidden' }}>
-                    <div style={{ width: `${course.progress}%`, height: '100%', backgroundColor: course.color, borderRadius: '3px' }}></div>
+                  <div style={{ height: '7px', borderRadius: '999px', backgroundColor: 'var(--bg-canvas)', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{
+                      width: `${course.progress}%`,
+                      height: '100%',
+                      background: `linear-gradient(90deg, ${course.color} 0%, var(--brand-glow) 100%)`,
+                      borderRadius: '999px',
+                      transition: 'width 0.4s ease'
+                    }} />
                   </div>
                 </div>
 
                 {/* Next task box */}
                 <div style={{
-                  padding: '0.75rem',
+                  padding: '0.85rem',
                   borderRadius: 'var(--radius-md)',
                   backgroundColor: 'var(--bg-canvas)',
                   border: '1px solid var(--border-subtle)',
-                  marginBottom: '1rem'
+                  marginBottom: '1.15rem'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--brand-500)', fontWeight: 600, marginBottom: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--brand-glow)', fontWeight: 700, marginBottom: '0.25rem' }}>
                     <Clock size={12} />
                     <span>Próxima Actividad</span>
                   </div>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                     {course.nextTask}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                     Vence: {course.dueDate}
                   </div>
                 </div>
@@ -297,24 +379,17 @@ export default function AulaDashboard() {
 
               <NavLink
                 to="/aula/actividades"
+                className="btn-secondary"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
+                  width: '100%',
+                  boxSizing: 'border-box',
                   justifyContent: 'center',
-                  gap: '0.5rem',
-                  padding: '0.65rem',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--bg-canvas)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  transition: 'background 0.2s'
+                  fontSize: '0.82rem',
+                  padding: '0.55rem'
                 }}
               >
                 <span>Ir a Actividades del Curso</span>
-                <ArrowRight size={15} />
+                <ArrowRight size={14} />
               </NavLink>
             </div>
           ))}
@@ -335,51 +410,50 @@ export default function AulaDashboard() {
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1.25rem'
+          gap: '1.4rem'
         }}>
           {/* Card 1: Actividades de Escritura */}
           <div style={{
             backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1.5rem',
+            border: '1px solid rgba(99, 102, 241, 0.25)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '1.6rem',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            boxShadow: 'var(--shadow-sm)'
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'transform 0.18s ease, box-shadow 0.18s ease'
           }}>
             <div>
               <div style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                color: 'var(--brand-500)',
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(79, 70, 229, 0.08))',
+                color: 'var(--brand-glow)',
+                border: '1px solid rgba(99, 102, 241, 0.28)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: '1rem'
               }}>
-                <PenTool size={24} />
+                <PenTool size={22} />
               </div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem 0', color: 'var(--text-primary)' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 0.4rem 0', color: 'var(--text-primary)' }}>
                 Talleres de Redacción y Transcripción
               </h3>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem 0' }}>
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 1.25rem 0' }}>
                 Ejercicios guiados de redacción técnica sobre directivas de seguridad. El sistema captura tiempos de pulsación (Hold Time) y latencias entre teclas para enriquecer tu perfil adaptativo.
               </p>
             </div>
             <NavLink
               to="/aula/actividades"
-              className="btn btn-primary"
+              className="btn-primary"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                textDecoration: 'none',
                 width: '100%',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                fontSize: '0.85rem',
+                padding: '0.6rem 1rem'
               }}
             >
               <span>Comenzar Actividad de Escritura</span>
@@ -391,20 +465,22 @@ export default function AulaDashboard() {
           <div style={{
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid rgba(245, 158, 11, 0.3)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1.5rem',
+            borderRadius: 'var(--radius-xl)',
+            padding: '1.6rem',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            boxShadow: 'var(--shadow-sm)'
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'transform 0.18s ease, box-shadow 0.18s ease'
           }}>
             <div>
               <div style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.08))',
                 color: '#f59e0b',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -412,40 +488,44 @@ export default function AulaDashboard() {
               }}>
                 <Gamepad2 size={24} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
                   Super Mario: 30 Niveles
                 </h3>
                 <span style={{
                   fontSize: '0.65rem',
                   fontWeight: 800,
                   backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                  color: '#d97706',
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '999px'
+                  color: '#f59e0b',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '999px',
+                  letterSpacing: '0.03em'
                 }}>
                   PAUSA ACTIVA
                 </span>
               </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem 0' }}>
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 1.25rem 0' }}>
                 Minijuego clásico de plataformas 2D con 30 niveles para relajarse y no aburrirse en el aula. <strong>Actividad externa recreativa: No mide telemetría ni recopila métricas de tecleo.</strong>
               </p>
             </div>
             <NavLink
               to="/aula/juego-mario"
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                padding: '0.65rem',
+                padding: '0.6rem 1rem',
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: '#f59e0b',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 color: '#fff',
-                fontSize: '0.82rem',
+                fontSize: '0.85rem',
                 fontWeight: 700,
                 textDecoration: 'none',
-                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)'
+                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                width: '100%',
+                boxSizing: 'border-box'
               }}
             >
               <span>Jugar Mario 30 Niveles 🍄</span>
@@ -457,20 +537,22 @@ export default function AulaDashboard() {
           <div style={{
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1.5rem',
+            borderRadius: 'var(--radius-xl)',
+            padding: '1.6rem',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            boxShadow: 'var(--shadow-sm)'
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'transform 0.18s ease, box-shadow 0.18s ease'
           }}>
             <div>
               <div style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.08))',
                 color: 'var(--success)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -478,8 +560,8 @@ export default function AulaDashboard() {
               }}>
                 <Crown size={24} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
                   Ajedrez Universitario
                 </h3>
                 <span style={{
@@ -487,31 +569,35 @@ export default function AulaDashboard() {
                   fontWeight: 800,
                   backgroundColor: 'rgba(16, 185, 129, 0.15)',
                   color: 'var(--success)',
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '999px'
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '999px',
+                  letterSpacing: '0.03em'
                 }}>
                   RECREATIVO
                 </span>
               </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem 0' }}>
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 1.25rem 0' }}>
                 Partida recreativa de ajedrez para ejercitar la mente durante pausas de estudio. <strong>Actividad externa recreativa: No mide telemetría ni recopila métricas de tecleo.</strong>
               </p>
             </div>
             <NavLink
               to="/aula/juego-ajedrez"
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                padding: '0.65rem',
+                padding: '0.6rem 1rem',
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--success)',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#fff',
-                fontSize: '0.82rem',
+                fontSize: '0.85rem',
                 fontWeight: 700,
                 textDecoration: 'none',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                width: '100%',
+                boxSizing: 'border-box'
               }}
             >
               <span>Jugar Ajedrez Táctico ♟️</span>

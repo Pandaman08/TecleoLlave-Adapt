@@ -81,17 +81,23 @@ export default function LanguageSelector({ variant = 'dropdown' }) {
 
   return (
     <div ref={containerRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-      <Globe size={14} style={{ color: 'var(--text-muted)', marginRight: '0.4rem' }} />
+      <Globe size={14} style={{ color: 'var(--text-muted)', marginRight: '0.4rem', pointerEvents: 'none' }} />
       <select
         className="select-control"
         value={i18n.language}
         onChange={(e) => handleSelect(e.target.value)}
-        style={{ padding: '0.4rem 0.5rem', fontSize: '0.78rem' }}
+        style={{
+          padding: '0.35rem 0.65rem',
+          fontSize: '0.78rem',
+          fontWeight: 600,
+          borderRadius: 'var(--radius-md)',
+          cursor: 'pointer'
+        }}
         aria-label={t('app.language')}
       >
         {languages.map(lang => (
           <option key={lang.code} value={lang.code}>
-            {lang.flag} {lang.short}
+            {lang.short} ({lang.label})
           </option>
         ))}
       </select>

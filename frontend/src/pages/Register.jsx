@@ -258,36 +258,42 @@ export default function Register() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-canvas)', display: 'flex', flexDirection: 'column' }}>
       {/* Topbar */}
-      <header className="topbar-header">
+      <header className="topbar-header" style={{
+        backgroundColor: 'rgba(11, 15, 25, 0.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)'
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
-            width: 34, height: 34, borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'var(--brand-600)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            width: 34, height: 34, borderRadius: 'var(--radius-md)',
+            background: 'var(--brand-gradient)', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
           }}>
             <UserPlus size={18} />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', lineHeight: 1.1 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.98rem', lineHeight: 1.1, color: 'var(--text-primary)' }}>
               Enrolamiento Multi-Sesión & Multi-Contexto
             </div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
               Captura de variación conductual legítima (30-40 muestras en ≥3 sesiones)
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <NavLink to="/live-demo" className="btn-secondary" style={{
-            fontSize: '0.8rem', padding: '0.35rem 0.75rem',
-            backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--brand-500)', borderColor: 'var(--brand-500)'
+            fontSize: '0.8rem', padding: '0.4rem 0.8rem',
+            backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--brand-glow)', borderColor: 'rgba(99, 102, 241, 0.35)',
+            textDecoration: 'none'
           }}>
             Demo en Vivo ⚡
           </NavLink>
-          <NavLink to="/" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
+          <NavLink to="/" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', textDecoration: 'none' }}>
             {t('nav.dashboard')}
           </NavLink>
-          <NavLink to="/login" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
+          <NavLink to="/login" className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', textDecoration: 'none' }}>
             {t('nav.login')}
           </NavLink>
           <LanguageSelector variant="compact" />

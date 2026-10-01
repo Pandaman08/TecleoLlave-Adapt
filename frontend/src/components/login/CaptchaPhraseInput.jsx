@@ -403,9 +403,9 @@ export default function CaptchaPhraseInput({
         <div
           ref={textScrollRef}
           style={{
-            fontSize: 'clamp(0.81rem, 1.02vw, 0.85rem)',
-            fontFamily: "'Inter', monospace",
-            letterSpacing: '-0.005em',
+            fontSize: 'clamp(0.85rem, 1.1vw, 0.95rem)',
+            fontFamily: "'JetBrains Mono', monospace",
+            letterSpacing: '0.02em',
             display: 'flex',
             alignItems: 'center',
             overflowX: 'auto',
@@ -413,7 +413,7 @@ export default function CaptchaPhraseInput({
             whiteSpace: 'pre',
             flex: 1,
             minWidth: 0,
-            padding: '0.15rem 0',
+            padding: '0.2rem 0',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none'
           }}
@@ -424,21 +424,21 @@ export default function CaptchaPhraseInput({
             const isPending = idx > typedText.length;
             const isErrorHere = isCurrent && hasKeyError;
 
-            let color = 'var(--text-muted)';
+            let color = 'rgba(148, 163, 184, 0.7)';
             let bgColor = 'transparent';
             let borderBottom = 'none';
 
             if (isTyped) {
               color = 'var(--success)';
-              borderBottom = '2px solid rgba(16, 185, 129, 0.5)';
+              borderBottom = '2px solid rgba(16, 185, 129, 0.8)';
             } else if (isErrorHere) {
               color = '#ffffff';
               bgColor = 'var(--danger)';
               borderBottom = '2px solid #ffffff';
             } else if (isCurrent) {
-              color = isFocused ? 'var(--brand-500)' : 'var(--text-primary)';
-              bgColor = isFocused ? 'rgba(99, 102, 241, 0.16)' : 'transparent';
-              borderBottom = isFocused ? '2px solid var(--brand-500)' : 'none';
+              color = '#ffffff';
+              bgColor = 'var(--brand)';
+              borderBottom = '2px solid var(--brand-glow)';
             }
 
             return (
@@ -450,16 +450,16 @@ export default function CaptchaPhraseInput({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: char === ' ' ? '0.52ch' : 'auto',
+                  minWidth: char === ' ' ? '0.75ch' : '1.15ch',
+                  padding: '0 1px',
+                  borderRadius: isCurrent ? '3px' : '0',
                   color,
-                  fontWeight: isTyped || isCurrent ? 700 : 400,
-                  opacity: isPending ? 0.42 : 1,
                   backgroundColor: bgColor,
-                  borderRadius: '2px',
-                  padding: '0 0.5px',
                   borderBottom,
+                  fontWeight: isTyped || isCurrent ? 700 : 500,
+                  opacity: isPending ? 0.45 : 1,
                   animation: isErrorHere ? 'tecleo-shake 0.28s ease' : undefined,
-                  transition: 'background-color 0.1s ease, color 0.1s ease'
+                  transition: 'all 0.12s ease'
                 }}
               >
                 {/* Cursor indicador vertical con animación de parpadeo */}
