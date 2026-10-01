@@ -45,5 +45,9 @@ Thumbs.db
 # ML artifacts
 *.joblib
 !backend/models/user_*
+backend/models/*candidate*
 *.pkl
 *.model
+
+# Generated office documents (local draft)
+*.docx
