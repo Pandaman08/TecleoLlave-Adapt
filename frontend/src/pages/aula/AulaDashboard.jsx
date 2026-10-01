@@ -99,13 +99,13 @@ export default function AulaDashboard() {
         background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.16) 0%, rgba(99, 102, 241, 0.06) 50%, rgba(16, 185, 129, 0.04) 100%)',
         border: '1px solid rgba(99, 102, 241, 0.28)',
         borderRadius: 'var(--radius-xl)',
-        padding: '2rem 2.25rem',
-        marginBottom: '2rem',
+        padding: '1.5rem 1.75rem',
+        marginBottom: '2.5rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '1.75rem',
+        gap: '1.5rem',
         boxShadow: 'var(--shadow-md)',
         position: 'relative',
         overflow: 'hidden'
@@ -123,7 +123,7 @@ export default function AulaDashboard() {
         }} />
 
         <div style={{ maxWidth: '640px', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
             <span style={{
               fontSize: '0.72rem',
               fontWeight: 800,
@@ -143,26 +143,26 @@ export default function AulaDashboard() {
           </div>
 
           <h1 style={{
-            fontSize: '1.75rem',
+            fontSize: '1.5rem',
             fontWeight: 800,
-            margin: '0 0 0.5rem 0',
+            margin: '0 0 0.45rem 0',
             color: 'var(--text-primary)',
             letterSpacing: '-0.01em'
           }}>
             Bienvenido al Aula Virtual, {username || 'Estudiante'} 👋
           </h1>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+          <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '62ch' }}>
             Tus actividades académicas y ejercicios de aula cuentan con autenticación continua mediante <strong>dinámica de tecleo</strong>. El sistema protege tu sesión mientras estudias y realizas actividades.
           </p>
 
           {/* Quick Actions in Hero */}
-          <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: '1.2rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <NavLink
               to="/aula/entrenamiento"
               className="btn-primary"
               style={{
-                fontSize: '0.85rem',
-                padding: '0.55rem 1.15rem'
+                fontSize: '0.82rem',
+                padding: '0.5rem 1rem'
               }}
             >
               <RefreshCw size={15} />
@@ -173,8 +173,8 @@ export default function AulaDashboard() {
               to="/aula/actividades"
               className="btn-secondary"
               style={{
-                fontSize: '0.85rem',
-                padding: '0.55rem 1.1rem'
+                fontSize: '0.82rem',
+                padding: '0.5rem 1rem'
               }}
             >
               <PenTool size={15} />
@@ -186,7 +186,7 @@ export default function AulaDashboard() {
         {/* Biometric Status Quick Widget */}
         <div style={{
           backgroundColor: 'var(--bg-surface)',
-          padding: '1.35rem 1.6rem',
+          padding: '1.25rem 1.5rem',
           borderRadius: 'var(--radius-lg)',
           border: '1px solid rgba(99, 102, 241, 0.25)',
           minWidth: '270px',
@@ -194,8 +194,8 @@ export default function AulaDashboard() {
           position: 'relative',
           zIndex: 1
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.95rem' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Estado Biométrico
             </span>
             <span style={{
@@ -224,14 +224,34 @@ export default function AulaDashboard() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1rem' }}>
             <div>
-              <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Modelo Perfil</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: 'var(--brand-glow)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Modelo Perfil
+              </div>
+              <div style={{
+                fontSize: '28px',
+                fontWeight: 800,
+                fontFamily: "'JetBrains Mono', monospace",
+                color: 'var(--brand)',
+                letterSpacing: 0,
+                fontVariantNumeric: 'tabular-nums',
+                lineHeight: 1.15,
+                marginTop: '0.2rem'
+              }}>
                 M{modelSummary?.active_model_version || 0}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Deriva (Drift)</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Deriva (Drift)
+              </div>
+              <div style={{
+                fontSize: '1.05rem',
+                fontWeight: 700,
+                fontFamily: "'JetBrains Mono', monospace",
+                color: 'var(--text-primary)',
+                lineHeight: 1.25,
+                marginTop: '0.45rem'
+              }}>
                 {driftInfo?.severity || 'ESTABLE'}
               </div>
             </div>
@@ -288,111 +308,114 @@ export default function AulaDashboard() {
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          alignItems: 'stretch',
           gap: '1.25rem'
         }}>
-          {courses.map((course) => (
-            <div
-              key={course.id}
-              style={{
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '1.25rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
-                boxShadow: 'var(--shadow-sm)'
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-                  <span style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    padding: '0.22rem 0.55rem',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: `${course.color}18`,
-                    color: course.color,
-                    border: `1px solid ${course.color}40`,
-                    letterSpacing: '0.02em'
-                  }}>
-                    {course.code}
-                  </span>
-                  <span style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    padding: '0.15rem 0.45rem',
-                    borderRadius: '999px',
-                    backgroundColor: 'var(--bg-surface-elevated)',
-                    color: 'var(--text-secondary)',
-                    border: '1px solid var(--border-subtle)'
-                  }}>
-                    {course.badge}
-                  </span>
-                </div>
+          {courses.map((course) => {
+            const courseGradients = {
+              'SI-801': 'linear-gradient(90deg, #6366f1, #4f46e5)',
+              'IA-802': 'linear-gradient(90deg, #38bdf8, #0ea5e9)',
+              'SD-803': 'linear-gradient(90deg, #34d399, #10b981)'
+            };
+            const barGradient = courseGradients[course.code] || `linear-gradient(90deg, ${course.color}, ${course.color})`;
+            const badgeClass = course.badge === 'Al Día' ? 'badge-course-up-to-date' : 'badge-course-ongoing';
 
-                <h3 style={{ fontSize: '1.08rem', fontWeight: 800, margin: '0 0 0.35rem 0', color: 'var(--text-primary)' }}>
-                  {course.title}
-                </h3>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 1.15rem 0' }}>
-                  {course.teacher}
-                </p>
-
-                {/* Progress bar con gradiente y esquinas redondeadas */}
-                <div style={{ marginBottom: '1.15rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '0.35rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Progreso del curso</span>
-                    <span style={{ fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-primary)' }}>{course.progress}%</span>
+            return (
+              <div key={course.id} className="aula-course-card">
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      padding: '0.22rem 0.55rem',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: `${course.color}18`,
+                      color: course.color,
+                      border: `1px solid ${course.color}40`,
+                      letterSpacing: '0.02em'
+                    }}>
+                      {course.code}
+                    </span>
+                    <span className={badgeClass}>
+                      {course.badge}
+                    </span>
                   </div>
-                  <div style={{ height: '7px', borderRadius: '999px', backgroundColor: 'var(--bg-canvas)', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+
+                  <h3 className="aula-course-title" title={course.title}>
+                    {course.title}
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 1.15rem 0' }}>
+                    {course.teacher}
+                  </p>
+
+                  {/* Progress bar con gradiente monotonal por curso */}
+                  <div style={{ marginBottom: '1.15rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '0.35rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Progreso del curso</span>
+                      <span style={{
+                        fontWeight: 600,
+                        fontFamily: "'Inter', sans-serif",
+                        fontVariantNumeric: 'tabular-nums',
+                        color: 'var(--text-primary)'
+                      }}>
+                        {course.progress}%
+                      </span>
+                    </div>
                     <div style={{
-                      width: `${course.progress}%`,
-                      height: '100%',
-                      background: `linear-gradient(90deg, ${course.color} 0%, var(--brand-glow) 100%)`,
+                      height: '8px',
                       borderRadius: '999px',
-                      transition: 'width 0.4s ease'
-                    }} />
+                      backgroundColor: 'rgba(148, 163, 184, 0.2)',
+                      overflow: 'hidden',
+                      border: 'none'
+                    }}>
+                      <div style={{
+                        width: `${course.progress}%`,
+                        height: '100%',
+                        background: barGradient,
+                        borderRadius: '999px',
+                        transition: 'width 0.4s ease'
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Next task box */}
+                  <div style={{
+                    padding: '0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-canvas)',
+                    border: '1px solid var(--border-subtle)',
+                    marginBottom: '1.15rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--brand-glow)', fontWeight: 700, marginBottom: '0.25rem' }}>
+                      <Clock size={12} />
+                      <span>Próxima Actividad</span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {course.nextTask}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      Vence: {course.dueDate}
+                    </div>
                   </div>
                 </div>
 
-                {/* Next task box */}
-                <div style={{
-                  padding: '0.85rem',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--bg-canvas)',
-                  border: '1px solid var(--border-subtle)',
-                  marginBottom: '1.15rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--brand-glow)', fontWeight: 700, marginBottom: '0.25rem' }}>
-                    <Clock size={12} />
-                    <span>Próxima Actividad</span>
-                  </div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {course.nextTask}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                    Vence: {course.dueDate}
-                  </div>
-                </div>
+                <NavLink
+                  to="/aula/actividades"
+                  className="btn-secondary"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    justifyContent: 'center',
+                    fontSize: '0.82rem',
+                    padding: '0.55rem'
+                  }}
+                >
+                  <span>Ir a Actividades del Curso</span>
+                  <ArrowRight size={14} />
+                </NavLink>
               </div>
-
-              <NavLink
-                to="/aula/actividades"
-                className="btn-secondary"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  justifyContent: 'center',
-                  fontSize: '0.82rem',
-                  padding: '0.55rem'
-                }}
-              >
-                <span>Ir a Actividades del Curso</span>
-                <ArrowRight size={14} />
-              </NavLink>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

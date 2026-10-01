@@ -40,13 +40,23 @@ export default function LanguageSelector({ variant = 'dropdown' }) {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="btn-icon"
+          className="aula-action-btn"
           aria-label={t('app.language')}
           title={t('app.language')}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.55rem' }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0 0.65rem',
+            height: '40px',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '12px',
+            fontWeight: 600,
+            letterSpacing: '0.02em'
+          }}
         >
-          <Globe size={14} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{current.short}</span>
+          <Globe size={14} style={{ opacity: 0.8 }} />
+          <span>{current.short}</span>
         </button>
         {isOpen && (
           <div style={{

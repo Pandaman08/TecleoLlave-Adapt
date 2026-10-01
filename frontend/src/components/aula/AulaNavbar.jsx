@@ -32,16 +32,7 @@ export default function AulaNavbar() {
   };
 
   return (
-    <header style={{
-      backgroundColor: 'rgba(17, 24, 39, 0.82)',
-      backdropFilter: 'blur(14px)',
-      WebkitBackdropFilter: 'blur(14px)',
-      borderBottom: '1px solid var(--border-subtle)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      boxShadow: 'var(--shadow-sm)'
-    }}>
+    <header className="aula-navbar">
       <div style={{
         maxWidth: '1360px',
         margin: '0 auto',
@@ -103,92 +94,70 @@ export default function AulaNavbar() {
           </div>
         </div>
 
-        {/* Navigation Links con colapso responsivo elegante */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', minWidth: 0, flexWrap: 'nowrap' }}>
+        {/* Navigation Links con legibilidad y contraste óptimo */}
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0, flexWrap: 'nowrap' }}>
           <NavLink
             to="/aula"
             end
-            className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-            style={{ padding: '0.42rem 0.65rem', fontSize: '0.8rem', borderRadius: 'var(--radius-md)', width: 'auto', whiteSpace: 'nowrap' }}
+            className={({ isActive }) => `aula-nav-link ${isActive ? 'active' : ''}`}
             title="Mis Cursos"
           >
-            <BookOpen size={15} className="nav-icon" />
+            <BookOpen size={15} style={{ flexShrink: 0 }} />
             <span className="aula-nav-text">Mis Cursos</span>
           </NavLink>
 
           <NavLink
             to="/aula/actividades"
-            className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-            style={{ padding: '0.42rem 0.65rem', fontSize: '0.8rem', borderRadius: 'var(--radius-md)', width: 'auto', whiteSpace: 'nowrap' }}
+            className={({ isActive }) => `aula-nav-link ${isActive ? 'active' : ''}`}
             title="Actividades de Escritura"
           >
-            <PenTool size={15} className="nav-icon" />
+            <PenTool size={15} style={{ flexShrink: 0 }} />
             <span className="aula-nav-text">Actividades</span>
           </NavLink>
 
           <NavLink
             to="/aula/juegos"
-            className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-            style={{ padding: '0.42rem 0.65rem', fontSize: '0.8rem', borderRadius: 'var(--radius-md)', width: 'auto', whiteSpace: 'nowrap' }}
+            className={({ isActive }) => `aula-nav-link ${isActive ? 'active' : ''}`}
             title="Juegos Interactivos"
           >
-            <Gamepad2 size={15} className="nav-icon" />
+            <Gamepad2 size={15} style={{ flexShrink: 0 }} />
             <span className="aula-nav-text">Juegos</span>
           </NavLink>
 
           <NavLink
             to="/aula/entrenamiento"
-            className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-            style={{ padding: '0.42rem 0.65rem', fontSize: '0.8rem', borderRadius: 'var(--radius-md)', width: 'auto', whiteSpace: 'nowrap' }}
+            className={({ isActive }) => `aula-nav-link ${isActive ? 'active' : ''}`}
             title="Reentrenamiento"
           >
-            <RefreshCw size={15} className="nav-icon" />
+            <RefreshCw size={15} style={{ flexShrink: 0 }} />
             <span className="aula-nav-text">Reentrenar</span>
           </NavLink>
 
           <NavLink
             to="/aula/perfil"
-            className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-            style={{ padding: '0.42rem 0.65rem', fontSize: '0.8rem', borderRadius: 'var(--radius-md)', width: 'auto', whiteSpace: 'nowrap' }}
+            className={({ isActive }) => `aula-nav-link ${isActive ? 'active' : ''}`}
             title="Mi Perfil"
           >
-            <User size={15} className="nav-icon" />
+            <User size={15} style={{ flexShrink: 0 }} />
             <span className="aula-nav-text">Mi Perfil</span>
           </NavLink>
         </nav>
 
-        {/* User Badge & Actions */}
+        {/* User Badge & Actions con altura uniforme de 40px */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           <button
             type="button"
             onClick={toggleTheme}
-            style={{
-              padding: '0.4rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--bg-canvas)',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
+            className="aula-action-btn"
+            style={{ width: '40px', padding: 0 }}
             title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
           >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
           <LanguageSelector variant="compact" />
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.3rem 0.65rem',
-            borderRadius: 'var(--radius-full)',
-            backgroundColor: 'var(--bg-canvas)',
-            border: '1px solid var(--border-subtle)'
-          }}>
+          <div className="aula-user-pill">
             <div style={{
               width: '26px',
               height: '26px',
@@ -216,20 +185,7 @@ export default function AulaNavbar() {
           <button
             type="button"
             onClick={handleLogout}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              padding: '0.4rem 0.65rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              backgroundColor: 'rgba(239, 68, 68, 0.08)',
-              color: 'var(--danger)',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'var(--transition)'
-            }}
+            className="aula-btn-logout"
             title="Cerrar sesión del aula"
           >
             <LogOut size={14} />
