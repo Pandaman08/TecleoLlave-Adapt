@@ -41,6 +41,7 @@ class EvaluateAuthSchema(BaseModel):
     is_impostor_mode: Optional[bool] = False
     ground_truth: Optional[str] = "LEGITIMATE"
     device_posture: Optional[str] = "ESTATICO"
+    client_event_id: Optional[str] = None
 
 
 class BatchSyncSchema(BaseModel):
@@ -111,7 +112,8 @@ def evaluate_auth(data: EvaluateAuthSchema, db: Session = Depends(get_db)):
             target_app=data.target_app or "WhatsApp",
             is_impostor_mode=data.is_impostor_mode or False,
             ground_truth=data.ground_truth or "LEGITIMATE",
-            device_posture=data.device_posture or "ESTATICO"
+            device_posture=data.device_posture or "ESTATICO",
+            client_event_id=data.client_event_id
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -121,24 +123,17 @@ def evaluate_auth(data: EvaluateAuthSchema, db: Session = Depends(get_db)):
 
 @router.post("/study/batch-sync")
 def batch_sync_telemetry(data: BatchSyncSchema, db: Session = Depends(get_db)):
-    """Sincroniza telemetría encolada offline en el dispositivo móvil."""
-    processed = 0
-    for ev in data.events:
-        try:
-            mobile_study_service.evaluate_auth_attempt(
-                db=db,
-                participant_id=data.participant_id,
-                raw_events=ev.get("raw_events", []),
-                phrase_typed=ev.get("phrase_typed", ""),
-                target_app=ev.get("target_app", "APP_LOCKER"),
-                is_impostor_mode=ev.get("is_impostor_mode", False),
-                ground_truth=ev.get("ground_truth", "LEGITIMATE"),
-                device_posture=ev.get("device_posture", "ESTATICO")
-            )
-            processed += 1
-        except Exception:
-            continue
-    return {"success": True, "synced_events": processed}
+    """Sincroniza telemetría encolada offline en el dispositivo móvil de forma idempotente."""
+    try:
+        return mobile_study_service.sync_batch_events(
+            db=db,
+            participant_id=data.participant_id,
+            events=data.events
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post("/study/satisfaction")

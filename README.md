@@ -103,7 +103,7 @@ El inicio de sesión opera como un mecanismo continuo de doble factor sin fricci
    * El servicio backend extrae las 100 features deterministas y calcula la probabilidad calibrada $S = P(\text{legítimo} \mid \vec{x}) \in [0.0, 1.0]$, además de la distancia de deriva $D(\vec{x})$.
    * **ALLOW ($S \ge \theta_{high}$)**: Acceso concedido instantáneo. Se genera el token de sesión JWT y la muestra legítima pasa al pool de candidatos para la adaptación continua.
    * **CHALLENGE ($\theta_{low} \le S < \theta_{high}$)**: Si el usuario presenta una variación leve de cadencia (fatiga o prisa moderada), se despliega de inmediato el modal **2FA TOTP**. Al ingresar el código temporal válido, se concede el acceso sin bloquear al usuario.
-   * **REJECT ($S < \theta_{low}$)**: Acceso denegado de inmediato por discrepancia biométrica (posible suplantador). 
+   * **REJECT ($S < \theta_{low}$)**: Acceso denegado de inmediato por discrepancia biométrica (posible suplantador).
 4. **Defensa contra Fuerza Bruta (*Lockout*)**:
    * Si se acumulan intentos fallidos consecutivos, el sistema impone un bloqueo temporal con cuenta regresiva visual en tiempo real en la interfaz (`retry-after`).
 5. **Redirección por Rol**:
@@ -145,7 +145,7 @@ El motor biométrico convierte cada frase ingresada en un vector determinista de
 ### 🛡️ 4.3 Motor de Decisión Tri-Zona Basado en Riesgo
 Cada autenticación evalúa la probabilidad calibrada $S = P(\text{legítimo} \mid \vec{x}) \in [0.0, 1.0]$ frente a umbrales reconfigurables $(\theta_{low}, \theta_{high})$:
 
-$$\text{Decisión}(S) = \begin{cases} 
+$$\text{Decisión}(S) = \begin{cases}
 \mathbf{ALLOW} \quad (\text{Acceso Directo}) & \text{si } S \ge \theta_{high} \quad (\text{ej. } \ge 0.75) \\
 \mathbf{CHALLENGE} \quad (\text{Desafío 2FA / TOTP}) & \text{si } \theta_{low} \le S < \theta_{high} \quad (\text{ej. } [0.45, 0.75)) \\
 \mathbf{REJECT} \quad (\text{Bloqueo Inmediato}) & \text{si } S < \theta_{low} \quad (\text{ej. } < 0.45)
@@ -228,6 +228,8 @@ docker compose up --build
 
 * **Frontend Web**: [http://localhost:5173](http://localhost:5173) (o `http://localhost` en modo producción)
 * **API Backend & Swagger**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+Para desplegar el backend en Render con PostgreSQL en Neon, consulta la [guía de despliegue](docs/DEPLOY_RENDER_NEON.md). La plantilla `render.yaml` configura un disco persistente para los modelos entrenados; ese disco requiere un plan de Render con almacenamiento persistente y no está incluido en el plan Free.
 
 ---
 

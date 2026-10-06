@@ -304,9 +304,11 @@ class MobileStudyService:
         target_app: str = "WhatsApp",
         is_impostor_mode: bool = False,
         ground_truth: str = "LEGITIMATE",
-        device_posture: str = "ESTATICO"
+        device_posture: str = "ESTATICO",
+        client_event_id: Optional[str] = None,
+        captured_at: Optional[datetime] = None
     ) -> Dict[str, Any]:
-        """Evalúa un intento de desbloqueo (legítimo o impostor) contra Mt."""
+        """Evalúa un intento de desbloqueo (legítimo o impostor) contra Mt con soporte de idempotencia."""
         participant = db.query(MobileParticipant).filter(
             MobileParticipant.id == participant_id
         ).first()
@@ -314,44 +316,55 @@ class MobileStudyService:
         if not participant or not participant.is_enrolled or not participant.mt_profile:
             raise ValueError("Perfil biométrico no enrolado en este participante")
 
+        theta_accept = 0.70
+
+        # Idempotencia: Si ya se evaluó y registró este client_event_id, no duplicar en BD
+        if client_event_id:
+            existing = db.query(MobileStudySample).filter(
+                MobileStudySample.client_event_id == str(client_event_id)
+            ).first()
+            if existing:
+                return {
+                    "success": True,
+                    "is_accepted": existing.is_accepted,
+                    "similarity_score": existing.similarity_score,
+                    "threshold": theta_accept,
+                    "decision": "DESBLOQUEADO" if existing.is_accepted else "ACCESO_DENEGADO",
+                    "ground_truth": existing.ground_truth,
+                    "target_app": existing.target_app,
+                    "drift": participant.current_drift,
+                    "stats": existing.features,
+                    "client_event_id": client_event_id,
+                    "is_duplicate": True
+                }
+
         mt = participant.mt_profile
         ht, lt, stats = self._extract_timing_vector(raw_events)
 
         # Distancia normalizada Mahalanobis/Z-score frente a Mt
-        centroid_ht = np.array(mt["centroid_ht"])
-        std_ht = np.array(mt["std_ht"])
-        centroid_lt = np.array(mt["centroid_lt"])
-        std_lt = np.array(mt["std_lt"])
+        centroid_ht = np.array(mt.get("centroid_ht", []))
+        std_ht = np.array(mt.get("std_ht", []))
+        centroid_lt = np.array(mt.get("centroid_lt", []))
+        std_lt = np.array(mt.get("std_lt", []))
 
         # Manejo de longitud
         min_ht_len = min(len(ht), len(centroid_ht))
         min_lt_len = min(len(lt), len(centroid_lt))
 
-        z_scores_ht = np.abs((np.array(ht[:min_ht_len]) - centroid_ht[:min_ht_len]) / std_ht[:min_ht_len])
-        z_scores_lt = np.abs((np.array(lt[:min_lt_len]) - centroid_lt[:min_lt_len]) / std_lt[:min_lt_len]) if min_lt_len > 0 else np.array([0.0])
+        z_scores_ht = np.abs((np.array(ht[:min_ht_len]) - centroid_ht[:min_ht_len]) / (std_ht[:min_ht_len] + 1e-4)) if min_ht_len > 0 else np.array([0.0])
+        z_scores_lt = np.abs((np.array(lt[:min_lt_len]) - centroid_lt[:min_lt_len]) / (std_lt[:min_lt_len] + 1e-4)) if min_lt_len > 0 else np.array([0.0])
 
         combined_z = float(np.mean(np.concatenate([z_scores_ht, z_scores_lt])))
 
         # Convertir Z-score a puntaje de similitud (0.0 a 1.0)
-        # z = 0 -> sim = 1.0; z = 2.0 -> sim ~ 0.60; z = 3.5 -> sim ~ 0.25
         similarity_score = round(max(0.05, min(0.99, math.exp(-combined_z / 3.0))), 3)
 
-        # Si estamos en modo desafío impostor explícito y la ground truth no es legítima,
-        # forzamos o etiquetamos según el experimento
         if is_impostor_mode or ground_truth != "LEGITIMATE":
             actual_gt = ground_truth if ground_truth != "LEGITIMATE" else "IMPOSTOR_KNOWN_CREDENTIAL"
         else:
             actual_gt = "LEGITIMATE"
 
-        # Umbrales
-        theta_accept = 0.70
         is_accepted = bool(similarity_score >= theta_accept)
-
-        # Si es un impostor con similitud baja, el sistema lo bloquea con éxito
-        if actual_gt != "LEGITIMATE":
-            # Si el sistema lo acepta siendo impostor, es una falsa aceptación (FAR)
-            # Si lo rechaza, es bloqueo exitoso
-            pass
 
         # Adaptación en caliente si es legítimo y score alto
         if actual_gt == "LEGITIMATE" and is_accepted and similarity_score >= 0.80:
@@ -364,13 +377,15 @@ class MobileStudyService:
                 mt["centroid_lt"] = [round(x, 2) for x in new_lt.tolist()]
 
             # Calcular deriva respecto a M0
-            m0_ht = np.array(participant.m0_profile["centroid_ht"][:min_ht_len])
+            m0_profile = participant.m0_profile or {}
+            m0_ht = np.array(m0_profile.get("centroid_ht", [])[:min_ht_len]) if m0_profile.get("centroid_ht") else new_ht
             drift_val = float(np.linalg.norm(new_ht - m0_ht) / (np.linalg.norm(m0_ht) + 1e-5))
             participant.current_drift = round(drift_val, 4)
             participant.mt_profile = mt
 
         # Registrar intento en base de datos para la telemetría del estudio
         sample = MobileStudySample(
+            client_event_id=str(client_event_id) if client_event_id else None,
             participant_id=participant_id,
             sample_type="AUTH_APPLOCKER" if target_app != "SYSTEM_LOCK" else "AUTH_SYSTEM",
             repetition_index=None,
@@ -383,7 +398,8 @@ class MobileStudyService:
             is_accepted=is_accepted,
             ground_truth=actual_gt,
             target_app=target_app,
-            device_posture=device_posture
+            device_posture=device_posture,
+            created_at=captured_at or datetime.utcnow()
         )
         db.add(sample)
         db.commit()
@@ -397,7 +413,136 @@ class MobileStudyService:
             "ground_truth": actual_gt,
             "target_app": target_app,
             "drift": participant.current_drift,
-            "stats": stats
+            "stats": stats,
+            "client_event_id": client_event_id
+        }
+
+    def sync_batch_events(
+        self,
+        db: Session,
+        participant_id: int,
+        events: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Sincroniza de forma idempotente y atómica un lote de actividades encoladas offline."""
+        participant = db.query(MobileParticipant).filter(
+            MobileParticipant.id == participant_id
+        ).first()
+
+        if not participant:
+            raise ValueError("Participante no encontrado")
+
+        synced_ids = []
+        duplicate_ids = []
+        failed_events = []
+
+        for item in events:
+            client_id = item.get("client_event_id") or item.get("id")
+            if not client_id:
+                client_id = f"gen-{secrets.token_hex(8)}"
+
+            client_id_str = str(client_id)
+
+            # 1. Comprobar idempotencia: si ya existe en BD, registrar como confirmado sin duplicar
+            existing = db.query(MobileStudySample).filter(
+                MobileStudySample.client_event_id == client_id_str
+            ).first()
+            if existing:
+                duplicate_ids.append(client_id_str)
+                synced_ids.append(client_id_str)
+                continue
+
+            # 2. Respetar fecha y hora original de captura en el teléfono
+            captured_at_str = item.get("captured_at")
+            captured_dt = datetime.utcnow()
+            if captured_at_str:
+                try:
+                    if isinstance(captured_at_str, (int, float)):
+                        captured_dt = datetime.utcfromtimestamp(captured_at_str / 1000.0)
+                    else:
+                        clean_iso = str(captured_at_str).replace("Z", "+00:00")
+                        captured_dt = datetime.fromisoformat(clean_iso).replace(tzinfo=None)
+                except Exception:
+                    captured_dt = datetime.utcnow()
+
+            activity_type = item.get("activity_type") or item.get("sample_type", "AUTH_APPLOCKER")
+            payload = item.get("payload") or item
+
+            try:
+                if activity_type == "ENROLLMENT_30":
+                    phrase = payload.get("phrase", participant.enrollment_phrase or "seguridad unt 2026")
+                    repetitions = payload.get("repetitions", [])
+                    if repetitions:
+                        self.enroll_30_repetitions(
+                            db=db,
+                            participant_id=participant_id,
+                            phrase=phrase,
+                            repetitions=repetitions
+                        )
+                        first_sample = db.query(MobileStudySample).filter(
+                            MobileStudySample.participant_id == participant_id,
+                            MobileStudySample.sample_type == "ENROLLMENT_30"
+                        ).first()
+                        if first_sample:
+                            first_sample.client_event_id = client_id_str
+                            db.commit()
+                        synced_ids.append(client_id_str)
+                elif activity_type == "SATISFACTION":
+                    score = int(payload.get("score", 5))
+                    comment = payload.get("comment")
+                    self.record_satisfaction(db, participant_id, score, comment)
+                    synced_ids.append(client_id_str)
+                else:
+                    raw_events = payload.get("raw_events", [])
+                    phrase_typed = payload.get("phrase_typed", payload.get("phrase", ""))
+                    target_app = payload.get("target_app", "APP_LOCKER")
+                    ground_truth = payload.get("ground_truth", "LEGITIMATE")
+                    is_impostor = bool(payload.get("is_impostor_mode", False))
+                    posture = payload.get("device_posture", "ESTATICO")
+
+                    ht, lt, stats = self._extract_timing_vector(raw_events)
+
+                    similarity = 0.85
+                    is_acc = True
+                    if participant.is_enrolled and participant.mt_profile:
+                        mt = participant.mt_profile
+                        centroid_ht = np.array(mt["centroid_ht"])
+                        std_ht = np.array(mt["std_ht"])
+                        min_ht = min(len(ht), len(centroid_ht))
+                        if min_ht > 0:
+                            z = float(np.mean(np.abs((np.array(ht[:min_ht]) - centroid_ht[:min_ht]) / std_ht[:min_ht])))
+                            similarity = round(max(0.05, min(0.99, math.exp(-z / 3.0))), 3)
+                            is_acc = bool(similarity >= 0.70)
+
+                    sample = MobileStudySample(
+                        client_event_id=client_id_str,
+                        participant_id=participant_id,
+                        sample_type=activity_type if activity_type in ["AUTH_SYSTEM", "AUTH_APPLOCKER", "PRACTICE_SAMPLE"] else "AUTH_APPLOCKER",
+                        phrase=phrase_typed,
+                        raw_timestamps=raw_events,
+                        hold_times=ht,
+                        latencies=lt,
+                        features=stats,
+                        similarity_score=similarity,
+                        is_accepted=is_acc,
+                        ground_truth=ground_truth,
+                        target_app=target_app,
+                        device_posture=posture,
+                        created_at=captured_dt
+                    )
+                    db.add(sample)
+                    db.commit()
+                    synced_ids.append(client_id_str)
+            except Exception as err:
+                db.rollback()
+                failed_events.append({"client_event_id": client_id_str, "error": str(err)})
+
+        return {
+            "success": True,
+            "synced_event_ids": synced_ids,
+            "synced_count": len(synced_ids),
+            "duplicates_count": len(duplicate_ids),
+            "failed_count": len(failed_events),
+            "failed_events": failed_events
         }
 
     def get_observatory_overview(self, db: Session) -> Dict[str, Any]:

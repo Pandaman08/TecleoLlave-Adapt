@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Shield, ShieldCheck, ShieldAlert, KeyRound, Smartphone, Mail,
   CheckCircle2, AlertTriangle, Lock, Unlock, Moon, Sun,
-  LogOut, RefreshCw, Sparkles, ChevronRight, Edit3, X
+  LogOut, RefreshCw, Sparkles, ChevronRight, Edit3, X, Server
 } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
-import api from '../../services/api';
+import api, { getBaseUrl, setCustomBaseUrl } from '../../services/api';
+import offlineSyncService from '../../services/offlineSyncService';
 import {
   isNativeAndroid,
   getInstalledApps,
@@ -30,6 +31,8 @@ import SettingsTab from '../../components/mobile/SettingsTab';
 import GuidedEnrollmentModal from '../../components/mobile/GuidedEnrollmentModal';
 import VerificationChallengeModal from '../../components/mobile/VerificationChallengeModal';
 import DeviceLockSetupModal from '../../components/mobile/DeviceLockSetupModal';
+import ServerConfigModal from '../../components/mobile/ServerConfigModal';
+import SyncStatusBar from '../../components/mobile/SyncStatusBar';
 
 export default function MobileAppContainer() {
   // ---------------------------------------------------------------------------
@@ -181,6 +184,17 @@ export default function MobileAppContainer() {
   const [showDeviceLockModal, setShowDeviceLockModal] = useState(false);
   const [showChangePhraseModal, setShowChangePhraseModal] = useState(false);
   const [newPhraseInput, setNewPhraseInput] = useState('');
+  const [showServerConfigModal, setShowServerConfigModal] = useState(false);
+  const [currentServerUrl, setCurrentServerUrl] = useState(() => getBaseUrl());
+
+  const handleSaveServerUrl = (newUrl) => {
+    setCustomBaseUrl(newUrl);
+    setCurrentServerUrl(getBaseUrl());
+    setShowServerConfigModal(false);
+    offlineSyncService.checkServerHealth().then((online) => {
+      if (online) offlineSyncService.syncQueue();
+    });
+  };
 
   // Estado de bloqueo maestro de TECLEOLLAVE: si ya está calibrada la frase, inicia bloqueada
   const [isAppMasterUnlocked, setIsAppMasterUnlocked] = useState(false);
@@ -340,7 +354,11 @@ export default function MobileAppContainer() {
       await api.post('/mobile/auth/request-otp', { email: cleanEmail });
       setIsOtpStep(true);
     } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Error al conectar con el servidor.');
+      if (!err.response) {
+        setErrorMsg('El servidor no está disponible. La creación de cuenta y el envío de códigos requieren conexión activa con el servidor central. Por favor verifica que tu laptop/túnel esté encendido o configura la URL en el ícono de servidor.');
+      } else {
+        setErrorMsg(err.response?.data?.detail || 'Error al conectar con el servidor.');
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -379,8 +397,17 @@ export default function MobileAppContainer() {
       }
       setIsOtpStep(false);
       setActiveTab('inicio');
+
+      // Al iniciar sesión online, sincronizar automáticamente actividades pendientes si existen
+      setTimeout(() => {
+        offlineSyncService.updateStats().then(() => offlineSyncService.syncQueue());
+      }, 500);
     } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Código incorrecto o expirado.');
+      if (!err.response) {
+        setErrorMsg('El servidor no respondió. La autenticación y registro de cuenta requieren conexión en línea con el servidor central.');
+      } else {
+        setErrorMsg(err.response?.data?.detail || 'Código incorrecto o expirado.');
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -406,6 +433,7 @@ export default function MobileAppContainer() {
     setEmail('');
     setOtpCode(['', '', '', '', '', '']);
     setActiveTab('inicio');
+    offlineSyncService.updateStats();
   };
 
   // ---------------------------------------------------------------------------
@@ -511,6 +539,15 @@ export default function MobileAppContainer() {
 
           <button
             type="button"
+            onClick={() => setShowServerConfigModal(true)}
+            className="tl-icon-btn"
+            title="Configurar servidor API / Túnel"
+          >
+            <Server size={17} />
+          </button>
+
+          <button
+            type="button"
             onClick={toggleTheme}
             className="tl-icon-btn"
             title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
@@ -524,6 +561,9 @@ export default function MobileAppContainer() {
       {/* CUERPO PRINCIPAL */}
       {/* =================================================================== */}
       <main className="tl-app-body">
+        {/* Barra Reactiva de Estado de Conexión y Cola de Sincronización */}
+        <SyncStatusBar onOpenServerConfig={() => setShowServerConfigModal(true)} />
+
         {/* CASO A: USUARIO NO AUTENTICADO (LOGIN / REGISTRO / OTP) */}
         {!participantData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '0.5rem' }}>
@@ -835,6 +875,8 @@ export default function MobileAppContainer() {
                 onOpenUsageSettings={openUsageSettings}
                 onOpenOverlaySettings={openOverlaySettings}
                 onOpenSecuritySettings={openSecuritySettings}
+                onOpenServerConfig={() => setShowServerConfigModal(true)}
+                currentServerUrl={currentServerUrl}
                 onLogout={handleLogout}
               />
             )}
@@ -940,6 +982,15 @@ export default function MobileAppContainer() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* 7. Modal de Configuración de Servidor / Túnel */}
+      {showServerConfigModal && (
+        <ServerConfigModal
+          currentUrl={currentServerUrl}
+          onSaveUrl={handleSaveServerUrl}
+          onClose={() => setShowServerConfigModal(false)}
+        />
       )}
     </div>
   );

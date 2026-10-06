@@ -10,8 +10,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from app.models import (
-    User, TypingSample, TypingFeature, AuthAttempt, 
-    ModelVersion, CandidateModel, AdaptationEvent, 
+    User, TypingSample, TypingFeature, AuthAttempt,
+    ModelVersion, CandidateModel, AdaptationEvent,
     AdaptationConfig, AdaptationAction, CandidateStatus,
     AuthDecision, QuarantinedSample
 )
@@ -39,10 +39,10 @@ class AdaptiveService:
     5. Versioned model promotion or rejection with full audit logging.
     6. Rollback support for administrative recovery.
     """
-    
+
     def __init__(self):
         pass
-    
+
     def _get_config(self, db: Session, user_id: int) -> AdaptationConfig:
         """Get user's adaptation config, create default if not exists."""
         config = db.query(AdaptationConfig).filter(
@@ -54,14 +54,14 @@ class AdaptiveService:
             db.commit()
             db.refresh(config)
         return config
-    
+
     def _get_candidate_pool(self, db: Session, user_id: int, window_size: int) -> List[TypingSample]:
         """Get recent ALLOW samples not yet used for candidate training, excluding quarantined samples."""
         # Get samples already used in previous candidates
         subquery = db.query(CandidateModel.source_samples).filter(
             CandidateModel.user_id == user_id
         ).all()
-        
+
         used_sample_ids = set()
         for (samples_json,) in subquery:
             if samples_json:
@@ -74,7 +74,7 @@ class AdaptiveService:
         quarantined_ids = set([qid for (qid,) in quarantined_subquery if qid])
 
         exclude_ids = used_sample_ids.union(quarantined_ids)
-        
+
         # Query recent ALLOW auth samples
         pool = db.query(TypingSample).join(AuthAttempt).filter(
             TypingSample.user_id == user_id,
@@ -82,13 +82,13 @@ class AdaptiveService:
             AuthAttempt.decision == AuthDecision.allow,
             TypingSample.id.notin_(exclude_ids) if exclude_ids else True
         ).order_by(TypingSample.created_at.desc()).limit(window_size).all()
-        
+
         return list(reversed(pool))  # Oldest first
-    
+
     def _create_candidate_model(
-        self, 
-        db: Session, 
-        user_id: int, 
+        self,
+        db: Session,
+        user_id: int,
         sample_ids: List[int],
         parent_version_id: int
     ) -> CandidateModel:
@@ -105,7 +105,7 @@ class AdaptiveService:
         db.commit()
         db.refresh(candidate)
         return candidate
-    
+
     def _log_event(
         self,
         db: Session,
@@ -205,9 +205,9 @@ class AdaptiveService:
         return True, "Trusted"
 
     def process_auth_result(
-        self, 
-        db: Session, 
-        user_id: int, 
+        self,
+        db: Session,
+        user_id: int,
         auth_attempt_id: int,
         decision: str,
         sample_id: int
@@ -221,7 +221,7 @@ class AdaptiveService:
         sample = db.query(TypingSample).filter(TypingSample.id == sample_id).first() if sample_id else None
         auth_attempt = db.query(AuthAttempt).filter(AuthAttempt.id == auth_attempt_id).first() if auth_attempt_id else None
         score = auth_attempt.score if auth_attempt else 0.0
-        
+
         if decision in ['allow', 'accept']:
             # Multi-layer trust verification before adding to adaptation pool
             is_trusted, trust_reason = self.validate_sample_trust(db, user_id, sample, auth_attempt, score)
@@ -249,7 +249,7 @@ class AdaptiveService:
 
             # Check if we have enough samples for candidate
             pool = self._get_candidate_pool(db, user_id, config.candidate_window_size)
-            
+
             if len(pool) >= config.min_candidate_samples:
                 return self._train_and_evaluate_candidate(db, user_id, config, pool, auth_attempt_id)
             else:
@@ -262,7 +262,7 @@ class AdaptiveService:
                     action="sample_enqueued",
                     message=f"Muestra legítima agregada al pool de adaptación ({len(pool)}/{config.min_candidate_samples})"
                 )
-        
+
         elif decision == 'challenge':
             self._log_event(
                 db, user_id, AdaptationAction.challenge_requested,
@@ -270,7 +270,7 @@ class AdaptiveService:
                 reason="Biometric score in challenge range"
             )
             return AdaptationResult(action="challenge_requested")
-        
+
         elif decision == 'reject':
             self._log_event(
                 db, user_id, AdaptationAction.candidate_rejected,
@@ -278,9 +278,9 @@ class AdaptiveService:
                 reason="Biometric score below reject threshold"
             )
             return AdaptationResult(action="rejected")
-        
+
         return AdaptationResult(action="unknown")
-    
+
     def _train_and_evaluate_candidate(
         self,
         db: Session,
@@ -290,26 +290,26 @@ class AdaptiveService:
         auth_attempt_id: int
     ) -> AdaptationResult:
         """Train candidate model and evaluate against current model."""
-        
+
         # Get current active model
         current_model = db.query(ModelVersion).filter(
             ModelVersion.user_id == user_id,
             ModelVersion.is_active == True
         ).first()
-        
+
         if not current_model:
             return AdaptationResult(
                 action="error",
                 message="No active model to compare against"
             )
-        
+
         sample_ids = [s.id for s in pool]
-        
+
         # Create candidate record
         candidate = self._create_candidate_model(
             db, user_id, sample_ids, current_model.id
         )
-        
+
         # Log candidate creation
         self._log_event(
             db, user_id, AdaptationAction.candidate_created,
@@ -318,26 +318,29 @@ class AdaptiveService:
             old_model_version_id=current_model.id,
             reason=f"Candidate trained with {len(pool)} samples"
         )
-        
+
         # Update candidate status to evaluating
         candidate.status = CandidateStatus.evaluating
         db.commit()
-        
+
         self._log_event(
             db, user_id, AdaptationAction.candidate_evaluating,
             candidate_model_id=candidate.id,
             old_model_version_id=current_model.id
         )
-        
+
         try:
             # Train candidate model with pool samples + recent original training data
             # For MVP: retrain with all enrollment samples + pool
             # In future: use sliding window
             import os
-            models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+            models_dir = os.getenv(
+                "MODELS_DIR",
+                os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+            )
             os.makedirs(models_dir, exist_ok=True)
             model_output_path = os.path.join(models_dir, f"user_{user_id}_candidate_{candidate.id}")
-            
+
             # Train the candidate with the historical enrollment data PLUS the
             # current candidate pool (the new ALLOW samples representing the
             # user's recent/drifted typing behavior). This is what actually
@@ -348,28 +351,28 @@ class AdaptiveService:
                 model_output_path=model_output_path,
                 extra_sample_ids=sample_ids
             )
-            
+
             # Update candidate with metrics
             candidate.model_path = model_output_path + '.joblib'
             candidate.metrics = metrics
             candidate.status = CandidateStatus.evaluating
             db.commit()
-            
+
             # Evaluate candidate vs current model using formal hold-out decision rule
             accepted, promo_reason, promo_details = should_promote_model(
                 current_metrics=current_model.metrics,
                 candidate_metrics=metrics,
                 epsilon=config.max_frr_degradation
             )
-            
+
             # Update candidate with evaluation details
             candidate.evaluation_details = promo_details
             candidate.resolved_at = datetime.utcnow()
-            
+
             if accepted:
                 # Activate new model
                 return self._accept_candidate(
-                    db, user_id, candidate, current_model, 
+                    db, user_id, candidate, current_model,
                     auth_attempt_id, promo_details, promo_reason
                 )
             else:
@@ -378,7 +381,7 @@ class AdaptiveService:
                     db, user_id, candidate, current_model,
                     auth_attempt_id, promo_details, promo_reason
                 )
-                
+
         except Exception as e:
             candidate.status = CandidateStatus.rejected
             db.commit()
@@ -393,7 +396,7 @@ class AdaptiveService:
                 action="candidate_rejected",
                 message=f"Candidate training failed: {str(e)}"
             )
-    
+
     def _accept_candidate(
         self,
         db: Session,
@@ -405,11 +408,11 @@ class AdaptiveService:
         reason: str = "Candidate accepted: metrics improved or maintained"
     ) -> AdaptationResult:
         """Accept candidate model as new active model with explicit versioning and audit."""
-        
+
         # Deactivate old model and record predecessor status
         old_model.is_active = False
         old_model.status = "PROMOTED"
-        
+
         existing_count = db.query(ModelVersion).filter(ModelVersion.user_id == user_id).count()
         new_version_num = existing_count + 1
 
@@ -437,14 +440,14 @@ class AdaptiveService:
         )
         db.add(new_model)
         db.flush()
-        
+
         # Update candidate
         candidate.status = CandidateStatus.accepted
         candidate.new_model_version_id = new_model.id
         candidate.resolved_at = datetime.utcnow()
-        
+
         db.commit()
-        
+
         # Log acceptance with full audit
         self._log_event(
             db, user_id, AdaptationAction.candidate_accepted,
@@ -456,14 +459,14 @@ class AdaptiveService:
             metrics_comparison=comparison,
             decision="PROMOTE"
         )
-        
+
         return AdaptationResult(
             action="candidate_accepted",
             candidate_model_id=candidate.id,
             message=f"Model adapted: M{new_model.version or new_model.id} activated ({reason})",
             metrics_comparison=comparison
         )
-    
+
     def _reject_candidate(
         self,
         db: Session,
@@ -475,11 +478,11 @@ class AdaptiveService:
         reason: str = "Candidate rejected: did not meet security/usability criteria"
     ) -> AdaptationResult:
         """Reject candidate model and maintain active model intact."""
-        
+
         candidate.status = CandidateStatus.rejected
         candidate.resolved_at = datetime.utcnow()
         db.commit()
-        
+
         self._log_event(
             db, user_id, AdaptationAction.candidate_rejected,
             auth_attempt_id=auth_attempt_id,
@@ -489,7 +492,7 @@ class AdaptiveService:
             metrics_comparison=comparison,
             decision="REJECT"
         )
-        
+
         return AdaptationResult(
             action="candidate_rejected",
             candidate_model_id=candidate.id,
@@ -633,22 +636,22 @@ class AdaptiveService:
             "active_model_retained": f"M{current_model.version or current_model.id}",
             "details": comparison
         }
-    
+
     def get_candidate_status(self, db: Session, user_id: int) -> Dict[str, Any]:
         """Get current candidate pool status."""
         config = self._get_config(db, user_id)
         pool = self._get_candidate_pool(db, user_id, config.candidate_window_size)
-        
+
         current_model = db.query(ModelVersion).filter(
             ModelVersion.user_id == user_id,
             ModelVersion.is_active == True
         ).first()
-        
+
         pending_candidate = db.query(CandidateModel).filter(
             CandidateModel.user_id == user_id,
             CandidateModel.status.in_([CandidateStatus.training, CandidateStatus.evaluating])
         ).first()
-        
+
         return {
             'pool_size': len(pool),
             'min_required': config.min_candidate_samples,
@@ -661,35 +664,35 @@ class AdaptiveService:
                 'created_at': pending_candidate.created_at.isoformat()
             } if pending_candidate else None
         }
-    
+
     def force_evaluation(self, db: Session, user_id: int) -> AdaptationResult:
         """Force evaluation of candidate pool."""
         config = self._get_config(db, user_id)
         pool = self._get_candidate_pool(db, user_id, config.candidate_window_size)
-        
+
         if len(pool) < config.min_candidate_samples:
             return AdaptationResult(
                 action="error",
                 message=f"Insufficient samples: {len(pool)}/{config.min_candidate_samples}"
             )
-        
+
         # Get latest auth attempt for logging
         latest_auth = db.query(AuthAttempt).filter(
             AuthAttempt.user_id == user_id
         ).order_by(AuthAttempt.created_at.desc()).first()
-        
+
         auth_id = latest_auth.id if latest_auth else None
-        
+
         return self._train_and_evaluate_candidate(db, user_id, config, pool, auth_id)
-    
+
     def update_config(self, db: Session, user_id: int, updates: Dict[str, Any]) -> AdaptationConfig:
         """Update user's adaptation configuration."""
         config = self._get_config(db, user_id)
-        
+
         for key, value in updates.items():
             if hasattr(config, key):
                 setattr(config, key, value)
-        
+
         config.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(config)

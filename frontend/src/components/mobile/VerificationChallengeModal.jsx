@@ -3,7 +3,9 @@ import {
   ShieldCheck, ShieldAlert, Lock, Unlock, X, RefreshCw,
   Sparkles, CheckCircle2, AlertTriangle, UserX, ArrowRight, Clock
 } from 'lucide-react';
-import api from '../../services/api';
+import api, { getBaseUrl } from '../../services/api';
+import { enqueueOfflineActivity, generateUUID } from '../../services/offlineDb';
+import offlineSyncService from '../../services/offlineSyncService';
 
 export default function VerificationChallengeModal({
   targetName = 'WhatsApp',
@@ -100,9 +102,13 @@ export default function VerificationChallengeModal({
     let isAuth = false;
     let scoreNum = 0;
     let noticeMsg = '';
+    const clientEventId = generateUUID();
+    const capturedAt = new Date().toISOString();
 
     try {
       const res = await api.post('/mobile/study/evaluate-auth', {
+        client_event_id: clientEventId,
+        captured_at: capturedAt,
         participant_id: participant?.id || 1,
         phrase_typed: typedText,
         raw_events: capturedEvents,
@@ -115,11 +121,34 @@ export default function VerificationChallengeModal({
       isAuth = Boolean(res.data?.authorized);
       scoreNum = Math.round((res.data?.score || 0.88) * 100);
       noticeMsg = res.data?.message || (isAuth ? 'Identidad confirmada por dinámica de tecleo' : 'Ritmo de escritura diferente al perfil del dueño');
-    } catch {
-      // Fallback local robusto para pruebas
-      isAuth = !isImpostorMode;
-      scoreNum = isAuth ? 94 : 36;
-      noticeMsg = isAuth ? 'Identidad confirmada (Modo offline)' : 'Intruso bloqueado: tiempos dwell/flight no coincidentes';
+    } catch (err) {
+      // Regla estricta: NO declarar autenticación biométrica exitosa si el servidor no evaluó la muestra
+      isAuth = false;
+      scoreNum = 0;
+      noticeMsg = 'Servidor no disponible. La verificación biométrica con modelo remoto requiere conexión activa. El intento fue registrado localmente en el teléfono.';
+
+      // Persistir la telemetría del intento en la cola segura IndexedDB con sus tiempos originales
+      try {
+        await enqueueOfflineActivity({
+          client_event_id: clientEventId,
+          server_origin: getBaseUrl(),
+          participant_id: participant?.id || 1,
+          activity_type: 'AUTH_ATTEMPT_TELEMETRY',
+          payload: {
+            participant_id: participant?.id || 1,
+            phrase_typed: typedText,
+            raw_events: capturedEvents,
+            target_app: targetName,
+            is_impostor_mode: isImpostorMode,
+            ground_truth: isImpostorMode ? 'IMPOSTOR' : 'LEGITIMATE',
+            device_posture: 'ESTATICO'
+          },
+          captured_at: capturedAt
+        });
+        offlineSyncService.updateStats();
+      } catch (dbErr) {
+        console.error('Error guardando intento en cola offline:', dbErr);
+      }
     } finally {
       setVerifying(false);
     }

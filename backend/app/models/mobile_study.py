@@ -44,6 +44,7 @@ class MobileStudySample(Base):
     __tablename__ = "mobile_study_samples"
 
     id = Column(Integer, primary_key=True, index=True)
+    client_event_id = Column(String(64), unique=True, index=True, nullable=True)
     participant_id = Column(Integer, ForeignKey("mobile_participants.id"), nullable=False)
     sample_type = Column(String(50), nullable=False)  # ENROLLMENT_30, AUTH_SYSTEM, AUTH_APPLOCKER, IMPOSTOR_CHALLENGE
     repetition_index = Column(Integer, nullable=True)  # 1..30 if enrollment

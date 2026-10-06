@@ -9,7 +9,7 @@ if not hasattr(ast, 'Num'):
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.database import init_db
+from app.database import engine, init_db
 from app.api.health import router as health_router
 from app.api.typing import router as typing_router
 from app.api.auth import router as auth_router
@@ -65,6 +65,9 @@ def root_endpoint():
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    if engine.dialect.name != "sqlite":
+        return
+
     try:
         migrate_security_policy()
     except Exception as e:

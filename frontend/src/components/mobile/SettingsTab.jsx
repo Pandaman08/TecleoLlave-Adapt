@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Shield, Moon, Sun,
-  LogOut, ExternalLink, CheckCircle2
+  LogOut, ExternalLink, CheckCircle2, Server
 } from 'lucide-react';
 
 export default function SettingsTab({
@@ -12,6 +12,8 @@ export default function SettingsTab({
   onOpenUsageSettings,
   onOpenOverlaySettings,
   onOpenSecuritySettings,
+  onOpenServerConfig,
+  currentServerUrl,
   onLogout
 }) {
   return (
@@ -201,6 +203,35 @@ export default function SettingsTab({
               style={{ padding: '4px 10px', fontSize: '0.72rem' }}
             >
               Cambiar
+            </button>
+          </div>
+
+          {/* Conexión Backend / Túnel */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.65rem 0.75rem',
+            borderRadius: '10px',
+            background: 'var(--tl-bg-surface-elevated)',
+            border: '1px solid var(--tl-border)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1, marginRight: '0.5rem' }}>
+              <Server size={16} color="var(--tl-accent)" style={{ flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--tl-text-primary)' }}>Servidor y Túnel</div>
+                <div style={{ fontSize: '0.67rem', color: 'var(--tl-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {currentServerUrl || 'Predeterminado'}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenServerConfig}
+              className="tl-btn-outline"
+              style={{ padding: '4px 10px', fontSize: '0.72rem', flexShrink: 0 }}
+            >
+              Configurar
             </button>
           </div>
         </div>

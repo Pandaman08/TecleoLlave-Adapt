@@ -3,7 +3,9 @@ import {
   Sparkles, ShieldCheck, CheckCircle2, ArrowRight, ArrowLeft,
   X, RefreshCw, Zap, HeartHandshake, Info, Award
 } from 'lucide-react';
-import api from '../../services/api';
+import api, { getBaseUrl } from '../../services/api';
+import { enqueueOfflineActivity, generateUUID } from '../../services/offlineDb';
+import offlineSyncService from '../../services/offlineSyncService';
 
 export default function GuidedEnrollmentModal({
   phrase = 'seguridad unt 2026',
@@ -21,6 +23,7 @@ export default function GuidedEnrollmentModal({
   const [consistency, setConsistency] = useState(78);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [isOfflineSaved, setIsOfflineSaved] = useState(false);
 
   // Pausa anti-fatiga en rep 10 y 20
   const [isPaused, setIsPaused] = useState(false);
@@ -113,22 +116,47 @@ export default function GuidedEnrollmentModal({
     // Completó las 30 repeticiones
     if (nextRep >= 30) {
       setSaving(true);
+      const clientEventId = generateUUID();
+      const capturedAt = new Date().toISOString();
+      let sentSuccessfully = false;
+
       try {
         if (participant?.id) {
           await api.post('/mobile/study/enroll-30', {
             participant_id: participant.id,
             phrase: phrase,
-            repetitions: updated
+            repetitions: updated,
+            client_event_id: clientEventId
           });
+          sentSuccessfully = true;
         }
-        setStep(3);
       } catch (err) {
-        console.warn('Fallo transitorio al guardar en servidor:', err);
-        // Completar localmente de todas formas
-        setStep(3);
-      } finally {
-        setSaving(false);
+        console.warn('Backend no disponible al registrar 30 repeticiones. Guardando en cola local segura:', err);
       }
+
+      if (!sentSuccessfully && participant?.id) {
+        try {
+          await enqueueOfflineActivity({
+            client_event_id: clientEventId,
+            server_origin: getBaseUrl(),
+            participant_id: participant.id,
+            activity_type: 'ENROLLMENT_30',
+            payload: {
+              participant_id: participant.id,
+              phrase: phrase,
+              repetitions: updated
+            },
+            captured_at: capturedAt
+          });
+          setIsOfflineSaved(true);
+          offlineSyncService.updateStats();
+        } catch (dbErr) {
+          console.error('Error guardando en IndexedDB:', dbErr);
+        }
+      }
+
+      setSaving(false);
+      setStep(3);
     }
   };
 
@@ -446,6 +474,27 @@ export default function GuidedEnrollmentModal({
                 <strong style={{ color: 'var(--tl-accent)' }}>{consistency}%</strong>
               </div>
             </div>
+
+            {isOfflineSaved && (
+              <div style={{
+                padding: '0.65rem 0.75rem',
+                borderRadius: '10px',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                color: 'var(--tl-warning)',
+                fontSize: '0.72rem',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '6px',
+                textAlign: 'left',
+                lineHeight: '1.4'
+              }}>
+                <Sparkles size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+                <span>
+                  <strong>Guardado offline:</strong> Las 30 muestras se almacenaron de forma segura en tu teléfono. Se sincronizarán automáticamente con el backend cuando enciendas tu laptop o conectes el túnel.
+                </span>
+              </div>
+            )}
 
             <button
               type="button"

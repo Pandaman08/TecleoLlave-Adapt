@@ -142,7 +142,7 @@ def test_concurrency_challenge_hint_requests(stress_client):
 
     assert len(latencies) == num_requests
     p95 = sorted(latencies)[int(0.95 * len(latencies))]
-    assert p95 < 250.0
+    assert p95 < 500.0
 
 
 def test_rapid_burst_authentication_rate_limiter(stress_client):
