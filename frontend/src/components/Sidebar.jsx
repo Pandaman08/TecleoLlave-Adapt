@@ -16,7 +16,8 @@ import {
   Sparkles,
   LogOut,
   ShieldAlert,
-  Users
+  Users,
+  Smartphone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -129,20 +130,27 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Quick Nav Links (Live Demo / Login / Register / Entrenamiento) */}
+      {/* Quick Nav Links (Observatorio / Mobile / Live Demo / Login) */}
       <div className="sidebar-footer">
-        {/* Enlace a Entrenamiento Continuo: solo visible para role === 'user' */}
-        {role === 'user' && (
-          <NavLink
-            to="/entrenamiento"
-            className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-            style={{ color: 'var(--brand-500)', fontWeight: 600 }}
-            title={isCollapsed ? 'Entrenar mi Perfil' : undefined}
-          >
-            <Sparkles size={18} strokeWidth={2} className="nav-icon" style={{ color: 'var(--brand-500)' }} />
-            {!isCollapsed && <span className="nav-label">Entrenar mi Perfil ✨</span>}
-          </NavLink>
-        )}
+        <NavLink
+          to="/admin/observatorio"
+          className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+          style={{ color: '#38bdf8', fontWeight: 600 }}
+          title={isCollapsed ? 'Observatorio Científico (Paper)' : undefined}
+        >
+          <Activity size={18} strokeWidth={2} className="nav-icon" style={{ color: '#38bdf8' }} />
+          {!isCollapsed && <span className="nav-label">Observatorio Paper 🔬</span>}
+        </NavLink>
+
+        <NavLink
+          to="/mobile"
+          className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+          style={{ color: '#34d399', fontWeight: 600 }}
+          title={isCollapsed ? 'App Locker Móvil (APK)' : undefined}
+        >
+          <Smartphone size={18} strokeWidth={2} className="nav-icon" style={{ color: '#34d399' }} />
+          {!isCollapsed && <span className="nav-label">App Locker Móvil 📱</span>}
+        </NavLink>
 
         <NavLink
           to="/live-demo"

@@ -1,0 +1,20 @@
+{
+  "appId": "pe.edu.unt.tecleollave",
+  "appName": "TecleoLlave Mobile",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#020617"
+    }
+  }
+}

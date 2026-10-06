@@ -290,17 +290,18 @@ export default function Login() {
               Demo en Vivo ⚡
             </NavLink>
             <NavLink
-              to="/register"
+              to="/mobile"
               className="aula-action-btn"
               style={{
                 fontSize: '0.8rem',
-                backgroundColor: 'var(--nav-btn-bg)',
-                borderColor: 'var(--nav-btn-border)',
-                color: 'var(--nav-link)',
+                backgroundColor: 'rgba(52, 211, 153, 0.12)',
+                borderColor: 'rgba(52, 211, 153, 0.3)',
+                color: '#34d399',
+                fontWeight: 600,
                 textDecoration: 'none'
               }}
             >
-              Crear Cuenta (Enrolamiento)
+              Simulador APK Móvil 📱
             </NavLink>
             <LanguageSelector variant="compact" />
             <button

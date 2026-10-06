@@ -8,6 +8,7 @@ from app.models.adaptation_event import AdaptationEvent, AdaptationAction
 from app.models.adaptation_config import AdaptationConfig
 from app.models.security_policy import SecurityPolicy
 from app.models.quarantined_sample import QuarantinedSample
+from app.models.mobile_study import MobileOtp, MobileParticipant, MobileStudySample
 
 __all__ = [
     "User",
@@ -25,4 +26,7 @@ __all__ = [
     "AdaptationConfig",
     "SecurityPolicy",
     "QuarantinedSample",
+    "MobileOtp",
+    "MobileParticipant",
+    "MobileStudySample",
 ]

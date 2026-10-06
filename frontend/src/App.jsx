@@ -2,108 +2,66 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import LiveDemo from './pages/LiveDemo';
-import TrainProfile from './pages/TrainProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
-// Pages del Aula Virtual
-import AulaDashboard from './pages/aula/AulaDashboard';
-import ActividadesEscritura from './pages/aula/ActividadesEscritura';
-import JuegoMario30 from './pages/aula/JuegoMario30';
-import JuegoAjedrez from './pages/aula/JuegoAjedrez';
-import PerfilEstudiante from './pages/aula/PerfilEstudiante';
+// Mobile App y Observatorio Científico
+import MobileAppContainer from './pages/mobile/MobileAppContainer';
+import ObservatorioWeb from './pages/admin/ObservatorioWeb';
 
-// Componente de Redirección Raíz Inteligente según Rol
+// Redirección inteligente de raíz: en APK móvil va directo a la app, en web solo a admin
 function RootRedirect() {
   const { token, role } = useAuth();
-  if (!token) return <Navigate to="/login" replace />;
-  if (role === 'admin') return <Navigate to="/admin" replace />;
-  return <Navigate to="/aula" replace />;
+  
+  // Detección de entorno móvil nativo (Capacitor APK)
+  const isCapacitorNative = (typeof window !== 'undefined' && Boolean(window.Capacitor?.isNativePlatform?.()));
+  if (isCapacitorNative) {
+    return <Navigate to="/mobile" replace />;
+  }
+
+  if (!token || role !== 'admin') return <Navigate to="/login" replace />;
+  return <Navigate to="/admin" replace />;
 }
 
 export default function App() {
   return (
     <Routes>
-      {/* Redirección inteligente de raíz */}
+      {/* Redirección raíz inteligente */}
       <Route path="/" element={<RootRedirect />} />
 
       {/* ========================================================= */}
-      {/* APLICACIÓN 1: AULA VIRTUAL (Estudiantes / Usuarios)       */}
+      {/* PLATAFORMA ADMINISTRATIVA E INVESTIGACIÓN (Solo Admin)    */}
       {/* ========================================================= */}
-      <Route
-        path="/aula"
-        element={
-          <ProtectedRoute allowedRoles={['user']}>
-            <AulaDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/aula/actividades"
-        element={
-          <ProtectedRoute allowedRoles={['user']}>
-            <ActividadesEscritura />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/aula/juegos"
-        element={
-          <ProtectedRoute allowedRoles={['user']}>
-            <JuegoMario30 />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/aula/juego-mario"
-        element={
-          <ProtectedRoute allowedRoles={['user']}>
-            <JuegoMario30 />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/aula/juego-ajedrez"
-        element={
-          <ProtectedRoute allowedRoles={['user']}>
-            <JuegoAjedrez />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/aula/perfil"
-        element={
-          <ProtectedRoute allowedRoles={['user']}>
-            <PerfilEstudiante />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/aula/entrenamiento"
-        element={
-          <ProtectedRoute allowedRoles={['user']}>
-            <TrainProfile />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Compatibilidad previa */}
-      <Route
-        path="/entrenamiento"
-        element={
-          <ProtectedRoute allowedRoles={['user']}>
-            <TrainProfile />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* ========================================================= */}
-      {/* APLICACIÓN 2: PANEL ADMINISTRATIVO (Investigación / Admin) */}
-      {/* ========================================================= */}
+      {/* La vista principal del Administrador es el Observatorio Científico del Estudio */}
       <Route
         path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <ObservatorioWeb />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/observatorio"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <ObservatorioWeb />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/observatorio"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <ObservatorioWeb />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Consola Técnica y Benchmarking Histórico */}
+      <Route
+        path="/admin/telemetria"
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Dashboard />
@@ -120,14 +78,24 @@ export default function App() {
       />
       <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
 
+
       {/* ========================================================= */}
-      {/* RUTAS PÚBLICAS Y SUSTENTACIÓN                             */}
+      {/* APP MÓVIL Y SUITE APPLOCKER (Participantes / APK Test)    */}
+      {/* ========================================================= */}
+      <Route path="/mobile" element={<MobileAppContainer />} />
+      <Route path="/mobile/*" element={<MobileAppContainer />} />
+      <Route path="/simulador" element={<Navigate to="/mobile" replace />} />
+      <Route path="/apk" element={<Navigate to="/mobile" replace />} />
+
+      {/* ========================================================= */}
+      {/* AUTENTICACIÓN ADMIN Y SUSTENTACIÓN                        */}
       {/* ========================================================= */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
       <Route path="/live-demo" element={<LiveDemo />} />
 
-      {/* Wildcard fallback */}
+      {/* Redirecciones fallback */}
+      <Route path="/aula/*" element={<Navigate to="/admin" replace />} />
+      <Route path="/entrenamiento" element={<Navigate to="/admin" replace />} />
       <Route path="*" element={<RootRedirect />} />
     </Routes>
   );
