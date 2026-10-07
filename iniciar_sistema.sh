@@ -15,8 +15,12 @@ echo "🚀 INICIANDO SISTEMA TECLEOLLAVE-ADAPT (BACKEND + NGROK)"
 echo "=========================================================="
 
 # 1. Comprobar entorno virtual de Python
-if [ ! -d "$VENV_DIR" ]; then
-    echo "❌ Error: No se encontró el entorno virtual en $VENV_DIR"
+if [ -d "$BACKEND_DIR/venv" ]; then
+    VENV_DIR="$BACKEND_DIR/venv"
+elif [ -d "$BACKEND_DIR/.venv" ]; then
+    VENV_DIR="$BACKEND_DIR/.venv"
+else
+    echo "❌ Error: No se encontró el entorno virtual en $BACKEND_DIR/venv ni en $BACKEND_DIR/.venv"
     exit 1
 fi
 
@@ -69,11 +73,23 @@ python -c "from app.database import init_db; init_db()"
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > /tmp/tecleollave_uvicorn.log 2>&1 &
 UVICORN_PID=$!
 
-# Esperar 2 segundos para asegurar arranque del backend
-sleep 2
-if ! kill -0 "$UVICORN_PID" 2>/dev/null; then
-    echo "❌ Error: Uvicorn no pudo iniciar. Revisa el log:"
+# Esperar hasta 6 segundos verificando que el backend responda en el puerto 8000
+BACKEND_OK=0
+for i in {1..12}; do
+    if curl -s -f http://127.0.0.1:8000/ >/dev/null 2>&1; then
+        BACKEND_OK=1
+        break
+    fi
+    sleep 0.5
+done
+
+if [ "$BACKEND_OK" -ne 1 ]; then
+    echo "❌ Error: Uvicorn no pudo iniciar o no responde en http://127.0.0.1:8000."
+    echo "Revisa el log detallado:"
+    echo "----------------------------------------------------------"
     cat /tmp/tecleollave_uvicorn.log
+    echo "----------------------------------------------------------"
+    cleanup
     exit 1
 fi
 echo "   ✓ Backend y SQLite activos (PID: $UVICORN_PID)."
