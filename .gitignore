@@ -16,6 +16,7 @@ backend/.env
 *.db
 !backend/tecleollave.db
 *.db-journal
+*.bak
 backend/*.joblib
 backend/models/test_*
 !backend/models/user_*
