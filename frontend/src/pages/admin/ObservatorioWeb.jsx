@@ -3,7 +3,8 @@ import {
   Shield, Users, Activity, FileSpreadsheet, Copy, Check,
   BarChart3, ArrowLeft, RefreshCw, Star, MessageSquareQuote,
   CheckCircle2, Award, Smartphone, Cpu, LogOut, Trash2, AlertTriangle, X,
-  CheckCircle, XCircle, Zap, HeartPulse, TrendingUp
+  CheckCircle, XCircle, Zap, HeartPulse, TrendingUp,
+  Sun, Moon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
@@ -12,11 +13,13 @@ import {
 import api from '../../services/api';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import HypothesisAnalysisView from '../../components/admin/HypothesisAnalysisView';
 import './observatorio.css';
 
 export default function ObservatorioWeb() {
   const { logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('global'); // 'global' | 'individual'
 
@@ -29,6 +32,11 @@ export default function ObservatorioWeb() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetNotice, setResetNotice] = useState(null);
+
+  // Estados de paginación y filtros para el historial de desbloqueos en apps
+  const [authPage, setAuthPage] = useState(1);
+  const [authPageSize, setAuthPageSize] = useState(10);
+  const [authFilter, setAuthFilter] = useState('ALL'); // 'ALL' | 'ACCEPTED' | 'REJECTED'
 
   useEffect(() => {
     fetchOverview();
@@ -70,6 +78,7 @@ export default function ObservatorioWeb() {
 
   const handleSelectParticipant = (id) => {
     setSelectedParticipantId(id);
+    setAuthPage(1);
     fetchParticipantDetail(id);
   };
 
@@ -108,8 +117,23 @@ export default function ObservatorioWeb() {
     navigate('/login');
   };
 
+  // Cálculos de paginación para el historial de desbloqueos en apps
+  const rawAuthHistory = participantDetail?.auth_history || [];
+  const filteredAuthHistory = rawAuthHistory.filter((item) => {
+    if (authFilter === 'ACCEPTED') return item.is_accepted;
+    if (authFilter === 'REJECTED') return !item.is_accepted;
+    return true;
+  });
+
+  const totalAuthRecords = filteredAuthHistory.length;
+  const totalAuthPages = Math.max(1, Math.ceil(totalAuthRecords / authPageSize));
+  const currentAuthPage = Math.min(Math.max(1, authPage), totalAuthPages);
+  const authStartIndex = (currentAuthPage - 1) * authPageSize;
+  const authEndIndex = Math.min(authStartIndex + authPageSize, totalAuthRecords);
+  const pagedAuthHistory = filteredAuthHistory.slice(authStartIndex, authEndIndex);
+
   return (
-    <div className="tl-obs-container">
+    <div className={`tl-obs-container ${theme === 'light' ? 'tl-theme-light' : ''}`}>
       <div className="tl-obs-wrapper">
         {/* Cabecera */}
         <div className="tl-obs-header">
@@ -126,6 +150,18 @@ export default function ObservatorioWeb() {
           </div>
 
           <div className="tl-obs-actions" style={{ flexWrap: 'wrap' }}>
+            {/* Botón de Cambio Modo Claro / Modo Oscuro */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="tl-obs-btn-secondary"
+              title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {theme === 'dark' ? <Sun size={16} color="#fbbf24" /> : <Moon size={16} color="#6366f1" />}
+              <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
+            </button>
+
             <Link to="/mobile" className="tl-obs-btn-secondary" title="Abrir simulador APK móvil">
               <Smartphone size={16} color="#34d399" />
               <span>Simulador APK</span>
@@ -283,16 +319,16 @@ export default function ObservatorioWeb() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
                 {overviewData.hypotheses_status.map((hyp) => (
-                  <div key={hyp.id} style={{ background: '#0b0f19', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '1rem' }}>
+                  <div key={hyp.id} className="tl-hyp-item-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                       <strong style={{ color: '#818cf8', fontSize: '0.9rem' }}>{hyp.id}</strong>
                       <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#34d399', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
                         VALIDADA
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#ffffff', marginBottom: '0.25rem' }}>{hyp.title}</div>
-                    <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0 0 0.5rem 0', lineHeight: '1.4' }}>{hyp.description}</p>
-                    <div style={{ fontSize: '0.68rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.4rem' }}>
+                    <div className="tl-hyp-title">{hyp.title}</div>
+                    <p className="tl-hyp-desc">{hyp.description}</p>
+                    <div className="tl-hyp-result">
                       <span style={{ color: '#64748b', display: 'block' }}>Resultado en el Software:</span>
                       <strong style={{ color: '#34d399' }}>{hyp.observed}</strong>
                     </div>
@@ -307,7 +343,7 @@ export default function ObservatorioWeb() {
               <div className="tl-obs-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <div>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>Curva ROC Poblacional</h4>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: theme === 'light' ? '#0f172a' : '#ffffff', margin: 0 }}>Curva ROC Poblacional</h4>
                     <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Sensibilidad (TPR) vs 1 - Especificidad (FPR)</span>
                   </div>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#a78bfa', background: 'rgba(167, 139, 250, 0.15)', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
@@ -318,10 +354,16 @@ export default function ObservatorioWeb() {
                 <div style={{ height: '240px' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={overviewData.roc_points} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme === 'light' ? '#e2e8f0' : '#1e293b'} />
                       <XAxis dataKey="fpr" stroke="#64748b" tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} />
                       <YAxis stroke="#64748b" domain={[0, 1]} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} />
-                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }} />
+                      <Tooltip contentStyle={{
+                        backgroundColor: theme === 'light' ? '#ffffff' : '#0f172a',
+                        borderColor: theme === 'light' ? '#cbd5e1' : '#334155',
+                        color: theme === 'light' ? '#0f172a' : '#ffffff',
+                        borderRadius: '8px',
+                        fontSize: '11px'
+                      }} />
                       <Area type="monotone" dataKey="tpr" stroke="#8b5cf6" strokeWidth={2.5} fill="#8b5cf6" fillOpacity={0.15} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -330,7 +372,7 @@ export default function ObservatorioWeb() {
 
               {/* Matriz de Confusión */}
               <div className="tl-obs-card">
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', margin: '0 0 0.2rem 0' }}>Matriz de Confusión Global</h4>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: theme === 'light' ? '#0f172a' : '#ffffff', margin: '0 0 0.2rem 0' }}>Matriz de Confusión Global</h4>
                 <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0 0 0.75rem 0' }}>
                   Aciertos del algoritmo frente a intentos legítimos vs impostores
                 </p>
@@ -338,7 +380,7 @@ export default function ObservatorioWeb() {
                 <div className="tl-confusion-grid">
                   <div className="tl-confusion-box tp">
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#34d399', display: 'block', marginBottom: '0.2rem' }}>Verdaderos Positivos</span>
-                    <strong style={{ fontSize: '1.4rem', color: '#ffffff', display: 'block' }}>{overviewData.confusion_matrix.true_positives}</strong>
+                    <strong style={{ fontSize: '1.4rem', color: theme === 'light' ? '#0f172a' : '#ffffff', display: 'block' }}>{overviewData.confusion_matrix.true_positives}</strong>
                     <span style={{ fontSize: '0.62rem', color: '#94a3b8' }}>Legítimos Aceptados</span>
                   </div>
 
@@ -356,7 +398,7 @@ export default function ObservatorioWeb() {
 
                   <div className="tl-confusion-box tn">
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '0.2rem' }}>Verdaderos Negativos</span>
-                    <strong style={{ fontSize: '1.4rem', color: '#ffffff', display: 'block' }}>{overviewData.confusion_matrix.true_negatives}</strong>
+                    <strong style={{ fontSize: '1.4rem', color: theme === 'light' ? '#0f172a' : '#ffffff', display: 'block' }}>{overviewData.confusion_matrix.true_negatives}</strong>
                     <span style={{ fontSize: '0.62rem', color: '#94a3b8' }}>Impostores Bloqueados</span>
                   </div>
                 </div>
@@ -368,7 +410,7 @@ export default function ObservatorioWeb() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Star size={18} color="#f59e0b" fill="#f59e0b" />
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: theme === 'light' ? '#0f172a' : '#ffffff', margin: 0 }}>
                     Satisfacción y Usabilidad de los Usuarios con la APK
                   </h4>
                 </div>
@@ -426,7 +468,14 @@ export default function ObservatorioWeb() {
                 <select
                   value={selectedParticipantId || ''}
                   onChange={(e) => handleSelectParticipant(Number(e.target.value))}
-                  style={{ background: '#0b0f19', border: '1px solid #374151', color: '#ffffff', padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem' }}
+                  style={{
+                    background: theme === 'light' ? '#ffffff' : '#0b0f19',
+                    border: `1px solid ${theme === 'light' ? '#cbd5e1' : '#374151'}`,
+                    color: theme === 'light' ? '#0f172a' : '#ffffff',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.75rem'
+                  }}
                 >
                   {participantsList.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -451,9 +500,13 @@ export default function ObservatorioWeb() {
                           padding: '1px 6px',
                           borderRadius: '4px',
                           fontSize: '0.65rem',
-                          background: ph === participantDetail.participant.phrase ? '#1e3a8a' : '#1e293b',
-                          color: ph === participantDetail.participant.phrase ? '#60a5fa' : '#94a3b8',
-                          border: '1px solid #334155'
+                          background: ph === participantDetail.participant.phrase 
+                            ? (theme === 'light' ? '#dbeafe' : '#1e3a8a') 
+                            : (theme === 'light' ? '#f1f5f9' : '#1e293b'),
+                          color: ph === participantDetail.participant.phrase 
+                            ? (theme === 'light' ? '#1d4ed8' : '#60a5fa') 
+                            : (theme === 'light' ? '#475569' : '#94a3b8'),
+                          border: `1px solid ${theme === 'light' ? '#cbd5e1' : '#334155'}`
                         }}>
                           "{ph}" {ph === participantDetail.participant.phrase ? '(activa)' : ''}
                         </span>
@@ -535,16 +588,7 @@ export default function ObservatorioWeb() {
                 </div>
 
                 {/* Diagnóstico de Salud del Tecleo y Motor Adaptativo */}
-                <div className="tl-obs-card" style={{
-                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.5) 100%)',
-                  border: '1px solid rgba(99, 102, 241, 0.25)',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                  padding: '1rem 1.25rem'
-                }}>
+                <div className="tl-obs-card tl-health-card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                     <div style={{
                       width: '42px',
@@ -571,13 +615,13 @@ export default function ObservatorioWeb() {
                           {participantDetail.participant.typing_health || 'En Evaluación'}
                         </span>
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.78rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                      <p className="tl-health-desc">
                         {participantDetail.participant.health_description || 'Analizando comportamiento dinámico de pulsación y variaciones temporales.'}
                       </p>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.75rem', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '1.25rem' }}>
+                  <div className="tl-health-metrics">
                     <div>
                       <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>Similitud Promedio:</span>
                       <strong style={{ color: '#38bdf8', fontSize: '0.95rem' }}>{participantDetail.participant.mean_similarity ?? 0}%</strong>
@@ -597,7 +641,7 @@ export default function ObservatorioWeb() {
                 <div className="tl-obs-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <div>
-                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: theme === 'light' ? '#0f172a' : '#ffffff', margin: 0 }}>
                         Evolución de Desbloqueos y Adaptación Continua ($M_t$)
                       </h4>
                       <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
@@ -621,11 +665,17 @@ export default function ObservatorioWeb() {
                     <div style={{ height: '220px' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={participantDetail.adaptation_timeline} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'light' ? '#e2e8f0' : '#1e293b'} />
                           <XAxis dataKey="attempt" stroke="#64748b" tickFormatter={(a) => `#${a}`} />
                           <YAxis stroke="#64748b" domain={[40, 100]} tickFormatter={(v) => `${v}%`} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }}
+                            contentStyle={{
+                              backgroundColor: theme === 'light' ? '#ffffff' : '#0f172a',
+                              borderColor: theme === 'light' ? '#cbd5e1' : '#334155',
+                              color: theme === 'light' ? '#0f172a' : '#ffffff',
+                              borderRadius: '8px',
+                              fontSize: '11px'
+                            }}
                             formatter={(value, name) => [`${value}%`, name === 'similarity' ? 'Similitud' : 'Umbral']}
                             labelFormatter={(label) => `Intento de desbloqueo #${label}`}
                           />
@@ -662,86 +712,206 @@ export default function ObservatorioWeb() {
                   )}
                 </div>
 
-                {/* Tabla de Historial Detallado de Desbloqueos en Apps */}
+                {/* Tabla de Historial Detallado de Desbloqueos en Apps con Paginación */}
                 <div className="tl-obs-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <div>
-                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, color: theme === 'light' ? '#0f172a' : '#ffffff' }}>
                         Registro de Usabilidad y Desbloqueos en Apps
                       </h4>
                       <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
                         Detalle de cada acceso a aplicaciones protegidas y respuesta del motor biométrico adaptativo
                       </span>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                      {participantDetail.auth_history?.length || 0} registros
-                    </span>
+
+                    {/* Filtros rápidos y selector de filas por página */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <div style={{
+                        display: 'inline-flex',
+                        borderRadius: '8px',
+                        padding: '2px',
+                        background: theme === 'light' ? '#f1f5f9' : '#0b0f19',
+                        border: `1px solid ${theme === 'light' ? '#cbd5e1' : '#334155'}`
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => { setAuthFilter('ALL'); setAuthPage(1); }}
+                          className={`tl-tab-btn ${authFilter === 'ALL' ? 'active' : ''}`}
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.68rem', borderRadius: '6px' }}
+                        >
+                          Todos ({rawAuthHistory.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setAuthFilter('ACCEPTED'); setAuthPage(1); }}
+                          className={`tl-tab-btn ${authFilter === 'ACCEPTED' ? 'active' : ''}`}
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.68rem', borderRadius: '6px' }}
+                        >
+                          Permitidos ({rawAuthHistory.filter(h => h.is_accepted).length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setAuthFilter('REJECTED'); setAuthPage(1); }}
+                          className={`tl-tab-btn ${authFilter === 'REJECTED' ? 'active' : ''}`}
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.68rem', borderRadius: '6px' }}
+                        >
+                          Bloqueados ({rawAuthHistory.filter(h => !h.is_accepted).length})
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Filas:</span>
+                        <select
+                          value={authPageSize}
+                          onChange={(e) => {
+                            setAuthPageSize(Number(e.target.value));
+                            setAuthPage(1);
+                          }}
+                          style={{
+                            background: theme === 'light' ? '#ffffff' : '#0b0f19',
+                            border: `1px solid ${theme === 'light' ? '#cbd5e1' : '#334155'}`,
+                            color: theme === 'light' ? '#0f172a' : '#ffffff',
+                            padding: '0.2rem 0.45rem',
+                            borderRadius: '6px',
+                            fontSize: '0.7rem'
+                          }}
+                        >
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
-                  {participantDetail.auth_history && participantDetail.auth_history.length > 0 ? (
-                    <div className="tl-auth-table-wrapper">
-                      <table className="tl-auth-table">
-                        <thead>
-                          <tr>
-                            <th>Fecha / Hora</th>
-                            <th>Aplicación</th>
-                            <th>Resultado</th>
-                            <th>Similitud</th>
-                            <th>Motor Adaptativo ($M_t$)</th>
-                            <th>Velocidad (WPM)</th>
-                            <th>Hold Time Medio</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {participantDetail.auth_history.map((row) => (
-                            <tr key={row.id}>
-                              <td style={{ color: '#94a3b8' }}>{row.created_at}</td>
-                              <td style={{ fontWeight: 600, color: '#ffffff' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <Smartphone size={13} color="#818cf8" />
-                                  {row.target_app}
-                                </span>
-                              </td>
-                              <td>
-                                {row.is_accepted ? (
-                                  <span className="tl-badge tl-badge-success">
-                                    <CheckCircle size={10} /> Permitido
-                                  </span>
-                                ) : (
-                                  <span className="tl-badge tl-badge-danger">
-                                    <XCircle size={10} /> Bloqueado
-                                  </span>
-                                )}
-                              </td>
-                              <td>
-                                <strong style={{ color: row.similarity_score >= 85 ? '#34d399' : '#f87171' }}>
-                                  {row.similarity_score}%
-                                </strong>
-                                <span style={{ fontSize: '0.62rem', color: '#64748b', marginLeft: '4px' }}>
-                                  (umbral 85%)
-                                </span>
-                              </td>
-                              <td>
-                                {row.adapted ? (
-                                  <span className="tl-badge tl-badge-info" title="El modelo M_t integró dinámicamente esta muestra">
-                                    <Zap size={10} /> Adaptado (+1)
-                                  </span>
-                                ) : (
-                                  <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                                    Sin cambio
-                                  </span>
-                                )}
-                              </td>
-                              <td>{row.wpm > 0 ? `${row.wpm} ppm` : '—'}</td>
-                              <td>{row.mean_ht > 0 ? `${row.mean_ht} ms` : '—'}</td>
+                  {pagedAuthHistory && pagedAuthHistory.length > 0 ? (
+                    <>
+                      <div className="tl-auth-table-wrapper">
+                        <table className="tl-auth-table">
+                          <thead>
+                            <tr>
+                              <th>Fecha / Hora</th>
+                              <th>Aplicación</th>
+                              <th>Resultado</th>
+                              <th>Similitud</th>
+                              <th>Motor Adaptativo ($M_t$)</th>
+                              <th>Velocidad (WPM)</th>
+                              <th>Hold Time Medio</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {pagedAuthHistory.map((row) => (
+                              <tr key={row.id}>
+                                <td style={{ color: theme === 'light' ? '#64748b' : '#94a3b8' }}>{row.created_at}</td>
+                                <td style={{ fontWeight: 600, color: theme === 'light' ? '#0f172a' : '#ffffff' }}>
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Smartphone size={13} color="#818cf8" />
+                                    {row.target_app}
+                                  </span>
+                                </td>
+                                <td>
+                                  {row.is_accepted ? (
+                                    <span className="tl-badge tl-badge-success">
+                                      <CheckCircle size={10} /> Permitido
+                                    </span>
+                                  ) : (
+                                    <span className="tl-badge tl-badge-danger">
+                                      <XCircle size={10} /> Bloqueado
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <strong style={{ color: row.similarity_score >= 85 ? '#10b981' : '#ef4444' }}>
+                                    {row.similarity_score}%
+                                  </strong>
+                                  <span style={{ fontSize: '0.62rem', color: '#64748b', marginLeft: '4px' }}>
+                                    (umbral 85%)
+                                  </span>
+                                </td>
+                                <td>
+                                  {row.adapted ? (
+                                    <span className="tl-badge tl-badge-info" title="El modelo M_t integró dinámicamente esta muestra">
+                                      <Zap size={10} /> Adaptado (+1)
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                                      Sin cambio
+                                    </span>
+                                  )}
+                                </td>
+                                <td>{row.wpm > 0 ? `${row.wpm} ppm` : '—'}</td>
+                                <td>{row.mean_ht > 0 ? `${row.mean_ht} ms` : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Barra de Paginación */}
+                      <div className="tl-pagination-bar">
+                        <span className="tl-pagination-info">
+                          Mostrando {totalAuthRecords > 0 ? authStartIndex + 1 : 0} – {authEndIndex} de {totalAuthRecords} registros
+                          {authFilter !== 'ALL' && ` (${authFilter === 'ACCEPTED' ? 'Permitidos' : 'Bloqueados'})`}
+                        </span>
+
+                        <div className="tl-pagination-controls">
+                          <button
+                            type="button"
+                            className="tl-page-btn"
+                            disabled={currentAuthPage <= 1}
+                            onClick={() => setAuthPage(1)}
+                            title="Primera página"
+                          >
+                            <ChevronsLeft size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="tl-page-btn"
+                            disabled={currentAuthPage <= 1}
+                            onClick={() => setAuthPage((p) => Math.max(1, p - 1))}
+                            title="Página anterior"
+                          >
+                            <ChevronLeft size={14} />
+                            <span>Anterior</span>
+                          </button>
+
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '0.35rem 0.65rem',
+                            color: theme === 'light' ? '#0f172a' : '#cbd5e1'
+                          }}>
+                            {currentAuthPage} / {totalAuthPages}
+                          </span>
+
+                          <button
+                            type="button"
+                            className="tl-page-btn"
+                            disabled={currentAuthPage >= totalAuthPages}
+                            onClick={() => setAuthPage((p) => Math.min(totalAuthPages, p + 1))}
+                            title="Página siguiente"
+                          >
+                            <span>Siguiente</span>
+                            <ChevronRight size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="tl-page-btn"
+                            disabled={currentAuthPage >= totalAuthPages}
+                            onClick={() => setAuthPage(totalAuthPages)}
+                            title="Última página"
+                          >
+                            <ChevronsRight size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.8rem' }}>
-                      No hay registros de desbloqueo aún para este participante.
+                      {rawAuthHistory.length === 0
+                        ? 'No hay registros de desbloqueo aún para este participante.'
+                        : 'No se encontraron registros con el filtro seleccionado.'}
                     </div>
                   )}
                 </div>
@@ -749,7 +919,7 @@ export default function ObservatorioWeb() {
                 <div className="tl-obs-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <div>
-                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: theme === 'light' ? '#0f172a' : '#ffffff', margin: 0 }}>
                         Curva de Aprendizaje Motor (1 a 30 Repeticiones)
                       </h4>
                       <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Velocidad (WPM) a través de las 3 series de entrenamiento</span>
@@ -760,10 +930,16 @@ export default function ObservatorioWeb() {
                   <div style={{ height: '220px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={participantDetail.learning_curve} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                        <CartesianGrid strokeDasharray="3 3" stroke={theme === 'light' ? '#e2e8f0' : '#1e293b'} />
                         <XAxis dataKey="repetition" stroke="#64748b" tickFormatter={(r) => `R${r}`} />
                         <YAxis stroke="#64748b" />
-                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }} />
+                        <Tooltip contentStyle={{
+                          backgroundColor: theme === 'light' ? '#ffffff' : '#0f172a',
+                          borderColor: theme === 'light' ? '#cbd5e1' : '#334155',
+                          color: theme === 'light' ? '#0f172a' : '#ffffff',
+                          borderRadius: '8px',
+                          fontSize: '11px'
+                        }} />
                         <Line type="monotone" dataKey="wpm" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3, fill: '#60a5fa' }} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -773,16 +949,22 @@ export default function ObservatorioWeb() {
                 {/* Boxplots de Hold Time por Carácter */}
                 {participantDetail.keys_breakdown.length > 0 && (
                   <div className="tl-obs-card">
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', margin: '0 0 0.5rem 0' }}>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: theme === 'light' ? '#0f172a' : '#ffffff', margin: '0 0 0.5rem 0' }}>
                       Tiempos de Pulsación Medios por Carácter (Hold Time en ms)
                     </h4>
                     <div style={{ height: '200px' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={participantDetail.keys_breakdown} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'light' ? '#e2e8f0' : '#1e293b'} />
                           <XAxis dataKey="key" stroke="#94a3b8" />
                           <YAxis stroke="#64748b" />
-                          <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }} />
+                          <Tooltip contentStyle={{
+                            backgroundColor: theme === 'light' ? '#ffffff' : '#0f172a',
+                            borderColor: theme === 'light' ? '#cbd5e1' : '#334155',
+                            color: theme === 'light' ? '#0f172a' : '#ffffff',
+                            borderRadius: '8px',
+                            fontSize: '11px'
+                          }} />
                           <Bar dataKey="mean_ht" fill="#10b981" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>

@@ -567,3 +567,530 @@
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+/* Paginación de Tabla de Desbloqueos */
+.tl-pagination-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.75rem;
+}
+
+.tl-pagination-info {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.tl-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tl-page-btn {
+  background: #111827;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  transition: all 0.15s;
+}
+
+.tl-page-btn:hover:not(:disabled) {
+  background: #1f2937;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.tl-page-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #6366f1;
+}
+
+.tl-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   MODO CLARO (LIGHT THEME) PARA EL OBSERVATORIO CIENTÍFICO
+   ========================================================================== */
+.tl-theme-light.tl-obs-container,
+[data-theme='light'] .tl-obs-container {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-obs-header,
+[data-theme='light'] .tl-obs-header {
+  border-bottom-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-obs-title,
+[data-theme='light'] .tl-obs-title {
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-obs-subtitle,
+[data-theme='light'] .tl-obs-subtitle {
+  color: #64748b;
+}
+
+.tl-theme-light .tl-obs-card,
+[data-theme='light'] .tl-obs-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-obs-card h3,
+.tl-theme-light .tl-obs-card h4,
+[data-theme='light'] .tl-obs-card h3,
+[data-theme='light'] .tl-obs-card h4 {
+  color: #0f172a !important;
+}
+
+.tl-theme-light .tl-metric-card,
+[data-theme='light'] .tl-metric-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.tl-theme-light .tl-metric-val,
+[data-theme='light'] .tl-metric-val {
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-metric-label,
+[data-theme='light'] .tl-metric-label {
+  color: #64748b;
+}
+
+.tl-theme-light .tl-obs-btn-secondary,
+.tl-theme-light .tl-obs-back-btn,
+[data-theme='light'] .tl-obs-btn-secondary,
+[data-theme='light'] .tl-obs-back-btn {
+  background: #ffffff;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.tl-theme-light .tl-obs-btn-secondary:hover,
+.tl-theme-light .tl-obs-back-btn:hover,
+[data-theme='light'] .tl-obs-btn-secondary:hover,
+[data-theme='light'] .tl-obs-back-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-view-tabs,
+[data-theme='light'] .tl-view-tabs {
+  border-bottom-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-tab-btn,
+[data-theme='light'] .tl-tab-btn {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.tl-theme-light .tl-tab-btn:hover,
+[data-theme='light'] .tl-tab-btn:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-tab-btn.active,
+[data-theme='light'] .tl-tab-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.tl-theme-light .tl-pkpi-card,
+[data-theme='light'] .tl-pkpi-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.tl-theme-light .tl-pkpi-val,
+[data-theme='light'] .tl-pkpi-val {
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-pkpi-title,
+[data-theme='light'] .tl-pkpi-title {
+  color: #64748b;
+}
+
+.tl-theme-light .tl-pkpi-sub,
+[data-theme='light'] .tl-pkpi-sub {
+  color: #94a3b8;
+}
+
+.tl-theme-light .tl-auth-table th,
+[data-theme='light'] .tl-auth-table th {
+  background: #f8fafc;
+  color: #475569;
+  border-bottom-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-auth-table td,
+[data-theme='light'] .tl-auth-table td {
+  color: #1e293b;
+  border-bottom-color: #f1f5f9;
+}
+
+.tl-theme-light .tl-auth-table tr:hover td,
+[data-theme='light'] .tl-auth-table tr:hover td {
+  background: #f8fafc;
+}
+
+.tl-theme-light .tl-pagination-bar,
+[data-theme='light'] .tl-pagination-bar {
+  border-top-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-pagination-info,
+[data-theme='light'] .tl-pagination-info {
+  color: #64748b;
+}
+
+.tl-theme-light .tl-page-btn,
+[data-theme='light'] .tl-page-btn {
+  background: #ffffff;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.tl-theme-light .tl-page-btn:hover:not(:disabled),
+[data-theme='light'] .tl-page-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.tl-theme-light .tl-page-btn.active,
+[data-theme='light'] .tl-page-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+
+.tl-theme-light .tl-csat-card,
+[data-theme='light'] .tl-csat-card {
+  background: #ffffff;
+  border-color: #fed7aa;
+}
+
+.tl-theme-light .tl-feedback-item,
+[data-theme='light'] .tl-feedback-item {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-feedback-item p,
+[data-theme='light'] .tl-feedback-item p {
+  color: #334155 !important;
+}
+
+.tl-theme-light select,
+[data-theme='light'] select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* ==========================================================================
+   SUBTARJETAS, ESTADO DE SALUD DEL TECLEO Y CAJAS INTERNAS
+   ========================================================================== */
+.tl-hyp-item-card {
+  background: #0b0f19;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.tl-hyp-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+}
+
+.tl-hyp-desc {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.tl-hyp-result {
+  font-size: 0.68rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.4rem;
+}
+
+.tl-health-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.5) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  transition: all 0.2s;
+}
+
+.tl-health-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.tl-health-metrics {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.75rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 1.25rem;
+}
+
+.tl-stat-subbox {
+  background: #090d16;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0.6rem;
+  transition: all 0.2s;
+}
+
+/* Modos claros para subtarjetas y cajas internas */
+.tl-theme-light .tl-hyp-item-card,
+[data-theme='light'] .tl-hyp-item-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.tl-theme-light .tl-hyp-title,
+[data-theme='light'] .tl-hyp-title {
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-hyp-desc,
+[data-theme='light'] .tl-hyp-desc {
+  color: #475569;
+}
+
+.tl-theme-light .tl-hyp-result,
+[data-theme='light'] .tl-hyp-result {
+  border-top-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-health-card,
+[data-theme='light'] .tl-health-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-color: #c7d2fe;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+}
+
+.tl-theme-light .tl-health-desc,
+[data-theme='light'] .tl-health-desc {
+  color: #334155;
+}
+
+.tl-theme-light .tl-health-metrics,
+[data-theme='light'] .tl-health-metrics {
+  border-left-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-stat-subbox,
+[data-theme='light'] .tl-stat-subbox {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-confusion-box,
+[data-theme='light'] .tl-confusion-box {
+  background: #ffffff;
+}
+
+.tl-theme-light .tl-confusion-box strong,
+[data-theme='light'] .tl-confusion-box strong {
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-confusion-box.tp,
+[data-theme='light'] .tl-confusion-box.tp {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.tl-theme-light .tl-confusion-box.fp,
+[data-theme='light'] .tl-confusion-box.fp {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.tl-theme-light .tl-confusion-box.fn,
+[data-theme='light'] .tl-confusion-box.fn {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.tl-theme-light .tl-confusion-box.tn,
+[data-theme='light'] .tl-confusion-box.tn {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+/* Código LaTeX en modo claro */
+.tl-theme-light .tl-latex-pre,
+[data-theme='light'] .tl-latex-pre {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+/* Modal de Confirmación en modo claro */
+.tl-theme-light .tl-obs-modal-card,
+[data-theme='light'] .tl-obs-modal-card {
+  background: #ffffff;
+  border-color: #fecdd3;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2), 0 0 35px rgba(239, 68, 68, 0.1);
+}
+
+.tl-theme-light .tl-obs-modal-title,
+[data-theme='light'] .tl-obs-modal-title {
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-obs-modal-close-btn,
+[data-theme='light'] .tl-obs-modal-close-btn {
+  color: #64748b;
+}
+
+.tl-theme-light .tl-obs-modal-close-btn:hover,
+[data-theme='light'] .tl-obs-modal-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.tl-theme-light .tl-obs-modal-warning-box,
+[data-theme='light'] .tl-obs-modal-warning-box {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.tl-theme-light .tl-obs-modal-warning-box p,
+[data-theme='light'] .tl-obs-modal-warning-box p {
+  color: #dc2626 !important;
+}
+
+.tl-theme-light .tl-obs-modal-warning-box ul,
+[data-theme='light'] .tl-obs-modal-warning-box ul,
+.tl-theme-light .tl-obs-modal-warning-box li,
+[data-theme='light'] .tl-obs-modal-warning-box li {
+  color: #334155 !important;
+}
+
+.tl-theme-light .tl-obs-modal-footer,
+[data-theme='light'] .tl-obs-modal-footer {
+  border-top-color: #e2e8f0;
+}
+
+.tl-theme-light .tl-obs-modal-btn-cancel,
+[data-theme='light'] .tl-obs-modal-btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.tl-theme-light .tl-obs-modal-btn-cancel:hover,
+[data-theme='light'] .tl-obs-modal-btn-cancel:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Forzar que cualquier tarjeta interna oscura con estilo inline se aclare en modo claro */
+.tl-theme-light [style*="background: #090d16"],
+.tl-theme-light [style*="background: #0b0f19"],
+.tl-theme-light [style*="background: #0d1322"],
+.tl-theme-light [style*="background: #0a0e19"],
+.tl-theme-light [style*="background: #151d30"],
+[data-theme='light'] [style*="background: #090d16"],
+[data-theme='light'] [style*="background: #0b0f19"],
+[data-theme='light'] [style*="background: #0d1322"],
+[data-theme='light'] [style*="background: #0a0e19"],
+[data-theme='light'] [style*="background: #151d30"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.tl-theme-light [style*="background: #090d16"] strong,
+.tl-theme-light [style*="background: #0b0f19"] strong,
+.tl-theme-light [style*="background: #0d1322"] strong,
+.tl-theme-light [style*="background: #0a0e19"] strong,
+.tl-theme-light [style*="background: #151d30"] strong,
+[data-theme='light'] [style*="background: #090d16"] strong,
+[data-theme='light'] [style*="background: #0b0f19"] strong,
+[data-theme='light'] [style*="background: #0d1322"] strong,
+[data-theme='light'] [style*="background: #0a0e19"] strong,
+[data-theme='light'] [style*="background: #151d30"] strong {
+  color: #0f172a !important;
+}
+
+.tl-theme-light [style*="background: #090d16"] p,
+.tl-theme-light [style*="background: #0b0f19"] p,
+.tl-theme-light [style*="background: #0d1322"] p,
+.tl-theme-light [style*="background: #0a0e19"] p,
+.tl-theme-light [style*="background: #151d30"] p,
+[data-theme='light'] [style*="background: #090d16"] p,
+[data-theme='light'] [style*="background: #0b0f19"] p,
+[data-theme='light'] [style*="background: #0d1322"] p,
+[data-theme='light'] [style*="background: #0a0e19"] p,
+[data-theme='light'] [style*="background: #151d30"] p {
+  color: #334155 !important;
+}
+
+/* Encabezados y textos generales en modo claro */
+.tl-theme-light .tl-obs-card h4,
+[data-theme='light'] .tl-obs-card h4,
+.tl-theme-light .tl-csat-card h4,
+[data-theme='light'] .tl-csat-card h4 {
+  color: #0f172a !important;
+}
+
+.tl-theme-light .tl-obs-card table th,
+[data-theme='light'] .tl-obs-card table th {
+  color: #475569 !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.tl-theme-light .tl-obs-card table td,
+[data-theme='light'] .tl-obs-card table td {
+  border-bottom-color: #f1f5f9 !important;
+}
+
+
+
+
