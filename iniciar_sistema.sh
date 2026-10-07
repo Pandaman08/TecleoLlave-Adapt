@@ -65,8 +65,8 @@ source "$VENV_DIR/bin/activate"
 # Inicializar/verificar base de datos SQLite
 python -c "from app.database import init_db; init_db()"
 
-# Levantar Uvicorn en segundo plano
-uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/tecleollave_uvicorn.log 2>&1 &
+# Levantar Uvicorn en segundo plano con hot-reload activado
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > /tmp/tecleollave_uvicorn.log 2>&1 &
 UVICORN_PID=$!
 
 # Esperar 2 segundos para asegurar arranque del backend
