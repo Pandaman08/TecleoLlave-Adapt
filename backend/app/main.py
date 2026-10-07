@@ -21,6 +21,7 @@ from app.api.reports import router as reports_router
 from app.api.cmu_benchmark import router as cmu_benchmark_router
 from app.api.admin_security import router as admin_security_router
 from app.api.mobile_study import router as mobile_study_router
+from app.api.hypothesis_routes import router as hypothesis_router
 from migrate_security_policy import migrate_security_policy
 
 app = FastAPI(
@@ -49,6 +50,7 @@ app.include_router(reports_router, prefix="/api")
 app.include_router(cmu_benchmark_router, prefix="/api/experiments")
 app.include_router(admin_security_router, prefix="/api")
 app.include_router(mobile_study_router, prefix="/api")
+app.include_router(hypothesis_router, prefix="/api")
 
 @app.get("/")
 @app.get("/api")
