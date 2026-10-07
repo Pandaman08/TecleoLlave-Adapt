@@ -267,3 +267,40 @@ export async function removeConfirmedItems(confirmedIds) {
     tx.onerror = (e) => reject(e.target.error);
   });
 }
+
+/**
+ * Restablece los elementos fallidos o bloqueados a estado 'pending' para permitir su reintento forzado.
+ */
+export async function resetFailedQueueItems(server_origin, participant_id) {
+  const db = await openOfflineDb();
+  const origin = normalizeServerOrigin(server_origin);
+  const pid = Number(participant_id) || 0;
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+
+    req.onsuccess = () => {
+      const all = req.result || [];
+      let count = 0;
+      all.forEach((item) => {
+        if (item.server_origin === origin && item.participant_id === pid && item.status === 'failed') {
+          const updated = {
+            ...item,
+            status: 'pending',
+            is_permanent_failure: false,
+            retry_count: 0,
+            last_error: null
+          };
+          store.put(updated);
+          count++;
+        }
+      });
+      tx.oncomplete = () => resolve(count);
+    };
+
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+

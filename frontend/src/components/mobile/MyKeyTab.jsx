@@ -122,10 +122,10 @@ export default function MyKeyTab({
           }}>
             <div style={{ fontSize: '0.65rem', color: 'var(--tl-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <ShieldCheck size={12} color="var(--tl-success)" />
-              <span>Modelo Activo</span>
+              <span>Firma de Seguridad</span>
             </div>
             <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--tl-text-primary)', marginTop: '2px' }}>
-              {isEnrolled ? 'M₀ Calibrado' : 'Sin calibrar'}
+              {isEnrolled ? 'Calibrada' : 'Sin calibrar'}
             </div>
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function MyKeyTab({
           </h4>
         </div>
         <p style={{ fontSize: '0.76rem', color: 'var(--tl-text-secondary)', lineHeight: '1.45', margin: '0 0 0.85rem 0' }}>
-          A diferencia de una contraseña estática que puede ser observada o filtrada, la biometría conductual evalúa micro-patrones fisiológicos involuntarios mientras escribes:
+          A diferencia de una contraseña tradicional que puede ser observada o copiada, la biometría conductual evalúa la forma única en la que interactúas con el teclado:
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -200,10 +200,10 @@ export default function MyKeyTab({
             </div>
             <div>
               <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--tl-text-primary)' }}>
-                Tiempo de Pulsación (Dwell Time)
+                Ritmo y presión al presionar teclas
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--tl-text-muted)', lineHeight: '1.3' }}>
-                Cuántos milisegundos permanece presionado cada caracter individual por tus dedos.
+                La duración exacta en milisegundos que cada dedo permanece sobre cada caracter.
               </div>
             </div>
           </div>
@@ -233,10 +233,10 @@ export default function MyKeyTab({
             </div>
             <div>
               <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--tl-text-primary)' }}>
-                Tiempo de Vuelo (Flight Time)
+                Velocidad de transición entre caracteres
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--tl-text-muted)', lineHeight: '1.3' }}>
-                El intervalo exacto de transición entre liberar una tecla y presionar la siguiente.
+                El intervalo de tiempo que te toma soltar una tecla y tocar la siguiente en la pantalla.
               </div>
             </div>
           </div>

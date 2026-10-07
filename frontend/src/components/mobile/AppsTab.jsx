@@ -291,12 +291,15 @@ export default function AppsTab({
                         <ShieldCheck size={13} color="var(--tl-accent)" style={{ flexShrink: 0 }} />
                       )}
                     </div>
-                    <span className="tl-app-badge" style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                    <span style={{
+                      fontSize: '0.68rem',
+                      color: isProtected && isEnrolled ? 'var(--tl-success)' : 'var(--tl-text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontWeight: 600
                     }}>
-                      {app.packageName}
+                      {isProtected && isEnrolled ? '● Protegida' : 'Sin proteger'}
                     </span>
                   </div>
                 </div>

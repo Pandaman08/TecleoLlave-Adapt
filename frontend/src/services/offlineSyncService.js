@@ -16,7 +16,8 @@ import {
   getQueueStats,
   markItemsSyncing,
   markItemsFailed,
-  removeConfirmedItems
+  removeConfirmedItems,
+  resetFailedQueueItems
 } from './offlineDb';
 import { App as CapApp } from '@capacitor/app';
 
@@ -219,6 +220,11 @@ class OfflineSyncService {
     if (!participantId) {
       await this.updateStats();
       return;
+    }
+
+    // Si la sincronización es forzada/manual, desbloquear elementos previamente marcados como fallidos
+    if (force) {
+      await resetFailedQueueItems(serverOrigin, participantId);
     }
 
     // Obtener elementos pendientes

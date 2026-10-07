@@ -136,9 +136,31 @@ class MobileStudyService:
             }
         }
 
-    def _extract_timing_vector(self, events: List[Dict[str, Any]]) -> Tuple[List[float], List[float], Dict[str, Any]]:
-        """Extrae hold times, latencias y estadísticas para cualquier frase de longitud variable."""
-        if not events or len(events) < 2:
+    def _extract_timing_vector(
+        self,
+        events: List[Dict[str, Any]],
+        expected_phrase: Optional[str] = None
+    ) -> Tuple[List[float], List[float], Dict[str, Any]]:
+        """Extrae hold times, latencias y estadísticas para cualquier frase de longitud variable.
+        Limpia teclas modificadoras, reproduce fielmente retrocesos (Backspace) y compensa el último carácter si falta.
+        """
+        if not events or len(events) < 1:
+            return [], [], {"wpm": 0.0, "mean_ht": 0.0, "mean_lt": 0.0}
+
+        # 1. Limpieza de modificadores y reproducción fiel de retrocesos (Backspace)
+        clean_events = []
+        ignored_keys = {"Shift", "Control", "Alt", "Meta", "CapsLock", "Tab", "Escape"}
+        for ev in events:
+            k = str(ev.get("key", ""))
+            if k in ignored_keys:
+                continue
+            if k == "Backspace":
+                if clean_events:
+                    clean_events.pop()
+                continue
+            clean_events.append(ev)
+
+        if not clean_events:
             return [], [], {"wpm": 0.0, "mean_ht": 0.0, "mean_lt": 0.0}
 
         hold_times = []
@@ -146,8 +168,10 @@ class MobileStudyService:
         press_times = []
         release_times = []
 
-        for i, ev in enumerate(events):
+        for i, ev in enumerate(clean_events):
             ht = float(ev.get("hold_time", 0.0))
+            if ht <= 0.0 and "dwell_time" in ev:
+                ht = float(ev.get("dwell_time", 0.0))
             if ht <= 0.0 and "press_time" in ev and "release_time" in ev:
                 ht = float(ev["release_time"]) - float(ev["press_time"])
             ht = max(15.0, min(800.0, ht))  # Clamping razonable
@@ -160,13 +184,27 @@ class MobileStudyService:
 
             if i > 0:
                 # Latencia entre soltar tecla anterior y presionar actual (Flight time)
-                lt = pt - release_times[i - 1]
+                if pt > 0 and release_times[i - 1] > 0:
+                    lt = pt - release_times[i - 1]
+                elif "flight_time" in ev:
+                    lt = float(ev.get("flight_time", 0.0))
+                else:
+                    lt = 150.0
                 lt = max(-200.0, min(1200.0, lt))
                 latencies.append(round(lt, 2))
 
+        # Si se especificó una frase esperada y falta exactamente 1 carácter (evento keyup cortado por submit inmediato)
+        if expected_phrase:
+            clean_exp = expected_phrase.strip()
+            if len(hold_times) == len(clean_exp) - 1:
+                mean_ht = float(np.mean(hold_times)) if hold_times else 25.0
+                mean_lt = float(np.mean(latencies)) if latencies else 150.0
+                hold_times.append(round(mean_ht, 2))
+                latencies.append(round(mean_lt, 2))
+
         # Cálculo de WPM
         total_time_ms = max(50.0, release_times[-1] - press_times[0]) if len(press_times) > 1 else 1000.0
-        n_chars = len(events)
+        n_chars = len(clean_events)
         wpm = round((n_chars / 5.0) / (total_time_ms / 60000.0), 2)
 
         stats = {
@@ -204,18 +242,41 @@ class MobileStudyService:
         if n_reps < 5:
             raise ValueError("Se requieren al menos 5 repeticiones para generar el perfil")
 
-        # Limpiar muestras anteriores si las hubiera
-        db.query(MobileStudySample).filter(
+        # 1. Preservar entrenamientos anteriores (NO BORRAR MUESTRAS PREVIAS)
+        # Marcamos las muestras previas de ENROLLMENT_30 como ARCHIVED_ENROLLMENT
+        existing_active = db.query(MobileStudySample).filter(
             MobileStudySample.participant_id == participant_id,
             MobileStudySample.sample_type == "ENROLLMENT_30"
-        ).delete()
+        ).all()
+
+        for old_sample in existing_active:
+            old_sample.sample_type = "ARCHIVED_ENROLLMENT"
+
+        # Archivar el perfil M0 anterior en el historial si existía
+        phrase_history = []
+        if participant.m0_profile and isinstance(participant.m0_profile, dict):
+            phrase_history = list(participant.m0_profile.get("phrase_history", []))
+            if participant.enrollment_phrase and participant.enrolled_reps_count > 0:
+                phrase_history.append({
+                    "phrase": participant.enrollment_phrase,
+                    "reps_count": participant.enrolled_reps_count,
+                    "global_wpm": participant.m0_profile.get("global_wpm", 0.0),
+                    "archived_at": datetime.utcnow().isoformat()
+                })
+
+        # Total acumulado de muestras de entrenamiento del usuario (históricas + nuevas)
+        prev_training_samples = db.query(MobileStudySample).filter(
+            MobileStudySample.participant_id == participant_id,
+            MobileStudySample.sample_type.in_(["ENROLLMENT_30", "ARCHIVED_ENROLLMENT"])
+        ).count()
+        total_training_samples = prev_training_samples + n_reps
 
         all_ht_vectors = []
         all_lt_vectors = []
         learning_curve = []
 
         for idx, rep_events in enumerate(repetitions):
-            ht, lt, stats = self._extract_timing_vector(rep_events)
+            ht, lt, stats = self._extract_timing_vector(rep_events, clean_phrase)
             all_ht_vectors.append(ht)
             all_lt_vectors.append(lt)
 
@@ -245,10 +306,28 @@ class MobileStudyService:
             )
             db.add(sample)
 
-        # Calcular modelo base M0 (usando ponderación asintótica de Newell & Rosenbloom)
-        # Las últimas repeticiones (21-30 o segunda mitad) tienen mayor peso por automatización motora
-        ht_array = np.array(all_ht_vectors)
-        lt_array = np.array(all_lt_vectors)
+        # 2. Alinear y normalizar vectores para evitar error de forma irregular en NumPy
+        target_ht_len = len(clean_phrase)
+        target_lt_len = max(1, target_ht_len - 1)
+
+        aligned_ht = []
+        aligned_lt = []
+        for v in all_ht_vectors:
+            if len(v) >= target_ht_len:
+                aligned_ht.append(v[:target_ht_len])
+            else:
+                default_ht = float(np.mean(v)) if v else 90.0
+                aligned_ht.append(v + [round(default_ht, 2)] * (target_ht_len - len(v)))
+
+        for v in all_lt_vectors:
+            if len(v) >= target_lt_len:
+                aligned_lt.append(v[:target_lt_len])
+            else:
+                default_lt = float(np.mean(v)) if v else 110.0
+                aligned_lt.append(v + [round(default_lt, 2)] * (target_lt_len - len(v)))
+
+        ht_array = np.array(aligned_ht, dtype=float)
+        lt_array = np.array(aligned_lt, dtype=float)
 
         m0_centroid_ht = np.mean(ht_array, axis=0).tolist()
         m0_std_ht = (np.std(ht_array, axis=0) + 1e-4).tolist()
@@ -263,11 +342,14 @@ class MobileStudyService:
             "centroid_lt": [round(x, 2) for x in m0_centroid_lt],
             "std_lt": [round(x, 2) for x in m0_std_lt],
             "global_wpm": round(float(np.mean([x["wpm"] for x in learning_curve])), 2),
-            "trained_reps": n_reps
+            "trained_reps": n_reps,
+            "total_training_samples": total_training_samples,
+            "training_sessions_count": len(phrase_history) + 1,
+            "phrase_history": phrase_history
         }
 
         participant.is_enrolled = True
-        participant.enrolled_reps_count = n_reps
+        participant.enrolled_reps_count = total_training_samples
         participant.enrollment_phrase = clean_phrase
         participant.m0_profile = m0_profile
         participant.mt_profile = m0_profile  # Inicia igual
@@ -282,9 +364,11 @@ class MobileStudyService:
 
         return {
             "success": True,
-            "message": f"Perfil biométrico entrenado exitosamente con {n_reps} repeticiones",
+            "message": f"Perfil biométrico entrenado exitosamente con {n_reps} repeticiones (Total acumulado: {total_training_samples})",
             "participant_id": participant.id,
             "phrase": clean_phrase,
+            "reps_count": n_reps,
+            "total_training_samples": total_training_samples,
             "motor_learning_summary": {
                 "fase_cognitiva_wpm": round(float(fase1_wpm), 2),
                 "fase_asociativa_wpm": round(float(fase2_wpm), 2),
@@ -316,7 +400,7 @@ class MobileStudyService:
         if not participant or not participant.is_enrolled or not participant.mt_profile:
             raise ValueError("Perfil biométrico no enrolado en este participante")
 
-        theta_accept = 0.70
+        theta_accept = 0.85
 
         # Idempotencia: Si ya se evaluó y registró este client_event_id, no duplicar en BD
         if client_event_id:
@@ -326,10 +410,13 @@ class MobileStudyService:
             if existing:
                 return {
                     "success": True,
+                    "authorized": existing.is_accepted,
                     "is_accepted": existing.is_accepted,
+                    "score": existing.similarity_score,
                     "similarity_score": existing.similarity_score,
                     "threshold": theta_accept,
                     "decision": "DESBLOQUEADO" if existing.is_accepted else "ACCESO_DENEGADO",
+                    "message": "Identidad confirmada por dinámica de tecleo" if existing.is_accepted else "Ritmo de escritura diferente al perfil del dueño",
                     "ground_truth": existing.ground_truth,
                     "target_app": existing.target_app,
                     "drift": participant.current_drift,
@@ -339,7 +426,7 @@ class MobileStudyService:
                 }
 
         mt = participant.mt_profile
-        ht, lt, stats = self._extract_timing_vector(raw_events)
+        ht, lt, stats = self._extract_timing_vector(raw_events, phrase_typed)
 
         # Distancia normalizada Mahalanobis/Z-score frente a Mt
         centroid_ht = np.array(mt.get("centroid_ht", []))
@@ -347,17 +434,22 @@ class MobileStudyService:
         centroid_lt = np.array(mt.get("centroid_lt", []))
         std_lt = np.array(mt.get("std_lt", []))
 
+        # Suelo de desviación estándar (20ms para hold time y 35ms para latency)
+        # Esto previene que la cuantización del muestreo táctil (16.6ms en pantallas de 60Hz) infle artificialmente el Z-score
+        std_ht_floored = np.maximum(std_ht, 20.0)
+        std_lt_floored = np.maximum(std_lt, 35.0)
+
         # Manejo de longitud
         min_ht_len = min(len(ht), len(centroid_ht))
         min_lt_len = min(len(lt), len(centroid_lt))
 
-        z_scores_ht = np.abs((np.array(ht[:min_ht_len]) - centroid_ht[:min_ht_len]) / (std_ht[:min_ht_len] + 1e-4)) if min_ht_len > 0 else np.array([0.0])
-        z_scores_lt = np.abs((np.array(lt[:min_lt_len]) - centroid_lt[:min_lt_len]) / (std_lt[:min_lt_len] + 1e-4)) if min_lt_len > 0 else np.array([0.0])
+        z_scores_ht = np.abs((np.array(ht[:min_ht_len]) - centroid_ht[:min_ht_len]) / std_ht_floored[:min_ht_len]) if min_ht_len > 0 else np.array([0.0])
+        z_scores_lt = np.abs((np.array(lt[:min_lt_len]) - centroid_lt[:min_lt_len]) / std_lt_floored[:min_lt_len]) if min_lt_len > 0 else np.array([0.0])
 
         combined_z = float(np.mean(np.concatenate([z_scores_ht, z_scores_lt])))
 
-        # Convertir Z-score a puntaje de similitud (0.0 a 1.0)
-        similarity_score = round(max(0.05, min(0.99, math.exp(-combined_z / 3.0))), 3)
+        # Convertir Z-score a puntaje de similitud (0.0 a 1.0) con escala biométrica calibrada (4.5)
+        similarity_score = round(max(0.05, min(0.99, math.exp(-combined_z / 4.5))), 3)
 
         if is_impostor_mode or ground_truth != "LEGITIMATE":
             actual_gt = ground_truth if ground_truth != "LEGITIMATE" else "IMPOSTOR_KNOWN_CREDENTIAL"
@@ -367,7 +459,8 @@ class MobileStudyService:
         is_accepted = bool(similarity_score >= theta_accept)
 
         # Adaptación en caliente si es legítimo y score alto
-        if actual_gt == "LEGITIMATE" and is_accepted and similarity_score >= 0.80:
+        adapted_in_this_attempt = False
+        if actual_gt == "LEGITIMATE" and is_accepted and similarity_score >= 0.88:
             alpha = 0.10
             new_ht = (1 - alpha) * centroid_ht[:min_ht_len] + alpha * np.array(ht[:min_ht_len])
             new_lt = (1 - alpha) * centroid_lt[:min_lt_len] + alpha * np.array(lt[:min_lt_len]) if min_lt_len > 0 else centroid_lt
@@ -381,7 +474,12 @@ class MobileStudyService:
             m0_ht = np.array(m0_profile.get("centroid_ht", [])[:min_ht_len]) if m0_profile.get("centroid_ht") else new_ht
             drift_val = float(np.linalg.norm(new_ht - m0_ht) / (np.linalg.norm(m0_ht) + 1e-5))
             participant.current_drift = round(drift_val, 4)
+            mt["adaptations_count"] = mt.get("adaptations_count", 0) + 1
             participant.mt_profile = mt
+            adapted_in_this_attempt = True
+
+        stats["adapted"] = adapted_in_this_attempt
+        stats["drift"] = participant.current_drift
 
         # Registrar intento en base de datos para la telemetría del estudio
         sample = MobileStudySample(
@@ -406,10 +504,13 @@ class MobileStudyService:
 
         return {
             "success": True,
+            "authorized": is_accepted,
             "is_accepted": is_accepted,
+            "score": similarity_score,
             "similarity_score": similarity_score,
             "threshold": theta_accept,
             "decision": "DESBLOQUEADO" if is_accepted else "ACCESO_DENEGADO",
+            "message": "Identidad confirmada por dinámica de tecleo" if is_accepted else "Ritmo de escritura diferente al perfil del dueño",
             "ground_truth": actual_gt,
             "target_app": target_app,
             "drift": participant.current_drift,
@@ -499,19 +600,19 @@ class MobileStudyService:
                     is_impostor = bool(payload.get("is_impostor_mode", False))
                     posture = payload.get("device_posture", "ESTATICO")
 
-                    ht, lt, stats = self._extract_timing_vector(raw_events)
+                    ht, lt, stats = self._extract_timing_vector(raw_events, phrase_typed)
 
                     similarity = 0.85
                     is_acc = True
                     if participant.is_enrolled and participant.mt_profile:
                         mt = participant.mt_profile
                         centroid_ht = np.array(mt["centroid_ht"])
-                        std_ht = np.array(mt["std_ht"])
+                        std_ht_floored = np.maximum(np.array(mt["std_ht"]), 20.0)
                         min_ht = min(len(ht), len(centroid_ht))
                         if min_ht > 0:
-                            z = float(np.mean(np.abs((np.array(ht[:min_ht]) - centroid_ht[:min_ht]) / std_ht[:min_ht])))
-                            similarity = round(max(0.05, min(0.99, math.exp(-z / 3.0))), 3)
-                            is_acc = bool(similarity >= 0.70)
+                            z = float(np.mean(np.abs((np.array(ht[:min_ht]) - centroid_ht[:min_ht]) / std_ht_floored[:min_ht])))
+                            similarity = round(max(0.05, min(0.99, math.exp(-z / 4.5))), 3)
+                            is_acc = bool(similarity >= 0.65)
 
                     sample = MobileStudySample(
                         client_event_id=client_id_str,
@@ -747,23 +848,90 @@ class MobileStudyService:
                         "std_ht": sht[i] if i < len(sht) else 15.0
                     })
 
-        # Últimos 10 intentos de autenticación
-        recent_auth = db.query(MobileStudySample).filter(
+        # Todos los intentos de autenticación / desbloqueo (ordenados por fecha ascendente para timeline)
+        all_auth_samples = db.query(MobileStudySample).filter(
             MobileStudySample.participant_id == participant_id,
             MobileStudySample.sample_type.in_(["AUTH_APPLOCKER", "AUTH_SYSTEM"])
-        ).order_by(MobileStudySample.created_at.desc()).limit(15).all()
+        ).order_by(MobileStudySample.created_at.asc()).all()
 
+        auth_total = len(all_auth_samples)
+        auth_accepted = sum(1 for a in all_auth_samples if a.is_accepted)
+        auth_rejected = auth_total - auth_accepted
+        success_rate = round((auth_accepted / auth_total) * 100, 1) if auth_total > 0 else 0.0
+
+        scores = [a.similarity_score for a in all_auth_samples if a.similarity_score is not None]
+        mean_similarity = round(float(np.mean(scores) * 100), 1) if scores else 0.0
+
+        mt = participant.mt_profile or {}
+        adaptations_count = mt.get("adaptations_count", 0) if isinstance(mt, dict) else 0
+
+        # Diagnóstico cualitativo del estado de tecleo del usuario
+        if auth_total == 0:
+            typing_health = "Sin desbloqueos aún"
+            typing_health_code = "IDLE"
+            health_description = "El usuario completó su entrenamiento base pero aún no ha realizado desbloqueos en aplicaciones."
+        elif participant.current_drift < 0.15 and success_rate >= 85.0:
+            typing_health = "Ritmo Estable y Consistente"
+            typing_health_code = "STABLE"
+            health_description = "El usuario escribe con cadencia regular; alta tasa de acceso concedido y baja deriva biométrica."
+        elif success_rate >= 75.0:
+            typing_health = "Adaptación Activa Fluida"
+            typing_health_code = "ADAPTING"
+            health_description = "El motor adaptativo está absorbiendo variaciones naturales de velocidad y fatiga con éxito."
+        else:
+            typing_health = "En Calibración / Variabilidad Alta"
+            typing_health_code = "CALIBRATING"
+            health_description = "Se detectan fluctuaciones notables en el ritmo de tecleo. Se mantiene la protección estricta."
+
+        # Línea de tiempo cronológica para graficar evolución
+        adaptation_timeline = []
+        for idx, a in enumerate(all_auth_samples):
+            feat = a.features or {}
+            adaptation_timeline.append({
+                "attempt": idx + 1,
+                "timestamp": a.created_at.strftime("%d/%m %H:%M"),
+                "similarity": round((a.similarity_score or 0.0) * 100, 1),
+                "threshold": 85.0,
+                "is_accepted": a.is_accepted,
+                "target_app": a.target_app,
+                "adapted": bool(feat.get("adapted", False)),
+                "drift": round(feat.get("drift", participant.current_drift), 4)
+            })
+
+        # Historial de intentos en orden descendente (más recientes primero)
         auth_history = [
             {
                 "id": a.id,
                 "target_app": a.target_app,
                 "ground_truth": a.ground_truth,
                 "is_accepted": a.is_accepted,
-                "similarity_score": a.similarity_score,
+                "decision": "PERMITIDO" if a.is_accepted else "BLOQUEADO",
+                "similarity_score": round((a.similarity_score or 0.0) * 100, 1),
+                "adapted": bool((a.features or {}).get("adapted", False)),
+                "wpm": (a.features or {}).get("wpm", 0),
+                "mean_ht": (a.features or {}).get("mean_ht", 0),
                 "timestamp": a.created_at.strftime("%Y-%m-%d %H:%M:%S")
             }
-            for a in recent_auth
+            for a in reversed(all_auth_samples)
         ]
+
+        # Total acumulado de muestras de entrenamiento
+        train_samples_count = db.query(MobileStudySample).filter(
+            MobileStudySample.participant_id == participant_id,
+            MobileStudySample.sample_type.in_(["ENROLLMENT_30", "ARCHIVED_ENROLLMENT"])
+        ).count()
+        total_training_samples = max(participant.enrolled_reps_count or 0, train_samples_count)
+
+        # Frases entrenadas en el histórico
+        phrases_query = db.query(MobileStudySample.phrase).filter(
+            MobileStudySample.participant_id == participant_id,
+            MobileStudySample.sample_type.in_(["ENROLLMENT_30", "ARCHIVED_ENROLLMENT"])
+        ).distinct().all()
+        trained_phrases = [r[0] for r in phrases_query if r[0]]
+
+        phrase_history = []
+        if participant.m0_profile and isinstance(participant.m0_profile, dict):
+            phrase_history = participant.m0_profile.get("phrase_history", [])
 
         return {
             "participant": {
@@ -776,11 +944,25 @@ class MobileStudyService:
                 "phrase": participant.enrollment_phrase,
                 "drift": participant.current_drift,
                 "is_enrolled": participant.is_enrolled,
-                "reps_count": participant.enrolled_reps_count
+                "reps_count": total_training_samples,
+                "total_train_samples": total_training_samples,
+                "train_sessions_count": len(phrase_history) + 1,
+                "auth_total": auth_total,
+                "auth_accepted": auth_accepted,
+                "auth_rejected": auth_rejected,
+                "success_rate": success_rate,
+                "mean_similarity": mean_similarity,
+                "adaptations_count": adaptations_count,
+                "typing_health": typing_health,
+                "typing_health_code": typing_health_code,
+                "health_description": health_description,
+                "trained_phrases": trained_phrases,
+                "phrase_history": phrase_history
             },
             "learning_curve": learning_curve,
             "keys_breakdown": keys_breakdown,
-            "auth_history": auth_history
+            "auth_history": auth_history,
+            "adaptation_timeline": adaptation_timeline
         }
 
 

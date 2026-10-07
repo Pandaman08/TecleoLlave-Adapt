@@ -164,10 +164,42 @@ def get_observatory_overview(db: Session = Depends(get_db)):
 
 @router.get("/study/observatory/participants")
 def list_observatory_participants(db: Session = Depends(get_db)):
-    from app.models.mobile_study import MobileParticipant
+    from app.models.mobile_study import MobileParticipant, MobileStudySample
     participants = db.query(MobileParticipant).order_by(MobileParticipant.id.asc()).all()
-    return [
-        {
+    results = []
+    for p in participants:
+        train_samples_count = db.query(MobileStudySample).filter(
+            MobileStudySample.participant_id == p.id,
+            MobileStudySample.sample_type.in_(["ENROLLMENT_30", "ARCHIVED_ENROLLMENT"])
+        ).count()
+        total_training = max(p.enrolled_reps_count or 0, train_samples_count)
+
+        auth_samples = db.query(MobileStudySample).filter(
+            MobileStudySample.participant_id == p.id,
+            MobileStudySample.sample_type.in_(["AUTH_APPLOCKER", "AUTH_SYSTEM"])
+        ).all()
+        auth_total = len(auth_samples)
+        auth_accepted = sum(1 for s in auth_samples if s.is_accepted)
+        auth_rejected = auth_total - auth_accepted
+        success_rate = round((auth_accepted / auth_total) * 100, 1) if auth_total > 0 else 0.0
+
+        mt = p.mt_profile or {}
+        adaptations_count = mt.get("adaptations_count", 0) if isinstance(mt, dict) else 0
+
+        if auth_total == 0:
+            typing_health = "Sin desbloqueos"
+            typing_health_code = "IDLE"
+        elif p.current_drift < 0.15 and success_rate >= 85.0:
+            typing_health = "Ritmo Estable"
+            typing_health_code = "STABLE"
+        elif success_rate >= 75.0:
+            typing_health = "Adaptación Activa"
+            typing_health_code = "ADAPTING"
+        else:
+            typing_health = "En Calibración"
+            typing_health_code = "CALIBRATING"
+
+        results.append({
             "id": p.id,
             "code": p.participant_code,
             "email": p.email,
@@ -176,12 +208,19 @@ def list_observatory_participants(db: Session = Depends(get_db)):
             "refresh_rate": p.screen_refresh_rate,
             "dominant_hand": p.dominant_hand,
             "is_enrolled": p.is_enrolled,
-            "reps_count": p.enrolled_reps_count,
+            "reps_count": total_training,
+            "total_train_samples": total_training,
+            "auth_total": auth_total,
+            "auth_accepted": auth_accepted,
+            "auth_rejected": auth_rejected,
+            "success_rate": success_rate,
+            "adaptations_count": adaptations_count,
+            "typing_health": typing_health,
+            "typing_health_code": typing_health_code,
             "drift": p.current_drift,
             "created_at": p.created_at.strftime("%Y-%m-%d %H:%M")
-        }
-        for p in participants
-    ]
+        })
+    return results
 
 
 @router.get("/study/observatory/participants/{participant_id}")
@@ -255,3 +294,22 @@ def export_dataset_csv(db: Session = Depends(get_db)):
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=tecleollave_mobile_study_dataset.csv"}
     )
+
+
+@router.post("/study/observatory/reset")
+def reset_study_database(db: Session = Depends(get_db)):
+    """Reinicia completamente los datos del estudio móvil (participantes, muestras y OTPs)."""
+    try:
+        from app.models.mobile_study import MobileStudySample, MobileParticipant, MobileOtp
+        db.query(MobileStudySample).delete()
+        db.query(MobileParticipant).delete()
+        db.query(MobileOtp).delete()
+        db.commit()
+        return {
+            "success": True,
+            "message": "Base de datos del estudio reiniciada con éxito. Todos los participantes y muestras fueron eliminados."
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+

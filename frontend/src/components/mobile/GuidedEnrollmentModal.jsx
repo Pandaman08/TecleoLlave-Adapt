@@ -54,8 +54,11 @@ export default function GuidedEnrollmentModal({
   }, [step, currentRep, isPaused]);
 
   // Captura de eventos de teclado nativo
+  const IGNORED_KEYS = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'];
+
   const handleKeyDown = (e) => {
     const key = e.key;
+    if (IGNORED_KEYS.includes(key)) return;
     const now = performance.now();
     if (!keyDownMap.current[key]) {
       keyDownMap.current[key] = now;
@@ -64,6 +67,16 @@ export default function GuidedEnrollmentModal({
 
   const handleKeyUp = (e) => {
     const key = e.key;
+    if (IGNORED_KEYS.includes(key)) return;
+
+    if (key === 'Backspace') {
+      delete keyDownMap.current[key];
+      if (repEvents.current.length > 0) {
+        repEvents.current.pop();
+      }
+      return;
+    }
+
     const now = performance.now();
     const pressTime = keyDownMap.current[key] || (now - 80);
     delete keyDownMap.current[key];
@@ -86,8 +99,30 @@ export default function GuidedEnrollmentModal({
     const val = e.target.value;
     setInputText(val);
 
+    // Si el usuario borró caracteres, sincronizar tamaño del vector de eventos
+    if (repEvents.current.length > val.length) {
+      repEvents.current.splice(val.length);
+    }
+
     if (val.trim().toLowerCase() === phrase.trim().toLowerCase()) {
-      finishSingleRep(repEvents.current);
+      setTimeout(() => {
+        if (repEvents.current.length < val.length) {
+          const lastChar = val[val.length - 1];
+          const now = performance.now();
+          const lastEv = repEvents.current[repEvents.current.length - 1];
+          const pressTime = keyDownMap.current[lastChar] || (now - 65);
+          delete keyDownMap.current[lastChar];
+          repEvents.current.push({
+            key: lastChar,
+            dwell_time: Math.round(Math.max(15, now - pressTime)),
+            flight_time: lastEv ? Math.round(Math.max(10, pressTime - (lastEv.release_time || now - 65))) : 120,
+            press_time: pressTime,
+            release_time: now,
+            pressure: 0.65
+          });
+        }
+        finishSingleRep([...repEvents.current]);
+      }, 50);
     }
   };
 
@@ -367,12 +402,12 @@ export default function GuidedEnrollmentModal({
               color: 'var(--tl-text-muted)'
             }}>
               <span>Teclas pulsadas: {inputText.length} / {phrase.length}</span>
-              <span>Dwell & Flight: Activo ✓</span>
+              <span>Ritmo en captura ✓</span>
             </div>
 
             {saving && (
               <div style={{ textAlign: 'center', color: 'var(--tl-accent)', fontSize: '0.75rem', fontWeight: 600 }}>
-                Generando modelo biométrico base M₀...
+                Guardando tu perfil de seguridad...
               </div>
             )}
           </div>
@@ -448,7 +483,7 @@ export default function GuidedEnrollmentModal({
             </h3>
 
             <p style={{ fontSize: '0.78rem', color: 'var(--tl-text-secondary)', lineHeight: '1.45', margin: 0 }}>
-              Se registraron satisfactoriamente las 30 muestras. Tu modelo base <strong>M₀</strong> ha calibrado tus tiempos de pulsación (dwell) y vuelo (flight).
+              Se registraron satisfactoriamente las 30 muestras. Tu firma de seguridad ha aprendido tu ritmo natural de escritura.
             </p>
 
             <div style={{

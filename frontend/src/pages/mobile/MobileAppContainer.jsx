@@ -178,12 +178,20 @@ export default function MobileAppContainer() {
   // ---------------------------------------------------------------------------
   // 4. CONTROL DE MODALES Y BLOQUEO MAESTRO DE TECLEOLLAVE
   // ---------------------------------------------------------------------------
+  const [isAppMasterUnlocked, setIsAppMasterUnlocked] = useState(false);
+  const isAppMasterUnlockedRef = useRef(isAppMasterUnlocked);
+  isAppMasterUnlockedRef.current = isAppMasterUnlocked;
+
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
   const [challengeTarget, setChallengeTarget] = useState({ name: 'WhatsApp', icon: '', packageName: 'com.whatsapp', phrase: 'seguridad unt 2026' });
+  const challengeTargetRef = useRef(challengeTarget);
+  challengeTargetRef.current = challengeTarget;
+
   const [showDeviceLockModal, setShowDeviceLockModal] = useState(false);
   const [showChangePhraseModal, setShowChangePhraseModal] = useState(false);
   const [newPhraseInput, setNewPhraseInput] = useState('');
+  const [previousPhrase, setPreviousPhrase] = useState('');
   const [showServerConfigModal, setShowServerConfigModal] = useState(false);
   const [currentServerUrl, setCurrentServerUrl] = useState(() => getBaseUrl());
 
@@ -196,52 +204,55 @@ export default function MobileAppContainer() {
     });
   };
 
-  // Estado de bloqueo maestro de TECLEOLLAVE: si ya está calibrada la frase, inicia bloqueada
-  const [isAppMasterUnlocked, setIsAppMasterUnlocked] = useState(false);
-
   // Escuchar cuando el servicio detecta una app protegida abierta en el celular
+  // o cuando TecleoLlave arranca y requiere desbloqueo biométrico inicial
   useEffect(() => {
-    const triggerForPackage = (pkgName) => {
-      if (!pkgName) return;
-      const found = installedApps.find(a => a.packageName === pkgName);
-      setChallengeTarget({
-        name: found?.name || pkgName,
-        icon: found?.icon || '',
-        packageName: pkgName,
-        phrase: phrase
-      });
+    let isMounted = true;
+
+    const triggerForPackage = (pkgName, isNative = false) => {
+      if (!isMounted) return;
+      if (pkgName) {
+        const found = installedApps.find(a => a.packageName === pkgName);
+        setChallengeTarget({
+          name: found?.name || pkgName,
+          icon: found?.icon || '',
+          packageName: pkgName,
+          phrase: phrase,
+          isNativeIntercept: isNative
+        });
+      } else {
+        setChallengeTarget({
+          name: 'TECLEOLLAVE',
+          icon: '',
+          packageName: '',
+          phrase: phrase,
+          isNativeIntercept: false
+        });
+      }
       setShowChallengeModal(true);
     };
 
     const listener = addAppChallengeListener((data) => {
       if (data?.targetPackage) {
-        triggerForPackage(data.targetPackage);
+        triggerForPackage(data.targetPackage, true);
       }
     });
 
     getPendingChallenge().then((res) => {
+      if (!isMounted) return;
       if (res?.hasChallenge && res.targetPackage) {
-        triggerForPackage(res.targetPackage);
+        triggerForPackage(res.targetPackage, true);
+      } else if (!modalsRef.current.challenge && participantData?.is_enrolled && !isAppMasterUnlockedRef.current) {
+        // Si el usuario ya está calibrado y TecleoLlave está bloqueada, exigir frase al abrir
+        triggerForPackage('', false);
       }
     });
 
     return () => {
+      isMounted = false;
       listener?.remove?.();
     };
-  }, [installedApps, phrase]);
-
-  // Si TECLEOLLAVE está configurada pero bloqueada, exigir automáticamente la frase llave
-  useEffect(() => {
-    if (participantData?.is_enrolled && !isAppMasterUnlocked && !showChallengeModal && !showEnrollmentModal) {
-      setChallengeTarget({
-        name: 'TECLEOLLAVE',
-        icon: '',
-        packageName: '',
-        phrase: phrase
-      });
-      setShowChallengeModal(true);
-    }
-  }, [participantData?.is_enrolled, isAppMasterUnlocked, showChallengeModal, showEnrollmentModal, phrase]);
+  }, [installedApps, phrase, participantData?.is_enrolled]);
 
   // ---------------------------------------------------------------------------
   // 5. MANEJO DE EVENTOS NATIVOS DE ANDROID (BOTÓN ATRÁS & RESUME / SCREEN OFF)
@@ -272,7 +283,9 @@ export default function MobileAppContainer() {
         if (m.enrollment) { setShowEnrollmentModal(false); return; }
         if (m.challenge) {
           setShowChallengeModal(false);
-          if (!challengeTarget.packageName && !isAppMasterUnlocked) {
+          if (challengeTargetRef.current.isNativeIntercept) {
+            minimizeApp();
+          } else if (!challengeTargetRef.current.packageName && !isAppMasterUnlockedRef.current) {
             minimizeApp();
           }
           return;
@@ -291,16 +304,18 @@ export default function MobileAppContainer() {
       console.warn('[AndroidApp] Error registrando backButton:', e);
     }
 
-    // Escuchar cuando la app regresa a primer plano o pasa a segundo plano (Screen lock / minimize)
+    // Escuchar cuando la app regresa a primer plano o pasa a segundo plano
     let stateSub;
     try {
       stateSub = CapApp.addListener('appStateChange', ({ isActive }) => {
-        if (!isActive) {
-          // Si la pantalla se apagó o la aplicación se minimizó, bloquear TECLEOLLAVE inmediatamente
-          setIsAppMasterUnlocked(false);
-        } else {
+        if (isActive) {
           refreshPermissions();
-          // Comprobar si hubo un reto al volver (ej. WhatsApp abierto)
+          // Si ya hay un reto nativo de app en curso, no interferir ni sobreescribir con TecleoLlave
+          if (challengeTargetRef.current?.isNativeIntercept && modalsRef.current.challenge) {
+            return;
+          }
+
+          // Comprobar si hubo un reto al volver
           getPendingChallenge().then((res) => {
             if (res?.hasChallenge && res.targetPackage) {
               const found = installedApps.find(a => a.packageName === res.targetPackage);
@@ -308,11 +323,26 @@ export default function MobileAppContainer() {
                 name: found?.name || res.targetPackage,
                 icon: found?.icon || '',
                 packageName: res.targetPackage,
-                phrase: phrase
+                phrase: phrase,
+                isNativeIntercept: true
+              });
+              setShowChallengeModal(true);
+            } else if (!modalsRef.current.challenge && participantData?.is_enrolled && !isAppMasterUnlockedRef.current) {
+              // Si la app regresa de segundo plano, está bloqueada y no hay reto activo, exigir frase para entrar
+              setChallengeTarget({
+                name: 'TECLEOLLAVE',
+                icon: '',
+                packageName: '',
+                phrase: phrase,
+                isNativeIntercept: false
               });
               setShowChallengeModal(true);
             }
           });
+        } else {
+          // La app pasó a segundo plano (se minimizó, salió o apagó la pantalla)
+          // Bloquear TecleoLlave para volver a pedir frase al regresar
+          setIsAppMasterUnlocked(false);
         }
       });
     } catch (e) {
@@ -323,7 +353,7 @@ export default function MobileAppContainer() {
       backSub?.then?.(sub => sub.remove?.())?.catch?.(() => {});
       stateSub?.then?.(sub => sub.remove?.())?.catch?.(() => {});
     };
-  }, [refreshPermissions, installedApps, phrase]);
+  }, [refreshPermissions, installedApps, phrase, participantData?.is_enrolled]);
 
   // ---------------------------------------------------------------------------
   // 6. ACCIONES DE AUTENTICACIÓN (LOGIN / REGISTRO / OTP)
@@ -429,6 +459,7 @@ export default function MobileAppContainer() {
     localStorage.removeItem('tl_mobile_participant');
     localStorage.removeItem('token');
     setParticipantData(null);
+    setIsAppMasterUnlocked(false);
     setIsOtpStep(false);
     setEmail('');
     setOtpCode(['', '', '', '', '', '']);
@@ -451,46 +482,76 @@ export default function MobileAppContainer() {
       name: name || 'Aplicación',
       icon: icon || '',
       packageName: pkgName || '',
-      phrase: phrase
+      phrase: phrase,
+      isNativeIntercept: false
     });
     setShowChallengeModal(true);
   };
 
-  const handleChallengeSuccess = async (pkgName) => {
+  const handleChallengeSuccess = async (pkgName, isNativeIntercept = false) => {
+    setShowChallengeModal(false);
     if (pkgName) {
       await unlockPackageForSession(pkgName);
-      // Minimizar TECLEOLLAVE para que se muestre la app subyacente (WhatsApp, BCP, etc.)
-      await minimizeApp();
+      // Solo minimizar TECLEOLLAVE si fue una intercepción nativa en segundo plano de Android
+      // para mostrar la app subyacente (WhatsApp, BCP, etc.)
+      if (isNativeIntercept) {
+        await minimizeApp();
+      }
     } else {
       // Desbloqueo exitoso de la propia aplicación TECLEOLLAVE
       setIsAppMasterUnlocked(true);
     }
-    setShowChallengeModal(false);
   };
 
   const handleChallengeClose = async () => {
     setShowChallengeModal(false);
-    // Si TECLEOLLAVE está bloqueada y el usuario cancela, minimizar para evitar bypass
-    if (!challengeTarget.packageName && !isAppMasterUnlocked) {
+    // Si era una intercepción nativa de una app externa y el usuario cancela, minimizar
+    if (challengeTarget.isNativeIntercept) {
+      await minimizeApp();
+    } else if (!challengeTarget.packageName && !isAppMasterUnlocked) {
+      // Si era para desbloquear TecleoLlave y canceló sin haber desbloqueado,
+      // minimizar la app para proteger el acceso
       await minimizeApp();
     }
   };
 
+  const handleEnrollmentClose = () => {
+    setShowEnrollmentModal(false);
+    // Si estaba calibrando una nueva frase pero canceló antes de terminar las 30 reps,
+    // restaurar la frase anterior para mantener activo el modelo calibrado previo
+    if (previousPhrase && previousPhrase !== phrase) {
+      setPhrase(previousPhrase);
+      setPreviousPhrase('');
+    }
+  };
+
   const handleEnrollmentComplete = ({ phrase: newKey, repsCount }) => {
-    setPhrase(newKey);
-    setIsAppMasterUnlocked(true);
+    const finalPhrase = newKey || phrase;
+    setPhrase(finalPhrase);
+    setPreviousPhrase('');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tl_key_phrase', finalPhrase);
+    }
     setParticipantData(prev => ({
       ...prev,
       is_enrolled: true,
-      enrollment_phrase: newKey,
+      enrollment_phrase: finalPhrase,
       enrolled_reps_count: repsCount || 30
     }));
+    setIsAppMasterUnlocked(true);
+    setShowEnrollmentModal(false);
   };
 
   const handleChangePhraseSubmit = (e) => {
     e.preventDefault();
     if (!newPhraseInput.trim()) return;
     const clean = newPhraseInput.trim().toLowerCase();
+    if (clean === phrase.trim().toLowerCase()) {
+      setShowChangePhraseModal(false);
+      setNewPhraseInput('');
+      return;
+    }
+    setPreviousPhrase(phrase);
     setPhrase(clean);
     setShowChangePhraseModal(false);
     setNewPhraseInput('');
@@ -511,10 +572,24 @@ export default function MobileAppContainer() {
 
   return (
     <div className={`tl-native-app tl-theme-${theme} ${isDesktopSim ? 'is-desktop-sim' : ''}`}>
-      {/* =================================================================== */}
-      {/* CABECERA DE LA APLICACIÓN */}
-      {/* =================================================================== */}
-      <header className="tl-app-header">
+      {/* 0. INTERCEPCIÓN NATIVA DE APP EXTERNA (PANTALLA DE BLOQUEO DEDICADA SIN FLASH DE FONDO) */}
+      {showChallengeModal && challengeTarget.isNativeIntercept ? (
+        <VerificationChallengeModal
+          targetName={challengeTarget.name}
+          targetIcon={challengeTarget.icon}
+          targetPackage={challengeTarget.packageName}
+          targetPhrase={challengeTarget.phrase || phrase}
+          isNativeIntercept={true}
+          participant={participantData}
+          onClose={handleChallengeClose}
+          onSuccess={handleChallengeSuccess}
+        />
+      ) : (
+        <>
+          {/* =================================================================== */}
+          {/* CABECERA DE LA APLICACIÓN */}
+          {/* =================================================================== */}
+          <header className="tl-app-header">
         <div className="tl-header-left">
           <div className="tl-header-logo-icon">
             <Shield size={19} />
@@ -526,7 +601,7 @@ export default function MobileAppContainer() {
         </div>
 
         <div className="tl-header-actions">
-          {participantData && (
+          {participantData && (!participantData.is_enrolled || isAppMasterUnlocked) && (
             <button
               type="button"
               onClick={() => handleOpenAppChallenge('Prueba Rápida', '', '')}
@@ -770,53 +845,53 @@ export default function MobileAppContainer() {
               </div>
             )}
           </div>
-        ) : participantData.is_enrolled && !isAppMasterUnlocked ? (
-          /* CASO B.1: TECLEOLLAVE BLOQUEADA (REQUIERE FRASE LLAVE) */
-          <div className="tl-card" style={{
-            textAlign: 'center',
-            padding: '2.5rem 1.5rem',
-            margin: '2rem 0.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '1.2rem',
-            border: '1px solid var(--tl-border)'
-          }}>
+        ) : !isAppMasterUnlocked && participantData?.is_enrolled ? (
+          /* CASO B: TECLEOLLAVE BLOQUEADA (REQUIERE FRASE LLAVE) */
+          <div className="tl-card" style={{ textAlign: 'center', padding: '2.5rem 1.25rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{
               width: 64,
               height: 64,
-              borderRadius: '50%',
+              borderRadius: '20px',
               background: 'var(--tl-accent-light)',
               color: 'var(--tl-accent)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              marginBottom: '1.2rem',
+              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.25)'
             }}>
               <Lock size={32} />
             </div>
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.4rem 0', color: 'var(--tl-text-primary)' }}>
-                TECLEOLLAVE Bloqueada
-              </h2>
-              <p style={{ fontSize: '0.8rem', color: 'var(--tl-text-secondary)', margin: 0, lineHeight: '1.45' }}>
-                La aplicación está protegida. Ingresa tu frase llave con tu ritmo habitual de tecleo para acceder al panel.
-              </p>
-            </div>
+
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.5rem 0', color: 'var(--tl-text-primary)' }}>
+              TecleoLlave Protegida
+            </h2>
+
+            <p style={{ fontSize: '0.8rem', color: 'var(--tl-text-secondary)', margin: '0 0 1.5rem 0', lineHeight: '1.5', maxWidth: '300px' }}>
+              Esta aplicación está protegida por tu ritmo biométrico de tecleo. Ingresa tu frase llave para acceder a tus aplicaciones y configuraciones.
+            </p>
+
             <button
               type="button"
+              className="tl-btn-primary"
+              style={{ width: '100%', maxWidth: '280px', padding: '0.85rem' }}
               onClick={() => {
-                setChallengeTarget({ name: 'TECLEOLLAVE', icon: '', packageName: '', phrase: phrase });
+                setChallengeTarget({
+                  name: 'TECLEOLLAVE',
+                  icon: '',
+                  packageName: '',
+                  phrase: phrase,
+                  isNativeIntercept: false
+                });
                 setShowChallengeModal(true);
               }}
-              className="tl-btn-primary"
-              style={{ width: '100%', maxWidth: '250px', padding: '0.75rem' }}
             >
-              <KeyRound size={16} />
-              <span>Desbloquear con Frase</span>
+              <KeyRound size={18} />
+              <span>Desbloquear con mi Frase</span>
             </button>
           </div>
         ) : (
-          /* CASO B.2: USUARIO CONECTADO Y DESBLOQUEADO - PESTAÑAS PRINCIPALES */
+          /* CASO C: ACCESO AUTORIZADO - PESTAÑAS PRINCIPALES */
           <>
             {activeTab === 'inicio' && (
               <HomeTab
@@ -885,7 +960,7 @@ export default function MobileAppContainer() {
       </main>
 
       {/* =================================================================== */}
-      {/* BARRA DE NAVEGACIÓN INFERIOR (Solo visible si la app está desbloqueada) */}
+      {/* BARRA DE NAVEGACIÓN INFERIOR */}
       {/* =================================================================== */}
       {participantData && (!participantData.is_enrolled || isAppMasterUnlocked) && (
         <MobileBottomNav
@@ -904,18 +979,19 @@ export default function MobileAppContainer() {
         <GuidedEnrollmentModal
           phrase={phrase}
           participant={participantData}
-          onClose={() => setShowEnrollmentModal(false)}
+          onClose={handleEnrollmentClose}
           onComplete={handleEnrollmentComplete}
         />
       )}
 
-      {/* 2. Modal de Verificación Biométrica de Frase Llave */}
-      {showChallengeModal && (
+      {/* 2. Modal de Verificación Biométrica de Frase Llave (para desbloqueo dentro de TecleoLlave) */}
+      {showChallengeModal && !challengeTarget.isNativeIntercept && (
         <VerificationChallengeModal
           targetName={challengeTarget.name}
           targetIcon={challengeTarget.icon}
           targetPackage={challengeTarget.packageName}
           targetPhrase={challengeTarget.phrase || phrase}
+          isNativeIntercept={false}
           participant={participantData}
           onClose={handleChallengeClose}
           onSuccess={handleChallengeSuccess}
@@ -991,6 +1067,8 @@ export default function MobileAppContainer() {
           onSaveUrl={handleSaveServerUrl}
           onClose={() => setShowServerConfigModal(false)}
         />
+      )}
+        </>
       )}
     </div>
   );

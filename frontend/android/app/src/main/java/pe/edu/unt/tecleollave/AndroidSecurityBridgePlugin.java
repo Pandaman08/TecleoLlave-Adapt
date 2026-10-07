@@ -239,6 +239,37 @@ public class AndroidSecurityBridgePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void promptDeviceCredential(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            try {
+                Context context = getContext();
+                KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+                if (km != null && km.isDeviceSecure()) {
+                    Intent intent = km.createConfirmDeviceCredentialIntent(
+                        "Desbloqueo de Seguridad",
+                        "Verifica tu identidad con tu PIN, patrón o huella"
+                    );
+                    if (intent != null) {
+                        startActivityForResult(call, intent, "deviceCredentialResult");
+                        return;
+                    }
+                }
+                call.reject("El dispositivo no tiene método seguro configurado");
+            } catch (Exception e) {
+                call.reject("Error al solicitar credencial: " + e.getMessage());
+            }
+        });
+    }
+
+    @com.getcapacitor.annotation.ActivityCallback
+    private void deviceCredentialResult(PluginCall call, androidx.activity.result.ActivityResult result) {
+        JSObject ret = new JSObject();
+        boolean success = (result.getResultCode() == android.app.Activity.RESULT_OK);
+        ret.put("success", success);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
     public void getPendingChallenge(PluginCall call) {
         String target = MainActivity.pendingChallengePackage;
         MainActivity.pendingChallengePackage = null;

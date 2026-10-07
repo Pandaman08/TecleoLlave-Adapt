@@ -157,6 +157,11 @@ public class AppLockerService extends Service {
             return;
         }
 
+        // Si MainActivity ya está en primer plano mostrando el reto o la app, no relanzar
+        if (MainActivity.isAppInForeground) {
+            return;
+        }
+
         try {
             UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
             if (usm == null) return;

@@ -265,14 +265,26 @@ export default function HomeTab({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => onNavigateTab('apps')}
-          className="tl-btn-outline"
-        >
-          <span>Administrar Aplicaciones</span>
-          <ArrowRight size={15} />
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('apps')}
+            className="tl-btn-primary"
+            style={{ flex: 1, padding: '0.65rem' }}
+          >
+            <span>+ Proteger Aplicación</span>
+            <ArrowRight size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('settings')}
+            className="tl-btn-outline"
+            style={{ padding: '0.65rem 0.85rem' }}
+            title="Configuración y permisos"
+          >
+            <span>Ajustes</span>
+          </button>
+        </div>
       </div>
     </div>
   );
