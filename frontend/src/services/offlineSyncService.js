@@ -178,7 +178,10 @@ class OfflineSyncService {
 
       const res = await fetch(healthUrl, {
         method: 'GET',
-        headers: { Accept: 'application/json' },
+        headers: {
+          'Accept': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
         signal: controller.signal
       });
       clearTimeout(timeoutId);

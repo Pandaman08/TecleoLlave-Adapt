@@ -22,7 +22,14 @@ export default function ServerConfigModal({
 
     try {
       const endpoint = clean.endsWith('/api') ? `${clean}/health` : clean === '/api' ? '/api/health' : `${clean}/api/health`;
-      const res = await fetch(endpoint, { method: 'GET', signal: AbortSignal.timeout(6000) });
+      const res = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        signal: AbortSignal.timeout(6000)
+      });
       const data = await res.json();
 
       if (res.ok && data.status === 'ok') {
