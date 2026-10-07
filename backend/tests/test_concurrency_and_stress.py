@@ -71,10 +71,11 @@ def stress_client():
     session.refresh(model)
 
     def override_get_db():
+        db_sess = TestingSessionLocal()
         try:
-            yield session
+            yield db_sess
         finally:
-            pass
+            db_sess.close()
 
     app.dependency_overrides[get_db] = override_get_db
     client = TestClient(app)
