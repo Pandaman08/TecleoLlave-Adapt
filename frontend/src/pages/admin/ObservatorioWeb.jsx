@@ -11,6 +11,7 @@ import {
 import api from '../../services/api';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import HypothesisAnalysisView from '../../components/admin/HypothesisAnalysisView';
 import './observatorio.css';
 
 export default function ObservatorioWeb() {
@@ -203,6 +204,15 @@ export default function ObservatorioWeb() {
           >
             <Users size={16} />
             <span>Vista Individual por Participante</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('hipotesis')}
+            className={`tl-tab-btn ${viewMode === 'hipotesis' ? 'active' : ''}`}
+            style={viewMode === 'hipotesis' ? { borderColor: '#818cf8', color: '#818cf8' } : {}}
+          >
+            <Shield size={16} />
+            <span>Análisis de Hipótesis (H1, H2, H3)</span>
           </button>
         </div>
 
@@ -431,6 +441,13 @@ export default function ObservatorioWeb() {
               </>
             )}
           </div>
+        )}
+
+        {/* ========================================================== */}
+        {/* VISTA 3: ANÁLISIS DE HIPÓTESIS H1, H2, H3                  */}
+        {/* ========================================================== */}
+        {viewMode === 'hipotesis' && (
+          <HypothesisAnalysisView />
         )}
       </div>
     </div>
