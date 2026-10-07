@@ -23,13 +23,15 @@ export const setCustomBaseUrl = (newUrl) => {
 const api = axios.create({
   baseURL: getBaseUrl(),
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
   }
 })
 
 api.interceptors.request.use(
   config => {
     config.baseURL = getBaseUrl();
+    config.headers['ngrok-skip-browser-warning'] = 'true';
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
