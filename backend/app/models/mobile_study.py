@@ -58,6 +58,13 @@ class MobileStudySample(Base):
     ground_truth = Column(String(50), default="LEGITIMATE", nullable=False)  # LEGITIMATE, IMPOSTOR_INFORMED, IMPOSTOR_ZERO_EFFORT
     target_app = Column(String(50), default="SYSTEM_LOCK", nullable=False)  # SYSTEM_LOCK, WhatsApp, BCP, Galería
     device_posture = Column(String(50), default="ESTATICO", nullable=False)  # ESTATICO, CAMINANDO
+    inference_time_ms = Column(Float, nullable=True)
+    total_unlock_delay_ms = Column(Float, nullable=True)
+    network_connection_type = Column(String(30), nullable=True)  # WIFI, CELLULAR, OFFLINE, UNKNOWN
+    challenge_session_id = Column(String(64), nullable=True)
+    attempt_number = Column(Integer, nullable=True)
+    auth_context = Column(String(50), nullable=True)  # SYSTEM_LOCK, APPLOCKER
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     participant = relationship("MobileParticipant", back_populates="samples")
+

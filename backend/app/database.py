@@ -43,9 +43,22 @@ def init_db():
         with engine.connect() as conn:
             result = conn.execute(text("PRAGMA table_info(mobile_study_samples)"))
             cols = [row[1] for row in result.fetchall()]
-            if cols and "client_event_id" not in cols:
-                conn.execute(text("ALTER TABLE mobile_study_samples ADD COLUMN client_event_id VARCHAR(64)"))
-                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_mobile_study_samples_client_event_id ON mobile_study_samples (client_event_id)"))
+            if cols:
+                if "client_event_id" not in cols:
+                    conn.execute(text("ALTER TABLE mobile_study_samples ADD COLUMN client_event_id VARCHAR(64)"))
+                    conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_mobile_study_samples_client_event_id ON mobile_study_samples (client_event_id)"))
+                if "inference_time_ms" not in cols:
+                    conn.execute(text("ALTER TABLE mobile_study_samples ADD COLUMN inference_time_ms FLOAT"))
+                if "total_unlock_delay_ms" not in cols:
+                    conn.execute(text("ALTER TABLE mobile_study_samples ADD COLUMN total_unlock_delay_ms FLOAT"))
+                if "network_connection_type" not in cols:
+                    conn.execute(text("ALTER TABLE mobile_study_samples ADD COLUMN network_connection_type VARCHAR(30)"))
+                if "challenge_session_id" not in cols:
+                    conn.execute(text("ALTER TABLE mobile_study_samples ADD COLUMN challenge_session_id VARCHAR(64)"))
+                if "attempt_number" not in cols:
+                    conn.execute(text("ALTER TABLE mobile_study_samples ADD COLUMN attempt_number INTEGER"))
+                if "auth_context" not in cols:
+                    conn.execute(text("ALTER TABLE mobile_study_samples ADD COLUMN auth_context VARCHAR(50)"))
                 conn.commit()
     except Exception:
         pass
