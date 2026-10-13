@@ -774,3 +774,96 @@ input:checked + .tl-slider:before {
 .tl-star-btn:active {
   transform: scale(1.2);
 }
+
+/* Botón Switch de Tema Visual (100% responsive, solo icono como botón) */
+.tl-theme-switch {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.25s ease, box-shadow 0.2s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.tl-theme-switch:focus-visible {
+  box-shadow: 0 0 0 2px var(--tl-accent);
+}
+
+.tl-theme-switch.dark {
+  background-color: var(--tl-accent);
+}
+
+.tl-theme-switch.light {
+  background-color: var(--tl-border);
+}
+
+.tl-theme-switch-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.tl-theme-switch.dark .tl-theme-switch-thumb {
+  transform: translateX(25px);
+  color: var(--tl-accent);
+}
+
+.tl-theme-switch.light .tl-theme-switch-thumb {
+  transform: translateX(3px);
+  color: #f59e0b;
+}
+
+/* Indicador de Conexión Informativo */
+.tl-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.tl-status-indicator.online {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--tl-success);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.tl-status-indicator.offline {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--tl-danger);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.tl-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.tl-status-indicator.online .tl-status-dot {
+  background-color: var(--tl-success);
+  box-shadow: 0 0 6px var(--tl-success);
+}
+
+.tl-status-indicator.offline .tl-status-dot {
+  background-color: var(--tl-danger);
+  box-shadow: 0 0 6px var(--tl-danger);
+}
+

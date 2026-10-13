@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Shield, ShieldCheck, ShieldAlert, KeyRound, Smartphone, Mail,
   CheckCircle2, AlertTriangle, Lock, Unlock, Moon, Sun,
-  LogOut, RefreshCw, Sparkles, ChevronRight, Edit3, X, Server
+  LogOut, RefreshCw, Sparkles, ChevronRight, Edit3, X
 } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
-import api, { getBaseUrl, setCustomBaseUrl } from '../../services/api';
+import api, { getBaseUrl } from '../../services/api';
 import offlineSyncService from '../../services/offlineSyncService';
 import {
   isNativeAndroid,
@@ -31,7 +31,6 @@ import SettingsTab from '../../components/mobile/SettingsTab';
 import GuidedEnrollmentModal from '../../components/mobile/GuidedEnrollmentModal';
 import VerificationChallengeModal from '../../components/mobile/VerificationChallengeModal';
 import DeviceLockSetupModal from '../../components/mobile/DeviceLockSetupModal';
-import ServerConfigModal from '../../components/mobile/ServerConfigModal';
 import SyncStatusBar from '../../components/mobile/SyncStatusBar';
 
 export default function MobileAppContainer() {
@@ -192,17 +191,16 @@ export default function MobileAppContainer() {
   const [showChangePhraseModal, setShowChangePhraseModal] = useState(false);
   const [newPhraseInput, setNewPhraseInput] = useState('');
   const [previousPhrase, setPreviousPhrase] = useState('');
-  const [showServerConfigModal, setShowServerConfigModal] = useState(false);
   const [currentServerUrl, setCurrentServerUrl] = useState(() => getBaseUrl());
+  const [isServerOnline, setIsServerOnline] = useState(() => offlineSyncService.getState().networkStatus === 'online');
 
-  const handleSaveServerUrl = (newUrl) => {
-    setCustomBaseUrl(newUrl);
-    setCurrentServerUrl(getBaseUrl());
-    setShowServerConfigModal(false);
-    offlineSyncService.checkServerHealth().then((online) => {
-      if (online) offlineSyncService.syncQueue();
+  useEffect(() => {
+    const unsub = offlineSyncService.subscribe((state) => {
+      setIsServerOnline(state.networkStatus === 'online');
     });
-  };
+    offlineSyncService.init();
+    return () => unsub();
+  }, []);
 
   // Escuchar cuando el servicio detecta una app protegida abierta en el celular
   // o cuando TecleoLlave arranca y requiere desbloqueo biométrico inicial
@@ -612,14 +610,14 @@ export default function MobileAppContainer() {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => setShowServerConfigModal(true)}
-            className="tl-icon-btn"
-            title="Configurar servidor API / Túnel"
+          <div
+            className={`tl-status-indicator ${isServerOnline ? 'online' : 'offline'}`}
+            style={{ padding: '3px 8px', fontSize: '0.68rem' }}
+            title={isServerOnline ? 'Servidor Backend Conectado' : 'Servidor Backend Desconectado'}
           >
-            <Server size={17} />
-          </button>
+            <span className="tl-status-dot" />
+            <span>{isServerOnline ? 'Conectado' : 'Desconectado'}</span>
+          </div>
 
           <button
             type="button"
@@ -637,7 +635,7 @@ export default function MobileAppContainer() {
       {/* =================================================================== */}
       <main className="tl-app-body">
         {/* Barra Reactiva de Estado de Conexión y Cola de Sincronización */}
-        <SyncStatusBar onOpenServerConfig={() => setShowServerConfigModal(true)} />
+        <SyncStatusBar />
 
         {/* CASO A: USUARIO NO AUTENTICADO (LOGIN / REGISTRO / OTP) */}
         {!participantData ? (
@@ -950,8 +948,8 @@ export default function MobileAppContainer() {
                 onOpenUsageSettings={openUsageSettings}
                 onOpenOverlaySettings={openOverlaySettings}
                 onOpenSecuritySettings={openSecuritySettings}
-                onOpenServerConfig={() => setShowServerConfigModal(true)}
                 currentServerUrl={currentServerUrl}
+                isServerOnline={isServerOnline}
                 onLogout={handleLogout}
               />
             )}
@@ -1060,14 +1058,7 @@ export default function MobileAppContainer() {
         </div>
       )}
 
-      {/* 7. Modal de Configuración de Servidor / Túnel */}
-      {showServerConfigModal && (
-        <ServerConfigModal
-          currentUrl={currentServerUrl}
-          onSaveUrl={handleSaveServerUrl}
-          onClose={() => setShowServerConfigModal(false)}
-        />
-      )}
+
         </>
       )}
     </div>

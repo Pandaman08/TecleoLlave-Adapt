@@ -1,19 +1,41 @@
 package pe.edu.unt.tecleollave;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends BridgeActivity {
 
     public static volatile String pendingChallengePackage = null;
     public static volatile boolean isAppInForeground = false;
+    private static final int PERMISSION_REQUEST_CODE = 1001;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AndroidSecurityBridgePlugin.class);
         super.onCreate(savedInstanceState);
+        requestAppPermissions();
         handleIntent(getIntent());
+    }
+
+    private void requestAppPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            List<String> permissionsToRequest = new ArrayList<>();
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
+            if (!permissionsToRequest.isEmpty()) {
+                ActivityCompat.requestPermissions(this, permissionsToRequest.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+            }
+        }
     }
 
     @Override

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Wifi, WifiOff, RefreshCw, CheckCircle2, AlertTriangle, KeyRound, Server
+  Wifi, WifiOff, RefreshCw, CheckCircle2, AlertTriangle, KeyRound
 } from 'lucide-react';
 import offlineSyncService from '../../services/offlineSyncService';
 
-export default function SyncStatusBar({ onOpenServerConfig }) {
+export default function SyncStatusBar() {
   const [syncState, setSyncState] = useState(() => offlineSyncService.getState());
 
   useEffect(() => {
@@ -151,18 +151,6 @@ export default function SyncStatusBar({ onOpenServerConfig }) {
           >
             <RefreshCw size={11} className={isSyncing ? 'tl-spin' : ''} />
             <span>Sincronizar</span>
-          </button>
-        )}
-
-        {onOpenServerConfig && (
-          <button
-            type="button"
-            onClick={onOpenServerConfig}
-            className="tl-icon-btn"
-            style={{ padding: '4px', width: '24px', height: '24px' }}
-            title="Configurar URL del servidor o túnel"
-          >
-            <Server size={13} />
           </button>
         )}
       </div>

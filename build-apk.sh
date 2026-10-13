@@ -50,9 +50,11 @@ if [ -f "$APK_PATH" ]; then
     echo "📍 Copia lista en Raíz: $PROJECT_ROOT/TecleoLlave-Adapt.apk"
     echo "⚖️ Tamaño: $APK_SIZE"
     echo "=========================================================="
-    echo "Para pasarlo a tu celular Android:"
+    echo "Para instalar con TODOS LOS PERMISOS concedidos automáticamente:"
     echo "  1) Conectar por cable USB con depuración USB y ejecutar:"
-    echo "     adb install -r \"$PROJECT_ROOT/TecleoLlave-Adapt.apk\""
+    echo "     adb install -r -g \"$PROJECT_ROOT/TecleoLlave-Adapt.apk\""
+    echo "     adb shell appops set pe.edu.unt.tecleollave GET_USAGE_STATS allow"
+    echo "     adb shell appops set pe.edu.unt.tecleollave SYSTEM_ALERT_WINDOW allow"
     echo "  2) O transferir el archivo 'TecleoLlave-Adapt.apk' por Telegram, Google Drive, WhatsApp o cable."
     echo "=========================================================="
 else

@@ -12,8 +12,8 @@ export default function SettingsTab({
   onOpenUsageSettings,
   onOpenOverlaySettings,
   onOpenSecuritySettings,
-  onOpenServerConfig,
   currentServerUrl,
+  isServerOnline = true,
   onLogout
 }) {
   return (
@@ -178,7 +178,7 @@ export default function SettingsTab({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          {/* Apariencia / Tema */}
+          {/* Apariencia / Tema con Switch de Solo Icono */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -198,15 +198,20 @@ export default function SettingsTab({
             </div>
             <button
               type="button"
+              role="switch"
+              aria-checked={theme === 'dark'}
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
               onClick={onToggleTheme}
-              className="tl-btn-outline"
-              style={{ padding: '4px 10px', fontSize: '0.72rem' }}
+              className={`tl-theme-switch ${theme === 'dark' ? 'dark' : 'light'}`}
             >
-              Cambiar
+              <div className="tl-theme-switch-thumb">
+                {theme === 'dark' ? <Moon size={12} /> : <Sun size={12} />}
+              </div>
             </button>
           </div>
 
-          {/* Conexión Backend / Túnel */}
+          {/* Conexión Backend / Servidor (Informativo) */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -214,25 +219,21 @@ export default function SettingsTab({
             padding: '0.65rem 0.75rem',
             borderRadius: '10px',
             background: 'var(--tl-bg-surface-elevated)',
-            border: '1px solid var(--tl-border)'
+            border: `1px solid ${isServerOnline ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1, marginRight: '0.5rem' }}>
-              <Server size={16} color="var(--tl-accent)" style={{ flexShrink: 0 }} />
+              <Server size={16} color={isServerOnline ? 'var(--tl-success)' : 'var(--tl-danger)'} style={{ flexShrink: 0 }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--tl-text-primary)' }}>Servidor y Túnel</div>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--tl-text-primary)' }}>Servidor Backend</div>
                 <div style={{ fontSize: '0.67rem', color: 'var(--tl-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {currentServerUrl || 'Predeterminado'}
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onOpenServerConfig}
-              className="tl-btn-outline"
-              style={{ padding: '4px 10px', fontSize: '0.72rem', flexShrink: 0 }}
-            >
-              Configurar
-            </button>
+            <div className={`tl-status-indicator ${isServerOnline ? 'online' : 'offline'}`}>
+              <span className="tl-status-dot" />
+              <span>{isServerOnline ? 'Conectado' : 'Desconectado'}</span>
+            </div>
           </div>
         </div>
       </div>
