@@ -1,4 +1,5 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import api from './api';
 
 // Registrar plugin nativo de Android si está presente
 const AndroidSecurityBridge = registerPlugin('AndroidSecurityBridge');
@@ -93,6 +94,21 @@ export async function openOverlaySettings() {
 }
 
 /**
+ * Fuerza el despliegue del teclado en Android para enfocar de inmediato
+ */
+export async function showKeyboard() {
+  if (isNativeAndroid()) {
+    try {
+      await AndroidSecurityBridge.showKeyboard();
+      return true;
+    } catch (e) {
+      console.warn('[NativeBridge] Error al mostrar teclado:', e);
+    }
+  }
+  return false;
+}
+
+/**
  * Abre la pantalla REAL de Ajustes de Seguridad del Dispositivo Android
  */
 export async function openSecuritySettings() {
@@ -131,14 +147,20 @@ export async function getDeviceSecurityStatus() {
 export async function syncAppLockerService({ protectedPackages = [], isEnrolled = false, phrase = 'seguridad unt 2026' }) {
   if (isNativeAndroid()) {
     try {
+      const pkgs = Array.isArray(protectedPackages) ? protectedPackages : [];
       await AndroidSecurityBridge.startAppLockerService({
-        protectedPackages: Array.isArray(protectedPackages) ? protectedPackages : [],
+        protectedPackages: pkgs,
         isEnrolled: Boolean(isEnrolled),
         phrase: phrase || 'seguridad unt 2026'
+      });
+      logTelemetry('AppLocker', `Servicio sincronizado (${pkgs.length} apps protegidas)`, {
+        apps: pkgs,
+        isEnrolled
       });
       return true;
     } catch (e) {
       console.warn('[NativeBridge] Error al sincronizar AppLockerService:', e);
+      logTelemetry('AppLockerError', `Error al sincronizar servicio: ${e?.message || e}`);
     }
   }
   return false;
@@ -151,6 +173,7 @@ export async function unlockPackageForSession(packageName) {
   if (isNativeAndroid()) {
     try {
       await AndroidSecurityBridge.unlockPackage({ packageName });
+      logTelemetry('Sesion', `App autorizada para sesión activa: ${packageName}`);
       return true;
     } catch (e) {
       console.warn('[NativeBridge] Error al desbloquear paquete:', e);
@@ -175,6 +198,24 @@ export async function minimizeApp() {
 }
 
 /**
+ * Abre inmediatamente la aplicación objetivo tras verificar la frase clave con éxito
+ */
+export async function openTargetApp(packageName) {
+  if (isNativeAndroid()) {
+    try {
+      logTelemetry('Launcher', `Abriendo aplicación protegida: ${packageName}`);
+      await AndroidSecurityBridge.openTargetApp({ packageName });
+      return true;
+    } catch (e) {
+      console.warn('[NativeBridge] Error al abrir aplicación objetivo:', e);
+      // Fallback a minimizar
+      return await minimizeApp();
+    }
+  }
+  return false;
+}
+
+/**
  * Comprueba si hay un reto de bloqueo pendiente por procesar
  */
 export async function getPendingChallenge() {
@@ -189,6 +230,36 @@ export async function getPendingChallenge() {
 }
 
 /**
+ * Envía al usuario a la pantalla de Inicio de Android (Home) al cancelar un reto
+ */
+export async function goToHomeScreen() {
+  if (isNativeAndroid()) {
+    try {
+      await AndroidSecurityBridge.goToHomeScreen();
+      return true;
+    } catch (e) {
+      console.warn('[NativeBridge] Error al ir a la pantalla de inicio:', e);
+    }
+  }
+  return false;
+}
+
+/**
+ * Limpia el paquete del reto pendiente procesado
+ */
+export async function clearPendingChallenge() {
+  if (isNativeAndroid()) {
+    try {
+      await AndroidSecurityBridge.clearPendingChallenge();
+      return true;
+    } catch (e) {
+      console.warn('[NativeBridge] Error al limpiar reto pendiente:', e);
+    }
+  }
+  return false;
+}
+
+/**
  * Registra listener para retos de bloqueo lanzados desde el servicio en segundo plano
  */
 export function addAppChallengeListener(callback) {
@@ -200,4 +271,13 @@ export function addAppChallengeListener(callback) {
     }
   }
   return { remove: () => {} };
+}
+
+/**
+ * Envía un registro de diagnóstico en tiempo real al backend para visualizar en iniciar_sistema.sh
+ */
+export async function logTelemetry(tag, message, details = null) {
+  try {
+    api.post('/mobile/telemetry/log', { tag, message, details }).catch(() => {});
+  } catch (ignored) {}
 }

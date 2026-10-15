@@ -37,6 +37,17 @@
                 android:value="Supervisión biométrica y bloqueo de aplicaciones" />
         </service>
 
+        <!-- Receptor de Inicio del Dispositivo para mantener supervisión activa -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

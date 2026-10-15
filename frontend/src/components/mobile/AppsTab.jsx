@@ -52,8 +52,12 @@ export default function AppsTab({
   const protectedCount = Object.values(protectedPackages).filter(Boolean).length;
 
   const handleSwitchChange = (pkgName, appName) => {
-    if (!isEnrolled) {
-      onRequireEnrollment?.();
+    if (!permissionsStatus.usageStats) {
+      onOpenUsageSettings?.();
+      return;
+    }
+    if (!permissionsStatus.overlay) {
+      onOpenOverlaySettings?.();
       return;
     }
     onToggleAppProtection(pkgName, appName);
@@ -72,10 +76,10 @@ export default function AppsTab({
             <Sparkles size={18} color="var(--tl-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div style={{ flex: 1 }}>
               <h4 style={{ margin: '0 0 0.2rem 0', fontSize: '0.82rem', fontWeight: 700, color: 'var(--tl-warning)' }}>
-                Calibración de Perfil Requerida
+                Calibración Biométrica en Curso
               </h4>
               <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.72rem', color: 'var(--tl-text-secondary)', lineHeight: '1.4' }}>
-                La frase llave <strong>solo funcionará si completas el entrenamiento de tu perfil (30 repeticiones)</strong>. Hasta entonces, las aplicaciones no se bloquearán.
+                Las aplicaciones protegidas solicitarán tu frase llave para abrirse. Completa las 30 repeticiones para activar la verificación adaptativa por tu ritmo de tecleo.
               </p>
               <button
                 type="button"
@@ -287,44 +291,44 @@ export default function AppsTab({
                       }}>
                         {app.name}
                       </span>
-                      {isProtected && isEnrolled && (
+                      {isProtected && (
                         <ShieldCheck size={13} color="var(--tl-accent)" style={{ flexShrink: 0 }} />
                       )}
                     </div>
                     <span style={{
                       fontSize: '0.68rem',
-                      color: isProtected && isEnrolled ? 'var(--tl-success)' : 'var(--tl-text-muted)',
+                      color: isProtected ? 'var(--tl-success)' : 'var(--tl-text-muted)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
                       fontWeight: 600
                     }}>
-                      {isProtected && isEnrolled ? '● Protegida' : 'Sin proteger'}
+                      {isProtected ? '● Protegida' : 'Sin proteger'}
                     </span>
                   </div>
                 </div>
 
                 {/* Lado derecho: Botón Probar + Switch Toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  {isProtected && isEnrolled && (
+                  {isProtected && (
                     <button
                       type="button"
                       onClick={() => onOpenAppChallenge(app.name, app.icon, app.packageName)}
                       className="tl-icon-btn"
-                      title="Probar verificación biométrica"
+                      title="Probar verificación con frase"
                       style={{ padding: '5px', color: 'var(--tl-accent)' }}
                     >
                       <Lock size={15} />
                     </button>
                   )}
 
-                  <label className="tl-switch" title={!isEnrolled ? 'Calibra tu perfil primero' : ''}>
+                  <label className="tl-switch" title={!permissionsStatus.usageStats ? 'Requiere permiso de acceso a datos de uso' : ''}>
                     <input
                       type="checkbox"
-                      checked={isProtected && isEnrolled}
+                      checked={isProtected}
                       onChange={() => handleSwitchChange(app.packageName, app.name)}
                     />
-                    <span className="tl-slider" style={{ opacity: isEnrolled ? 1 : 0.6 }} />
+                    <span className="tl-slider" />
                   </label>
                 </div>
               </div>

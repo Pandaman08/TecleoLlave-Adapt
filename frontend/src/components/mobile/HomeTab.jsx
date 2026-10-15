@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck, ShieldAlert, KeyRound, Smartphone, Eye, EyeOff,
-  Sparkles, CheckCircle2, AlertTriangle, ArrowRight, Lock
+  Sparkles, CheckCircle2, AlertTriangle, ArrowRight, Lock, ClipboardCheck
 } from 'lucide-react';
 
 export default function HomeTab({
@@ -197,6 +197,44 @@ export default function HomeTab({
             <Sparkles size={15} />
             <span>{isEnrolled ? 'Reentrenar' : 'Entrenar Perfil'}</span>
           </button>
+        </div>
+      </div>
+
+      {/* 2.5. Tarjeta Interactiva: Cuestionario del Estudio Científico */}
+      <div
+        className="tl-card"
+        style={{
+          background: 'linear-gradient(135deg, var(--tl-bg-surface) 0%, rgba(56, 189, 248, 0.08) 100%)',
+          border: '1px solid var(--tl-border)',
+          cursor: 'pointer',
+          padding: '0.85rem'
+        }}
+        onClick={() => onNavigateTab('survey')}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'var(--tl-accent-light)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <ClipboardCheck size={20} color="var(--tl-accent)" />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--tl-text-primary)', lineHeight: 1.2 }}>
+                Cuestionario del Estudio Científico
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--tl-text-secondary)', marginTop: '2px' }}>
+                Completa la evaluación de usabilidad para el paper UNT
+              </div>
+            </div>
+          </div>
+          <ArrowRight size={16} color="var(--tl-accent)" style={{ flexShrink: 0 }} />
         </div>
       </div>
 

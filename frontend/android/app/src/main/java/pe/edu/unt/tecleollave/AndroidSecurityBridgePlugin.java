@@ -15,7 +15,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Process;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Base64;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -164,6 +167,26 @@ public class AndroidSecurityBridgePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void showKeyboard(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            try {
+                View view = getActivity().getCurrentFocus();
+                if (view == null && getBridge() != null) {
+                    view = getBridge().getWebView();
+                }
+                if (view != null) {
+                    InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        view.requestFocus();
+                        imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+                    }
+                }
+            } catch (Exception ignored) {}
+        });
+        call.resolve();
+    }
+
+    @PluginMethod
     public void getDeviceSecurityStatus(PluginCall call) {
         Context context = getContext();
         KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
@@ -239,6 +262,42 @@ public class AndroidSecurityBridgePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void openTargetApp(PluginCall call) {
+        String packageName = call.getString("packageName");
+        if (packageName == null || packageName.isEmpty()) {
+            call.reject("packageName requerido");
+            return;
+        }
+
+        getActivity().runOnUiThread(() -> {
+            try {
+                Context context = getContext();
+                PackageManager pm = context.getPackageManager();
+                Intent launchIntent = pm.getLaunchIntentForPackage(packageName);
+                if (launchIntent != null) {
+                    launchIntent.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK |
+                        Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED |
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT |
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    );
+                    context.startActivity(launchIntent);
+                    getActivity().moveTaskToBack(true);
+                    call.resolve();
+                } else {
+                    getActivity().moveTaskToBack(true);
+                    call.resolve();
+                }
+            } catch (Exception e) {
+                try {
+                    getActivity().moveTaskToBack(true);
+                } catch (Exception ignored) {}
+                call.resolve();
+            }
+        });
+    }
+
+    @PluginMethod
     public void promptDeviceCredential(PluginCall call) {
         getActivity().runOnUiThread(() -> {
             try {
@@ -270,13 +329,31 @@ public class AndroidSecurityBridgePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void goToHomeScreen(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            try {
+                Intent startMain = new Intent(Intent.ACTION_MAIN);
+                startMain.addCategory(Intent.CATEGORY_HOME);
+                startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(startMain);
+            } catch (Exception ignored) {}
+        });
+        call.resolve();
+    }
+
+    @PluginMethod
     public void getPendingChallenge(PluginCall call) {
         String target = MainActivity.pendingChallengePackage;
-        MainActivity.pendingChallengePackage = null;
         JSObject ret = new JSObject();
         ret.put("hasChallenge", target != null && !target.isEmpty());
         ret.put("targetPackage", target != null ? target : "");
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void clearPendingChallenge(PluginCall call) {
+        MainActivity.pendingChallengePackage = null;
+        call.resolve();
     }
 
     private boolean hasUsageStatsPermission(Context context) {
@@ -289,7 +366,6 @@ public class AndroidSecurityBridgePlugin extends Plugin {
         );
         return mode == AppOpsManager.MODE_ALLOWED;
     }
-
     private boolean isDeviceSecure(Context context) {
         KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
         return km != null && km.isDeviceSecure();

@@ -4,4 +4,5 @@
     <string name="title_activity_main">TecleoLlave Mobile</string>
     <string name="package_name">pe.edu.unt.tecleollave</string>
     <string name="custom_url_scheme">pe.edu.unt.tecleollave</string>
+    <string name="accessibility_service_description">Permite a TECLEOLLAVE detectar el inicio de aplicaciones protegidas al instante para activar el bloqueo con tu frase llave.</string>
 </resources>

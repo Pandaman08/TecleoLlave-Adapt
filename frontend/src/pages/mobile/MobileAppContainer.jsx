@@ -18,7 +18,10 @@ import {
   syncAppLockerService,
   unlockPackageForSession,
   minimizeApp,
+  openTargetApp,
+  goToHomeScreen,
   getPendingChallenge,
+  clearPendingChallenge,
   addAppChallengeListener
 } from '../../services/nativeBridge';
 
@@ -28,6 +31,7 @@ import HomeTab from '../../components/mobile/HomeTab';
 import MyKeyTab from '../../components/mobile/MyKeyTab';
 import AppsTab from '../../components/mobile/AppsTab';
 import SettingsTab from '../../components/mobile/SettingsTab';
+import SurveyTab from '../../components/mobile/SurveyTab';
 import GuidedEnrollmentModal from '../../components/mobile/GuidedEnrollmentModal';
 import VerificationChallengeModal from '../../components/mobile/VerificationChallengeModal';
 import DeviceLockSetupModal from '../../components/mobile/DeviceLockSetupModal';
@@ -109,10 +113,29 @@ export default function MobileAppContainer() {
     }
   }, [participantData]);
 
-  // ---------------------------------------------------------------------------
-  // 3. PESTAÑAS PRINCIPALES Y APLICACIONES INSTALADAS
-  // ---------------------------------------------------------------------------
-  const [activeTab, setActiveTab] = useState('inicio'); // 'inicio' | 'mykey' | 'apps' | 'settings'
+  const TAB_ORDER = ['inicio', 'mykey', 'apps', 'survey', 'settings'];
+  const [activeTab, setActiveTab] = useState('inicio'); // 'inicio' | 'mykey' | 'apps' | 'survey' | 'settings'
+  const [slideDirection, setSlideDirection] = useState('slide-left');
+  const [isSurveyCompleted, setIsSurveyCompleted] = useState(() => {
+    try {
+      const cached = localStorage.getItem(`tl_survey_${participantData?.id}`);
+      return Boolean(cached);
+    } catch {
+      return false;
+    }
+  });
+
+  const handleSelectTab = useCallback((newTab) => {
+    setActiveTab((prevTab) => {
+      if (prevTab === newTab) return prevTab;
+      const oldIdx = TAB_ORDER.indexOf(prevTab);
+      const newIdx = TAB_ORDER.indexOf(newTab);
+      if (newIdx !== -1 && oldIdx !== -1) {
+        setSlideDirection(newIdx >= oldIdx ? 'slide-left' : 'slide-right');
+      }
+      return newTab;
+    });
+  }, []);
   const [installedApps, setInstalledApps] = useState([]);
   const [protectedPackages, setProtectedPackages] = useState(() => {
     try {
@@ -145,7 +168,8 @@ export default function MobileAppContainer() {
   const [permissionsStatus, setPermissionsStatus] = useState({
     usageStats: true,
     overlay: true,
-    deviceSecure: true
+    deviceSecure: true,
+    accessibility: true
   });
 
   const refreshPermissions = useCallback(async () => {
@@ -202,6 +226,103 @@ export default function MobileAppContainer() {
     return () => unsub();
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // 4.1 GESTO DE DESLIZAMIENTO CON EL DEDO (SWIPE NAVIGATION ENTRE PANTALLAS)
+  // ---------------------------------------------------------------------------
+  const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
+  const touchCurrentRef = useRef({ x: 0, y: 0 });
+  const isMouseDownRef = useRef(false);
+
+  const handleSwipeStart = (clientX, clientY, target) => {
+    if (showEnrollmentModal || showChallengeModal || showDeviceLockModal || showChangePhraseModal) {
+      return;
+    }
+    if (target && target.closest && target.closest('input, textarea, select, .tl-slider, .tl-theme-switch, .tl-touch-keyboard')) {
+      return;
+    }
+    touchStartRef.current = { x: clientX, y: clientY, time: Date.now() };
+    touchCurrentRef.current = { x: clientX, y: clientY };
+  };
+
+  const handleSwipeMove = (clientX, clientY) => {
+    if (touchStartRef.current.time > 0) {
+      touchCurrentRef.current = { x: clientX, y: clientY };
+    }
+  };
+
+  const handleSwipeEnd = () => {
+    const start = touchStartRef.current;
+    const current = touchCurrentRef.current;
+    if (!start.time) return;
+
+    const deltaX = current.x - start.x;
+    const deltaY = current.y - start.y;
+    const deltaTime = Date.now() - start.time;
+    touchStartRef.current.time = 0;
+
+    // Umbrales de deslizamiento:
+    // Mínimo 42px horizontal, dominante horizontalmente (deltaX > deltaY * 1.25), y duración < 650ms
+    if (Math.abs(deltaX) >= 42 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25 && deltaTime < 650) {
+      if (participantData && (!participantData.is_enrolled || isAppMasterUnlocked)) {
+        const currentIndex = TAB_ORDER.indexOf(activeTab);
+        if (currentIndex !== -1) {
+          if (deltaX < 0 && currentIndex < TAB_ORDER.length - 1) {
+            // Deslizar izquierda: siguiente pantalla
+            handleSelectTab(TAB_ORDER[currentIndex + 1]);
+          } else if (deltaX > 0 && currentIndex > 0) {
+            // Deslizar derecha: pantalla anterior
+            handleSelectTab(TAB_ORDER[currentIndex - 1]);
+          }
+        }
+      } else if (!participantData && !isOtpStep) {
+        if (deltaX < 0 && authTab === 'login') {
+          setAuthTab('register');
+        } else if (deltaX > 0 && authTab === 'register') {
+          setAuthTab('login');
+        }
+      }
+    }
+  };
+
+  const onTouchStart = (e) => {
+    if (e.touches && e.touches.length === 1) {
+      handleSwipeStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+    }
+  };
+
+  const onTouchMove = (e) => {
+    if (e.touches && e.touches.length === 1) {
+      handleSwipeMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const onTouchEnd = () => {
+    handleSwipeEnd();
+  };
+
+  const onMouseDown = (e) => {
+    isMouseDownRef.current = true;
+    handleSwipeStart(e.clientX, e.clientY, e.target);
+  };
+
+  const onMouseMove = (e) => {
+    if (isMouseDownRef.current) {
+      handleSwipeMove(e.clientX, e.clientY);
+    }
+  };
+
+  const onMouseUp = () => {
+    if (isMouseDownRef.current) {
+      isMouseDownRef.current = false;
+      handleSwipeEnd();
+    }
+  };
+
+  const installedAppsRef = useRef(installedApps);
+  installedAppsRef.current = installedApps;
+  const phraseRef = useRef(phrase);
+  phraseRef.current = phrase;
+
   // Escuchar cuando el servicio detecta una app protegida abierta en el celular
   // o cuando TecleoLlave arranca y requiere desbloqueo biométrico inicial
   useEffect(() => {
@@ -209,21 +330,24 @@ export default function MobileAppContainer() {
 
     const triggerForPackage = (pkgName, isNative = false) => {
       if (!isMounted) return;
+      const currentPhrase = phraseRef.current || phrase;
       if (pkgName) {
-        const found = installedApps.find(a => a.packageName === pkgName);
+        const currentApps = installedAppsRef.current || installedApps;
+        const found = currentApps.find(a => a.packageName === pkgName);
         setChallengeTarget({
           name: found?.name || pkgName,
           icon: found?.icon || '',
           packageName: pkgName,
-          phrase: phrase,
+          phrase: currentPhrase,
           isNativeIntercept: isNative
         });
+        clearPendingChallenge();
       } else {
         setChallengeTarget({
           name: 'TECLEOLLAVE',
           icon: '',
           packageName: '',
-          phrase: phrase,
+          phrase: currentPhrase,
           isNativeIntercept: false
         });
       }
@@ -236,19 +360,35 @@ export default function MobileAppContainer() {
       }
     });
 
-    getPendingChallenge().then((res) => {
-      if (!isMounted) return;
-      if (res?.hasChallenge && res.targetPackage) {
-        triggerForPackage(res.targetPackage, true);
-      } else if (!modalsRef.current.challenge && participantData?.is_enrolled && !isAppMasterUnlockedRef.current) {
-        // Si el usuario ya está calibrado y TecleoLlave está bloqueada, exigir frase al abrir
-        triggerForPackage('', false);
+    const checkPending = () => {
+      getPendingChallenge().then((res) => {
+        if (!isMounted) return;
+        if (res?.hasChallenge && res.targetPackage) {
+          triggerForPackage(res.targetPackage, true);
+        } else if (!modalsRef.current.challenge && participantData?.is_enrolled && !isAppMasterUnlockedRef.current) {
+          // Si el usuario ya está calibrado y TecleoLlave está bloqueada, exigir frase al abrir
+          triggerForPackage('', false);
+        }
+      });
+    };
+
+    checkPending();
+
+    const onFocus = () => checkPending();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkPending();
       }
-    });
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       isMounted = false;
       listener?.remove?.();
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [installedApps, phrase, participantData?.is_enrolled]);
 
@@ -281,9 +421,10 @@ export default function MobileAppContainer() {
         if (m.enrollment) { setShowEnrollmentModal(false); return; }
         if (m.challenge) {
           setShowChallengeModal(false);
+          clearPendingChallenge();
           if (challengeTargetRef.current.isNativeIntercept) {
-            minimizeApp();
-          } else if (!challengeTargetRef.current.packageName && !isAppMasterUnlockedRef.current) {
+            goToHomeScreen();
+          } else {
             minimizeApp();
           }
           return;
@@ -308,7 +449,7 @@ export default function MobileAppContainer() {
       stateSub = CapApp.addListener('appStateChange', ({ isActive }) => {
         if (isActive) {
           refreshPermissions();
-          // Si ya hay un reto nativo de app en curso, no interferir ni sobreescribir con TecleoLlave
+          // Si ya hay un reto nativo de app en curso, no interferir
           if (challengeTargetRef.current?.isNativeIntercept && modalsRef.current.challenge) {
             return;
           }
@@ -316,14 +457,17 @@ export default function MobileAppContainer() {
           // Comprobar si hubo un reto al volver
           getPendingChallenge().then((res) => {
             if (res?.hasChallenge && res.targetPackage) {
-              const found = installedApps.find(a => a.packageName === res.targetPackage);
+              const currentApps = installedAppsRef.current || installedApps;
+              const currentPhrase = phraseRef.current || phrase;
+              const found = currentApps.find(a => a.packageName === res.targetPackage);
               setChallengeTarget({
                 name: found?.name || res.targetPackage,
                 icon: found?.icon || '',
                 packageName: res.targetPackage,
-                phrase: phrase,
+                phrase: currentPhrase,
                 isNativeIntercept: true
               });
+              clearPendingChallenge();
               setShowChallengeModal(true);
             } else if (!modalsRef.current.challenge && participantData?.is_enrolled && !isAppMasterUnlockedRef.current) {
               // Si la app regresa de segundo plano, está bloqueada y no hay reto activo, exigir frase para entrar
@@ -331,16 +475,18 @@ export default function MobileAppContainer() {
                 name: 'TECLEOLLAVE',
                 icon: '',
                 packageName: '',
-                phrase: phrase,
+                phrase: phraseRef.current || phrase,
                 isNativeIntercept: false
               });
               setShowChallengeModal(true);
             }
           });
         } else {
-          // La app pasó a segundo plano (se minimizó, salió o apagó la pantalla)
-          // Bloquear TecleoLlave para volver a pedir frase al regresar
-          setIsAppMasterUnlocked(false);
+          // Al salir a segundo plano, si el usuario tiene calibrada la frase,
+          // re-bloquear la app TECLEOLLAVE para que al regresar deba ingresar su frase de nuevo
+          if (participantData?.is_enrolled) {
+            setIsAppMasterUnlocked(false);
+          }
         }
       });
     } catch (e) {
@@ -476,6 +622,12 @@ export default function MobileAppContainer() {
   };
 
   const handleOpenAppChallenge = (name, icon, pkgName) => {
+    if (pkgName && !protectedPackages[pkgName]) {
+      setProtectedPackages(prev => ({
+        ...prev,
+        [pkgName]: true
+      }));
+    }
     setChallengeTarget({
       name: name || 'Aplicación',
       icon: icon || '',
@@ -488,12 +640,13 @@ export default function MobileAppContainer() {
 
   const handleChallengeSuccess = async (pkgName, isNativeIntercept = false) => {
     setShowChallengeModal(false);
+    clearPendingChallenge();
     if (pkgName) {
       await unlockPackageForSession(pkgName);
-      // Solo minimizar TECLEOLLAVE si fue una intercepción nativa en segundo plano de Android
-      // para mostrar la app subyacente (WhatsApp, BCP, etc.)
       if (isNativeIntercept) {
         await minimizeApp();
+      } else {
+        await openTargetApp(pkgName);
       }
     } else {
       // Desbloqueo exitoso de la propia aplicación TECLEOLLAVE
@@ -503,12 +656,12 @@ export default function MobileAppContainer() {
 
   const handleChallengeClose = async () => {
     setShowChallengeModal(false);
-    // Si era una intercepción nativa de una app externa y el usuario cancela, minimizar
+    clearPendingChallenge();
+    // Si era una intercepción nativa de una app externa y el usuario cancela,
+    // enviar a la pantalla de Inicio (Home) para no revelar la aplicación protegida
     if (challengeTarget.isNativeIntercept) {
-      await minimizeApp();
+      await goToHomeScreen();
     } else if (!challengeTarget.packageName && !isAppMasterUnlocked) {
-      // Si era para desbloquear TecleoLlave y canceló sin haber desbloqueado,
-      // minimizar la app para proteger el acceso
       await minimizeApp();
     }
   };
@@ -633,7 +786,17 @@ export default function MobileAppContainer() {
       {/* =================================================================== */}
       {/* CUERPO PRINCIPAL */}
       {/* =================================================================== */}
-      <main className="tl-app-body">
+      <main
+        className="tl-app-body"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+      >
         {/* Barra Reactiva de Estado de Conexión y Cola de Sincronización */}
         <SyncStatusBar />
 
@@ -890,7 +1053,7 @@ export default function MobileAppContainer() {
           </div>
         ) : (
           /* CASO C: ACCESO AUTORIZADO - PESTAÑAS PRINCIPALES */
-          <>
+          <div key={activeTab} className={`tl-tab-content ${slideDirection}`}>
             {activeTab === 'inicio' && (
               <HomeTab
                 participant={participantData}
@@ -899,7 +1062,7 @@ export default function MobileAppContainer() {
                 enrolledRepsCount={participantData.enrolled_reps_count || (participantData.is_enrolled ? 30 : 0)}
                 protectedApps={protectedAppsList}
                 permissionsStatus={permissionsStatus}
-                onNavigateTab={(tab) => setActiveTab(tab)}
+                onNavigateTab={(tab) => handleSelectTab(tab)}
                 onStartTraining={(targetPhrase) => {
                   setPhrase(targetPhrase || phrase);
                   setShowEnrollmentModal(true);
@@ -939,6 +1102,13 @@ export default function MobileAppContainer() {
               />
             )}
 
+            {activeTab === 'survey' && (
+              <SurveyTab
+                participant={participantData}
+                onSurveySaved={() => setIsSurveyCompleted(true)}
+              />
+            )}
+
             {activeTab === 'settings' && (
               <SettingsTab
                 participant={participantData}
@@ -948,12 +1118,13 @@ export default function MobileAppContainer() {
                 onOpenUsageSettings={openUsageSettings}
                 onOpenOverlaySettings={openOverlaySettings}
                 onOpenSecuritySettings={openSecuritySettings}
+                onNavigateTab={(tab) => handleSelectTab(tab)}
                 currentServerUrl={currentServerUrl}
                 isServerOnline={isServerOnline}
                 onLogout={handleLogout}
               />
             )}
-          </>
+          </div>
         )}
       </main>
 
@@ -963,8 +1134,9 @@ export default function MobileAppContainer() {
       {participantData && (!participantData.is_enrolled || isAppMasterUnlocked) && (
         <MobileBottomNav
           currentTab={activeTab}
-          onSelectTab={(tabId) => setActiveTab(tabId)}
+          onSelectTab={(tabId) => handleSelectTab(tabId)}
           protectedAppsCount={protectedAppsList.length}
+          isSurveyCompleted={isSurveyCompleted}
         />
       )}
 

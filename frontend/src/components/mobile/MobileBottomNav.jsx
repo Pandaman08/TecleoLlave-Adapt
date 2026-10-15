@@ -1,11 +1,12 @@
 import React from 'react';
-import { Shield, KeyRound, Smartphone, Settings } from 'lucide-react';
+import { Shield, KeyRound, Smartphone, Settings, ClipboardList } from 'lucide-react';
 
-export default function MobileBottomNav({ currentTab, onSelectTab, protectedAppsCount = 0 }) {
+export default function MobileBottomNav({ currentTab, onSelectTab, protectedAppsCount = 0, isSurveyCompleted = false }) {
   const tabs = [
     { id: 'inicio', label: 'Inicio', icon: Shield },
     { id: 'mykey', label: 'Mi llave', icon: KeyRound },
     { id: 'apps', label: 'Apps', icon: Smartphone, badge: protectedAppsCount > 0 ? protectedAppsCount : null },
+    { id: 'survey', label: 'Encuesta', icon: ClipboardList, dot: !isSurveyCompleted },
     { id: 'settings', label: 'Ajustes', icon: Settings }
   ];
 
@@ -41,6 +42,18 @@ export default function MobileBottomNav({ currentTab, onSelectTab, protectedApps
                 }}>
                   {tab.badge}
                 </span>
+              )}
+              {tab.dot && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-4px',
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: 'var(--tl-accent)',
+                  boxShadow: '0 0 6px var(--tl-accent)'
+                }} />
               )}
             </div>
             <span>{tab.label}</span>

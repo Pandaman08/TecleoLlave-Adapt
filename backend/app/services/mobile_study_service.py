@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.models.mobile_study import MobileOtp, MobileParticipant, MobileStudySample
+from app.models.mobile_study import MobileOtp, MobileParticipant, MobileStudySample, MobileStudySurvey
 from app.models.user import User
 from app.utils.security import create_access_token, get_password_hash
 from app.services.email_service import email_service
@@ -400,7 +400,16 @@ class MobileStudyService:
         if not participant or not participant.is_enrolled or not participant.mt_profile:
             raise ValueError("Perfil biométrico no enrolado en este participante")
 
-        theta_accept = 0.85
+        # Contar total de muestras acumuladas del participante (entrenamiento + intentos)
+        total_samples = db.query(func.count(MobileStudySample.id)).filter(
+            MobileStudySample.participant_id == participant.id
+        ).scalar() or 0
+        sample_count = max(participant.enrolled_reps_count or 0, total_samples)
+
+        # Umbral adaptativo según madurez del dataset del participante:
+        # Sube al 90% (0.90) cuando la muestra es de 60 a más repeticiones/muestras,
+        # y se mantiene en 85% (0.85) en la etapa inicial de 30 a 59 muestras.
+        theta_accept = 0.90 if sample_count >= 60 else 0.85
 
         # Idempotencia: Si ya se evaluó y registró este client_event_id, no duplicar en BD
         if client_event_id:
@@ -460,7 +469,8 @@ class MobileStudyService:
 
         # Adaptación en caliente si es legítimo y score alto
         adapted_in_this_attempt = False
-        if actual_gt == "LEGITIMATE" and is_accepted and similarity_score >= 0.88:
+        adapt_min_score = 0.92 if theta_accept >= 0.90 else 0.88
+        if actual_gt == "LEGITIMATE" and is_accepted and similarity_score >= adapt_min_score:
             alpha = 0.10
             new_ht = (1 - alpha) * centroid_ht[:min_ht_len] + alpha * np.array(ht[:min_ht_len])
             new_lt = (1 - alpha) * centroid_lt[:min_lt_len] + alpha * np.array(lt[:min_lt_len]) if min_lt_len > 0 else centroid_lt
@@ -751,7 +761,8 @@ class MobileStudyService:
             "satisfaction": {
                 "average_score": avg_satisfaction,
                 "total_ratings": total_feedback,
-                "recent_comments": recent_comments
+                "recent_comments": recent_comments,
+                "survey_summary": self.get_survey_population_summary(db)
             },
             "confusion_matrix": {
                 "true_positives": legitimate_accepted if legitimate_total > 0 else 1840,
@@ -806,6 +817,163 @@ class MobileStudyService:
             "message": "Calificación registrada exitosamente",
             "score": clean_score,
             "comment": participant.satisfaction_comment
+        }
+
+    def submit_full_survey(
+        self,
+        db: Session,
+        participant_id: int,
+        overall_score: int,
+        responses: Dict[str, int],
+        comment: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Registra el cuestionario científico completo de usabilidad, percepción de seguridad y TAM para el paper."""
+        participant = db.query(MobileParticipant).filter(
+            MobileParticipant.id == participant_id
+        ).first()
+
+        if not participant:
+            raise ValueError("Participante no encontrado")
+
+        clean_overall = max(1, min(5, int(overall_score)))
+
+        # Sub-escalas Likert
+        sus_vals = [responses.get(k, 4) for k in ["sus_q1", "sus_q2", "sus_q3"] if k in responses]
+        usability_score = float(np.mean(sus_vals)) if sus_vals else 4.0
+
+        sec_vals = [responses.get(k, 4) for k in ["sec_q1", "sec_q2"] if k in responses]
+        security_perception = float(np.mean(sec_vals)) if sec_vals else 4.0
+
+        fatigue_vals = [responses.get(k, 4) for k in ["fatigue_q1", "fatigue_q2"] if k in responses]
+        fatigue_level = float(np.mean(fatigue_vals)) if fatigue_vals else 4.0
+
+        tam_vals = [responses.get(k, 4) for k in ["tam_q1", "tam_q2"] if k in responses]
+        adoption_willingness = float(np.mean(tam_vals)) if tam_vals else 4.0
+
+        all_numeric_items = [v for v in responses.values() if isinstance(v, (int, float))]
+        if all_numeric_items:
+            sus_score = round(float(np.mean([(val - 1) / 4.0 * 100.0 for val in all_numeric_items])), 1)
+        else:
+            sus_score = round(float((clean_overall - 1) / 4.0 * 100.0), 1)
+
+        existing_survey = db.query(MobileStudySurvey).filter(
+            MobileStudySurvey.participant_id == participant_id
+        ).first()
+
+        clean_comment = comment.strip()[:1000] if comment else None
+
+        if existing_survey:
+            existing_survey.sus_score = sus_score
+            existing_survey.overall_score = clean_overall
+            existing_survey.security_perception = round(security_perception, 2)
+            existing_survey.usability_score = round(usability_score, 2)
+            existing_survey.fatigue_level = round(fatigue_level, 2)
+            existing_survey.adoption_willingness = round(adoption_willingness, 2)
+            existing_survey.responses = responses
+            existing_survey.qualitative_comment = clean_comment
+            existing_survey.created_at = datetime.utcnow()
+            survey = existing_survey
+        else:
+            survey = MobileStudySurvey(
+                participant_id=participant_id,
+                sus_score=sus_score,
+                overall_score=clean_overall,
+                security_perception=round(security_perception, 2),
+                usability_score=round(usability_score, 2),
+                fatigue_level=round(fatigue_level, 2),
+                adoption_willingness=round(adoption_willingness, 2),
+                responses=responses,
+                qualitative_comment=clean_comment
+            )
+            db.add(survey)
+
+        participant.satisfaction_score = clean_overall
+        participant.satisfaction_comment = clean_comment
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "Cuestionario científico registrado exitosamente para el artículo.",
+            "survey_id": survey.id,
+            "sus_score": sus_score,
+            "overall_score": clean_overall,
+            "security_perception": round(security_perception, 2),
+            "usability_score": round(usability_score, 2),
+            "fatigue_level": round(fatigue_level, 2),
+            "adoption_willingness": round(adoption_willingness, 2),
+            "comment": clean_comment
+        }
+
+    def get_participant_survey(self, db: Session, participant_id: int) -> Dict[str, Any]:
+        """Obtiene la encuesta de un participante si ya la completó."""
+        survey = db.query(MobileStudySurvey).filter(
+            MobileStudySurvey.participant_id == participant_id
+        ).order_by(MobileStudySurvey.id.desc()).first()
+
+        if not survey:
+            return {"has_survey": False, "survey": None}
+
+        return {
+            "has_survey": True,
+            "survey": {
+                "id": survey.id,
+                "sus_score": survey.sus_score,
+                "overall_score": survey.overall_score,
+                "security_perception": survey.security_perception,
+                "usability_score": survey.usability_score,
+                "fatigue_level": survey.fatigue_level,
+                "adoption_willingness": survey.adoption_willingness,
+                "responses": survey.responses,
+                "comment": survey.qualitative_comment,
+                "created_at": survey.created_at.isoformat() if survey.created_at else None
+            }
+        }
+
+    def get_survey_population_summary(self, db: Session) -> Dict[str, Any]:
+        """Genera el consolidado estadístico de la encuesta para la tabla y gráficos del paper."""
+        surveys = db.query(MobileStudySurvey).all()
+        n = len(surveys)
+        if n == 0:
+            return {
+                "total_surveys": 0,
+                "mean_sus": 0.0,
+                "std_sus": 0.0,
+                "mean_overall": 0.0,
+                "mean_security": 0.0,
+                "std_security": 0.0,
+                "mean_usability": 0.0,
+                "std_usability": 0.0,
+                "mean_fatigue": 0.0,
+                "std_fatigue": 0.0,
+                "mean_adoption": 0.0,
+                "std_adoption": 0.0,
+                "qualitative_quotes": []
+            }
+
+        sus_scores = [s.sus_score for s in surveys]
+        overall_scores = [s.overall_score for s in surveys]
+        sec_scores = [s.security_perception for s in surveys]
+        usab_scores = [s.usability_score for s in surveys]
+        fatigue_scores = [s.fatigue_level for s in surveys]
+        adopt_scores = [s.adoption_willingness for s in surveys]
+
+        quotes = [s.qualitative_comment for s in surveys if s.qualitative_comment]
+
+        return {
+            "total_surveys": n,
+            "mean_sus": round(float(np.mean(sus_scores)), 2),
+            "std_sus": round(float(np.std(sus_scores)), 2),
+            "mean_overall": round(float(np.mean(overall_scores)), 2),
+            "mean_security": round(float(np.mean(sec_scores)), 2),
+            "std_security": round(float(np.std(sec_scores)), 2),
+            "mean_usability": round(float(np.mean(usab_scores)), 2),
+            "std_usability": round(float(np.std(usab_scores)), 2),
+            "mean_fatigue": round(float(np.mean(fatigue_scores)), 2),
+            "std_fatigue": round(float(np.std(fatigue_scores)), 2),
+            "mean_adoption": round(float(np.mean(adopt_scores)), 2),
+            "std_adoption": round(float(np.std(adopt_scores)), 2),
+            "qualitative_quotes": quotes[:20]
         }
 
     def get_participant_drilldown(self, db: Session, participant_id: int) -> Dict[str, Any]:
@@ -885,13 +1053,15 @@ class MobileStudyService:
 
         # Línea de tiempo cronológica para graficar evolución
         adaptation_timeline = []
+        base_reps = participant.enrolled_reps_count or 30
         for idx, a in enumerate(all_auth_samples):
             feat = a.features or {}
+            th_at_attempt = 90.0 if (base_reps + idx + 1) >= 60 else 85.0
             adaptation_timeline.append({
                 "attempt": idx + 1,
                 "timestamp": a.created_at.strftime("%d/%m %H:%M"),
                 "similarity": round((a.similarity_score or 0.0) * 100, 1),
-                "threshold": 85.0,
+                "threshold": th_at_attempt,
                 "is_accepted": a.is_accepted,
                 "target_app": a.target_app,
                 "adapted": bool(feat.get("adapted", False)),

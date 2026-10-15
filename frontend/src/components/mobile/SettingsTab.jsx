@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Shield, Moon, Sun,
-  LogOut, ExternalLink, CheckCircle2, Server
+  LogOut, ExternalLink, CheckCircle2, Server, ClipboardCheck
 } from 'lucide-react';
 
 export default function SettingsTab({
@@ -12,6 +12,7 @@ export default function SettingsTab({
   onOpenUsageSettings,
   onOpenOverlaySettings,
   onOpenSecuritySettings,
+  onNavigateTab,
   currentServerUrl,
   isServerOnline = true,
   onLogout
@@ -132,6 +133,7 @@ export default function SettingsTab({
             )}
           </div>
 
+
           {/* Permiso 3: Bloqueo Seguro de Android (Keyguard) */}
           <div style={{
             display: 'flex',
@@ -235,6 +237,44 @@ export default function SettingsTab({
               <span>{isServerOnline ? 'Conectado' : 'Desconectado'}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 3.5. Cuestionario del Estudio Científico */}
+      <div
+        className="tl-card"
+        style={{
+          background: 'linear-gradient(135deg, var(--tl-bg-surface) 0%, rgba(56, 189, 248, 0.08) 100%)',
+          border: '1px solid var(--tl-border)',
+          cursor: 'pointer',
+          padding: '0.85rem'
+        }}
+        onClick={() => onNavigateTab && onNavigateTab('survey')}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: 'var(--tl-accent-light)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <ClipboardCheck size={18} color="var(--tl-accent)" />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--tl-text-primary)' }}>
+                Cuestionario del Estudio Científico
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--tl-text-secondary)', marginTop: '2px' }}>
+                Respuestas para la evaluación empírica del paper
+              </div>
+            </div>
+          </div>
+          <ExternalLink size={14} color="var(--tl-accent)" style={{ flexShrink: 0 }} />
         </div>
       </div>
 

@@ -50,6 +50,12 @@ fi
 cleanup() {
     echo ""
     echo "🛑 Deteniendo servicios..."
+    if [ -n "$TAIL_PID" ]; then
+        kill "$TAIL_PID" 2>/dev/null || true
+    fi
+    if [ -n "$ADB_PID" ]; then
+        kill "$ADB_PID" 2>/dev/null || true
+    fi
     if [ -n "$UVICORN_PID" ]; then
         kill "$UVICORN_PID" 2>/dev/null || true
     fi
@@ -124,5 +130,5 @@ echo "   Deja esta terminal abierta mientras realices pruebas."
 echo "   Pulsa Ctrl+C para apagar el sistema cuando termines."
 echo "=========================================================="
 
-# Mantener script corriendo y redirigir logs
+# Mantener script corriendo
 wait "$UVICORN_PID"

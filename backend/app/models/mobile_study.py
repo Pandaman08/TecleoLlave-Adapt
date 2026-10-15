@@ -38,6 +38,7 @@ class MobileParticipant(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     samples = relationship("MobileStudySample", back_populates="participant", cascade="all, delete-orphan")
+    surveys = relationship("MobileStudySurvey", back_populates="participant", cascade="all, delete-orphan")
 
 
 class MobileStudySample(Base):
@@ -67,4 +68,23 @@ class MobileStudySample(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     participant = relationship("MobileParticipant", back_populates="samples")
+
+
+class MobileStudySurvey(Base):
+    __tablename__ = "mobile_study_surveys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    participant_id = Column(Integer, ForeignKey("mobile_participants.id"), nullable=False)
+    sus_score = Column(Float, nullable=False)  # Puntuación SUS estandarizada (0 a 100)
+    overall_score = Column(Integer, nullable=False)  # Calificación global (1 a 5 estrellas)
+    security_perception = Column(Float, nullable=False)  # Dimensión Percepción de Seguridad (1 a 5)
+    usability_score = Column(Float, nullable=False)  # Dimensión Facilidad y Naturalidad (1 a 5)
+    fatigue_level = Column(Float, nullable=False)  # Dimensión Carga y Fatiga (1 a 5)
+    adoption_willingness = Column(Float, nullable=False)  # Dimensión Intención de Adopción TAM (1 a 5)
+    responses = Column(JSON, nullable=False)  # Mapa detallado de respuestas a cada ítem Likert
+    qualitative_comment = Column(Text, nullable=True)  # Comentarios abiertos para citas en el paper
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    participant = relationship("MobileParticipant", back_populates="surveys")
+
 

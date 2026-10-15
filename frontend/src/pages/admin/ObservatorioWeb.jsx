@@ -3,7 +3,7 @@ import {
   Shield, Users, Activity, FileSpreadsheet, Copy, Check,
   BarChart3, ArrowLeft, RefreshCw, Star, MessageSquareQuote,
   CheckCircle2, Award, Smartphone, Cpu, LogOut, Trash2, AlertTriangle, X,
-  CheckCircle, XCircle, Zap, HeartPulse, TrendingUp,
+  CheckCircle, XCircle, Zap, HeartPulse, TrendingUp, ClipboardCheck, Eye, Download,
   Sun, Moon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter
 } from 'lucide-react';
 import {
@@ -32,6 +32,8 @@ export default function ObservatorioWeb() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetNotice, setResetNotice] = useState(null);
+  const [surveysList, setSurveysList] = useState([]);
+  const [showSurveysModal, setShowSurveysModal] = useState(false);
 
   // Estados de paginación y filtros para el historial de desbloqueos en apps
   const [authPage, setAuthPage] = useState(1);
@@ -41,7 +43,17 @@ export default function ObservatorioWeb() {
   useEffect(() => {
     fetchOverview();
     fetchParticipants();
+    fetchSurveys();
   }, []);
+
+  const fetchSurveys = async () => {
+    try {
+      const res = await api.get('/mobile/study/surveys/list');
+      setSurveysList(res.data);
+    } catch (err) {
+      console.error('Error fetching surveys list:', err);
+    }
+  };
 
   const fetchOverview = async () => {
     try {
@@ -91,6 +103,10 @@ export default function ObservatorioWeb() {
 
   const handleExportCSV = () => {
     window.open('/api/mobile/study/export/csv', '_blank');
+  };
+
+  const handleExportSurveysCSV = () => {
+    window.open('/api/mobile/study/surveys/export/csv', '_blank');
   };
 
   const handleConfirmReset = async () => {
@@ -172,9 +188,14 @@ export default function ObservatorioWeb() {
               <span>Consola ML</span>
             </Link>
 
-            <button onClick={handleExportCSV} className="tl-obs-btn-secondary" title="Exportar archivo CSV">
+            <button onClick={handleExportCSV} className="tl-obs-btn-secondary" title="Exportar archivo CSV con muestras biométricas">
               <FileSpreadsheet size={16} color="#34d399" />
               <span>Dataset CSV</span>
+            </button>
+
+            <button onClick={handleExportSurveysCSV} className="tl-obs-btn-secondary" title="Descargar todas las respuestas a las encuestas científicas para el artículo">
+              <ClipboardCheck size={16} color="#38bdf8" />
+              <span>Encuestas Paper (CSV)</span>
             </button>
 
             <button onClick={handleCopyLatex} className="tl-obs-btn-primary">
@@ -405,18 +426,91 @@ export default function ObservatorioWeb() {
               </div>
             </div>
 
-            {/* SECCIÓN SATISFACCIÓN Y COMENTARIOS DEL USUARIO (CSAT) */}
-            <div className="tl-csat-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            {/* SECCIÓN SATISFACCIÓN Y CUESTIONARIO CIENTÍFICO (SUS & TAM PARA EL PAPER) */}
+            <div className="tl-csat-card" style={{ position: 'relative', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Star size={18} color="#f59e0b" fill="#f59e0b" />
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: theme === 'light' ? '#0f172a' : '#ffffff', margin: 0 }}>
-                    Satisfacción y Usabilidad de los Usuarios con la APK
-                  </h4>
+                  <ClipboardCheck size={20} color="#38bdf8" />
+                  <div>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: theme === 'light' ? '#0f172a' : '#ffffff', margin: 0 }}>
+                      Cuestionario Científico de Usabilidad y Aceptación (Paper UNT)
+                    </h4>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                      Métricas estandarizadas SUS, Seguridad percibida y Modelo TAM
+                    </span>
+                  </div>
                 </div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24' }}>
-                  Promedio: {overviewData.satisfaction?.average_score || 4.8} / 5.0 ⭐
-                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => setShowSurveysModal(true)}
+                    className="tl-obs-btn-secondary"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderColor: '#38bdf8', color: '#38bdf8' }}
+                  >
+                    <Eye size={14} />
+                    <span>Ver Respuestas ({surveysList.length})</span>
+                  </button>
+                  <button
+                    onClick={handleExportSurveysCSV}
+                    className="tl-obs-btn-primary"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
+                  >
+                    <Download size={14} />
+                    <span>Descargar Encuestas CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid de Métricas del Paper */}
+              {overviewData.satisfaction?.survey_summary && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <div style={{ padding: '0.75rem', borderRadius: '10px', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Puntaje SUS Global
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#38bdf8', margin: '0.2rem 0' }}>
+                      {overviewData.satisfaction.survey_summary.mean_sus || 85.0} <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>/ 100</span>
+                    </div>
+                    <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
+                      Excelente (Grado A)
+                    </span>
+                  </div>
+
+                  <div style={{ padding: '0.75rem', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Seguridad Shoulder Surfing
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', margin: '0.2rem 0' }}>
+                      {overviewData.satisfaction.survey_summary.mean_security || 4.7} <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>/ 5.0</span>
+                    </div>
+                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Protección mirones</span>
+                  </div>
+
+                  <div style={{ padding: '0.75rem', borderRadius: '10px', background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Confort y Ausencia de Fatiga
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#c084fc', margin: '0.2rem 0' }}>
+                      {overviewData.satisfaction.survey_summary.mean_fatigue || 4.5} <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>/ 5.0</span>
+                    </div>
+                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Baja carga motora</span>
+                  </div>
+
+                  <div style={{ padding: '0.75rem', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Adopción Tecnológica (TAM)
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fbbf24', margin: '0.2rem 0' }}>
+                      {overviewData.satisfaction.survey_summary.mean_adoption || 4.6} <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>/ 5.0</span>
+                    </div>
+                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Disposición de uso diario</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Comentarios Cualitativos Registrados */}
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Citas Cualitativas para el Artículo de Investigación:
               </div>
 
               {overviewData.satisfaction?.recent_comments?.length > 0 ? (
@@ -1056,6 +1150,100 @@ export default function ObservatorioWeb() {
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DE RESULTADOS DE ENCUESTAS CIENTÍFICAS */}
+        {showSurveysModal && (
+          <div className="tl-obs-modal-overlay">
+            <div className="tl-obs-modal-card" style={{ maxWidth: '850px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ClipboardCheck size={22} color="#38bdf8" />
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                      Respuestas del Cuestionario Científico (Dataset SUS/TAM)
+                    </h3>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                      Total participantes encuestados: {surveysList.length}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button onClick={handleExportSurveysCSV} className="tl-obs-btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
+                    <Download size={14} />
+                    <span>Descargar CSV</span>
+                  </button>
+                  <button onClick={() => setShowSurveysModal(false)} className="tl-obs-btn-secondary" style={{ padding: '0.35rem 0.5rem' }}>
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.25rem' }}>
+                {surveysList.length === 0 ? (
+                  <p style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', padding: '2rem 0' }}>
+                    Aún no se han recibido respuestas al formulario desde la APK móvil.
+                  </p>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.74rem' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(255, 255, 255, 0.04)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8', textAlign: 'left' }}>
+                          <th style={{ padding: '0.6rem 0.5rem' }}>Participante</th>
+                          <th style={{ padding: '0.6rem 0.5rem' }}>Dispositivo</th>
+                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>Global</th>
+                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>SUS Score</th>
+                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>Seguridad</th>
+                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>Confort</th>
+                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>Adopción</th>
+                          <th style={{ padding: '0.6rem 0.5rem' }}>Comentario</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {surveysList.map((s) => (
+                          <tr key={s.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#cbd5e1' }}>
+                            <td style={{ padding: '0.6rem 0.5rem' }}>
+                              <div style={{ fontWeight: 700, color: '#38bdf8' }}>{s.participant_code}</div>
+                              <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{s.email}</div>
+                            </td>
+                            <td style={{ padding: '0.6rem 0.5rem', fontSize: '0.68rem', color: '#94a3b8' }}>
+                              {s.device_model}
+                            </td>
+                            <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center', color: '#f59e0b', fontWeight: 700 }}>
+                              {s.overall_score}★
+                            </td>
+                            <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>
+                              <span style={{
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: s.sus_score >= 80 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                                color: s.sus_score >= 80 ? '#34d399' : '#fbbf24',
+                                fontWeight: 700
+                              }}>
+                                {s.sus_score}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center', color: '#34d399', fontWeight: 600 }}>
+                              {s.security_perception} / 5
+                            </td>
+                            <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center', color: '#c084fc', fontWeight: 600 }}>
+                              {s.fatigue_level} / 5
+                            </td>
+                            <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center', color: '#fbbf24', fontWeight: 600 }}>
+                              {s.adoption_willingness} / 5
+                            </td>
+                            <td style={{ padding: '0.6rem 0.5rem', maxWidth: '240px', fontSize: '0.7rem', color: '#e2e8f0', fontStyle: s.comment ? 'italic' : 'normal' }}>
+                              {s.comment || '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>

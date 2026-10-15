@@ -22,6 +22,12 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AndroidSecurityBridgePlugin.class);
         super.onCreate(savedInstanceState);
+        try {
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                android.webkit.WebSettings settings = getBridge().getWebView().getSettings();
+                settings.setMediaPlaybackRequiresUserGesture(false);
+            }
+        } catch (Exception ignored) {}
         requestAppPermissions();
         handleIntent(getIntent());
     }
@@ -42,6 +48,9 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         isAppInForeground = true;
+        if (pendingChallengePackage != null && !pendingChallengePackage.isEmpty()) {
+            AndroidSecurityBridgePlugin.notifyChallengeReceived(pendingChallengePackage);
+        }
     }
 
     @Override
